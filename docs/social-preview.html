@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1280px;
+    height: 640px;
+    overflow: hidden;
+  }
+
+  body {
+    --paper: #fbfaf7;
+    --ink: #1b1f24;
+    --accent: #0e7c74;
+    --muted: #5c6470;
+    --rule: #e4e0d6;
+
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    position: relative;
+  }
+
+  /* accent bar down the left edge */
+  body::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 10px;
+    background: var(--accent);
+  }
+
+  .left {
+    width: 560px;
+    flex: 0 0 560px;
+    padding: 66px 56px 56px 70px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kicker {
+    font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+    font-size: 17px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-size: 82px;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    margin-top: 22px;
+  }
+
+  .pkg {
+    font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+    font-size: 20px;
+    color: var(--muted);
+    margin-top: 18px;
+  }
+
+  .tagline {
+    font-size: 23px;
+    line-height: 1.5;
+    color: #3a4048;
+    margin-top: 30px;
+    max-width: 430px;
+  }
+
+  .chips {
+    display: flex;
+    gap: 12px;
+    margin-top: 34px;
+  }
+
+  .chip {
+    font-size: 17px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+  }
+  .chip.solid {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .spacer { flex: 1; }
+
+  .url {
+    font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+    font-size: 19px;
+    color: var(--muted);
+  }
+
+  .right {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* the grid screenshot, in a card that bleeds off the right/bottom edges */
+  .shot {
+    position: absolute;
+    top: 96px;
+    left: 40px;
+    width: 900px;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    box-shadow: 0 30px 70px -24px rgba(27, 31, 36, 0.35);
+    background: #fff;
+    overflow: hidden;
+  }
+  .shot img { display: block; width: 100%; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="kicker">Angular data grid</div>
+    <h1>inandu&#8209;grid</h1>
+    <div class="pkg">&#64;inandu-solutions/grid-angular</div>
+    <div class="tagline">
+      Sorting, filtering, grouping, virtual scroll, inline editing,
+      CSV/Excel/PDF export, i18n and theming &mdash; small footprint.
+    </div>
+    <div class="chips">
+      <span class="chip solid">MIT</span>
+      <span class="chip">Angular 21</span>
+      <span class="chip">standalone &middot; signals</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="url">github.com/inandusolutions/inandu-grid</div>
+  </div>
+
+  <div class="right">
+    <div class="shot"><img src="screenshot.png" alt=""></div>
+  </div>
+</body>
+</html>
