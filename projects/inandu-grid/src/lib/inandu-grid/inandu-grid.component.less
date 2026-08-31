@@ -1,0 +1,664 @@
+.inandu {
+    display: block;
+    overflow: auto;
+}
+
+.inandu-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+// ── Icon system ──────────────────────────────────────────────────────────────
+// Every action button renders its glyph as a CSS mask painted with `currentColor`
+// from an inline SVG data-URI — no image file, no icon font, no SVG library, so
+// it stays consistent with the library's "self-contained, minimal dependencies"
+// posture. Because the shape is a mask over `currentColor` it inherits the
+// button's text colour (every built-in theme and the `:disabled` state just
+// work) and scales with `font-size`. A button opts in by carrying `inandu-icon`
+// plus exactly one `inandu-icon-<name>` modifier and no text content; its
+// `aria-label`/`title` remain the accessible name. All icons share one 24×24
+// outline style via the `@icon-head`/`@icon-tail` wrappers below.
+@icon-head: ~"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E";
+@icon-tail: ~"%3C/svg%3E";
+
+.inandu-icon::before {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    background-color: currentColor;
+    -webkit-mask: var(--inandu-icon) no-repeat center;
+    mask: var(--inandu-icon) no-repeat center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.inandu-icon-sort-asc      { --inandu-icon: url("@{icon-head}%3Cpath d='M12 5v14M6 11l6-6 6 6'/%3E@{icon-tail}"); }
+.inandu-icon-sort-desc     { --inandu-icon: url("@{icon-head}%3Cpath d='M12 19V5M6 13l6 6 6-6'/%3E@{icon-tail}"); }
+.inandu-icon-sort-none     { --inandu-icon: url("@{icon-head}%3Cpath d='M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4'/%3E@{icon-tail}"); }
+.inandu-icon-filter        { --inandu-icon: url("@{icon-head}%3Cpath d='M3 4h18l-7 8v7l-4-2v-5z'/%3E@{icon-tail}"); }
+.inandu-icon-clear-filters { --inandu-icon: url("@{icon-head}%3Cpath d='M3 4h18l-7 8v7l-4-2v-5z'/%3E%3Cpath d='M4 3l16 16'/%3E@{icon-tail}"); }
+.inandu-icon-columns       { --inandu-icon: url("@{icon-head}%3Cpath d='M4 5h16v14H4z'/%3E%3Cpath d='M10 5v14M16 5v14'/%3E@{icon-tail}"); }
+.inandu-icon-cancel        { --inandu-icon: url("@{icon-head}%3Cpath d='M18 6L6 18M6 6l12 12'/%3E@{icon-tail}"); }
+.inandu-icon-add           { --inandu-icon: url("@{icon-head}%3Cpath d='M12 5v14M5 12h14'/%3E@{icon-tail}"); }
+.inandu-icon-edit          { --inandu-icon: url("@{icon-head}%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'/%3E@{icon-tail}"); }
+.inandu-icon-save          { --inandu-icon: url("@{icon-head}%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/%3E%3Cpath d='M7 3v6h9M8 21v-7h8v7'/%3E@{icon-tail}"); }
+.inandu-icon-delete        { --inandu-icon: url("@{icon-head}%3Cpath d='M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14M10 11v6M14 11v6'/%3E@{icon-tail}"); }
+.inandu-icon-print         { --inandu-icon: url("@{icon-head}%3Cpath d='M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v8H6z'/%3E@{icon-tail}"); }
+.inandu-icon-export-csv    { --inandu-icon: url("@{icon-head}%3Cpath d='M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/%3E%3Cpath d='M14 3v6h6M8 13h8M8 17h8'/%3E@{icon-tail}"); }
+.inandu-icon-export-excel  { --inandu-icon: url("@{icon-head}%3Cpath d='M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/%3E%3Cpath d='M14 3v6h6M8 12v8M8 14h8M8 18h8'/%3E@{icon-tail}"); }
+.inandu-icon-export-pdf    { --inandu-icon: url("@{icon-head}%3Cpath d='M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/%3E%3Cpath d='M14 3v6h6M12 12v6M9 15l3 3 3-3'/%3E@{icon-tail}"); }
+.inandu-icon-page-first    { --inandu-icon: url("@{icon-head}%3Cpath d='M17 6l-6 6 6 6M11 6l-6 6 6 6'/%3E@{icon-tail}"); }
+.inandu-icon-page-prev     { --inandu-icon: url("@{icon-head}%3Cpath d='M14 6l-6 6 6 6'/%3E@{icon-tail}"); }
+.inandu-icon-page-next     { --inandu-icon: url("@{icon-head}%3Cpath d='M10 6l6 6-6 6'/%3E@{icon-tail}"); }
+.inandu-icon-page-last     { --inandu-icon: url("@{icon-head}%3Cpath d='M7 6l6 6-6 6M13 6l6 6-6 6'/%3E@{icon-tail}"); }
+.inandu-icon-drag          { --inandu-icon: url("@{icon-head}%3Ccircle cx='9' cy='6' r='0.1'/%3E%3Ccircle cx='15' cy='6' r='0.1'/%3E%3Ccircle cx='9' cy='12' r='0.1'/%3E%3Ccircle cx='15' cy='12' r='0.1'/%3E%3Ccircle cx='9' cy='18' r='0.1'/%3E%3Ccircle cx='15' cy='18' r='0.1'/%3E@{icon-tail}"); }
+
+// The four pager chevrons are drawn pointing physically left/right; under `dir="rtl"` (see
+// InanduGridComponent.dir) "first/previous" should point toward the *end* of the reading direction
+// (visually right) and "next/last" toward the *start* (visually left) — the mirror image of LTR.
+// Flipping via `scaleX(-1)` on the existing glyphs is simpler than drawing four more SVGs, and the
+// mask (not the icon's own layout) is all that needs mirroring, so this doesn't affect the button's
+// hit area, aria-label, or a consumer-supplied text `firstLabel`/etc. (which replaces the icon
+// entirely, so isn't scoped by these rules at all — see the `[class.inandu-icon]` bindings in the template).
+.inandu[dir="rtl"] {
+    .inandu-icon-page-first,
+    .inandu-icon-page-prev,
+    .inandu-icon-page-next,
+    .inandu-icon-page-last {
+        &::before {
+            transform: scaleX(-1);
+        }
+    }
+}
+
+.xtable {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.xtable th,
+.xtable td {
+    border: 1px solid #ddd;
+    padding: 4px 8px;
+    text-align: start;
+}
+
+.xtable th {
+    position: relative;
+}
+
+.inandu-column-resize-handle {
+    position: absolute;
+    top: 0;
+    inset-inline-end: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+}
+
+.inandu-column-resize-handle:hover,
+.inandu-column-resize-handle:active {
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.inandu-sort-button {
+    margin-inline-start: 4px;
+    padding: 0 2px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+}
+
+// Priority badge for a multi-column sort (see InanduGridComponent.sortPriorityFor) — only rendered
+// once a second sort criterion exists, so a plain single-column sort never shows a "1".
+.inandu-sort-priority {
+    display: inline-block;
+    margin-inline-start: 2px;
+    min-width: 1.2em;
+    padding: 0 3px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 0.65em;
+    line-height: 1.4;
+    text-align: center;
+    vertical-align: text-top;
+}
+
+.inandu-filter-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font: inherit;
+}
+
+.inandu-column-filter-toggle {
+    margin-inline-start: 4px;
+    padding: 0 2px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+    color: inherit;
+}
+
+.inandu-column-filter-toggle-active {
+    color: #1976d2;
+    font-weight: 700;
+}
+
+.inandu-column-filter-popup {
+    position: absolute;
+    top: 100%;
+    inset-inline-end: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 2px;
+    padding: 8px;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: default;
+}
+
+.inandu-column-filter-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font: inherit;
+    font-size: 0.85em;
+}
+
+.inandu-column-filter-cancel {
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8em;
+    color: #666;
+}
+
+.inandu-column-filters-actions {
+    text-align: end;
+}
+
+.inandu-column-toggle-wrapper {
+    position: relative;
+}
+
+.inandu-column-toggle-popup {
+    position: absolute;
+    top: 100%;
+    inset-inline-end: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 2px;
+    padding: 8px;
+    min-width: 160px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-weight: normal;
+    cursor: default;
+}
+
+.inandu-column-toggle-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.inandu-cell-edit-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 2px 4px;
+    border: 1px solid #1976d2;
+    border-radius: 2px;
+    font: inherit;
+}
+
+.inandu-field-error {
+    display: block;
+    margin-top: 2px;
+    color: #c62828;
+    font-size: 0.75em;
+    line-height: 1.2;
+}
+
+.inandu-row-actions-column {
+    width: 130px;
+}
+
+.inandu-row-actions {
+    text-align: end;
+    white-space: nowrap;
+}
+
+.inandu-row-actions .inandu-pager-button {
+    margin-inline-start: 4px;
+}
+
+.inandu-group-zone {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    border: 1px dashed #bbb;
+    border-radius: 3px;
+}
+
+.inandu-group-zone-hint {
+    color: #888;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
+.inandu-group-zone-label {
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.xtable th[draggable="true"] {
+    cursor: grab;
+}
+
+.xtable th[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+// Visual feedback while a dragged header is hovering a valid drop target (see
+// InanduGridComponent.isDragOverHeaderField/isDragOverGroupZone) — purely cosmetic, doesn't affect
+// which drops are actually accepted (a non-groupable column dropped on the group zone still no-ops).
+.inandu-group-zone.inandu-drag-over,
+.xtable th.inandu-drag-over {
+    outline: 2px dashed #1976d2;
+    outline-offset: -2px;
+    background-color: rgba(25, 118, 210, 0.08);
+}
+
+// Same visual treatment, applied to a whole `<tr>` while a dragged row hovers it as a drop target —
+// see InanduGridComponent.isDragOverRow/rowReorder.
+.xtable tr.inandu-drag-over {
+    outline: 2px dashed #1976d2;
+    outline-offset: -2px;
+}
+
+// The row-drag-handle column (see InanduGridComponent.rowReorder) — same "36px fallback only covers
+// a stripped custom property" caveat as `.inandu-select-column` above, mirrored via its own constant.
+.inandu-row-drag-column {
+    width: var(--inandu-row-drag-column-width, 32px);
+}
+
+.inandu-row-drag-cell {
+    text-align: center;
+    cursor: grab;
+}
+
+// Cell range selection (see InanduGridComponent.cellRangeSelection) — a lighter tint than the
+// drag-over outline treatment above, since a range can legitimately span many cells at once and a
+// dashed outline per cell would look noisy; `!important` isn't needed since this class is applied
+// directly on the same `<td>` a sticky column's opaque background lives on, at equal specificity,
+// declared later in the stylesheet so it wins the cascade for a cell that's both sticky and selected.
+.inandu-cell-range-selected {
+    background-color: rgba(25, 118, 210, 0.15);
+    cursor: cell;
+    user-select: none;
+}
+
+// The `36px` fallback here only covers a consumer who somehow strips the inline custom property
+// (e.g. copying just this rule out of context) — in normal use, `--inandu-select-column-width` is
+// always set by InanduGridComponent's own root-element style binding, sourced from the single
+// `SELECT_COLUMN_WIDTH` TS constant `stickyOffset()`'s math also reads, so the two can't drift apart.
+.inandu-select-column {
+    width: var(--inandu-select-column-width, 36px);
+}
+
+.inandu-select-cell {
+    text-align: center;
+}
+
+// `sticky` columns (see InanduColumnComponent.sticky) and the always-sticky select column above need an
+// opaque background — without one, non-sticky cells scrolled underneath would show through — plus a
+// z-index above the rest of the row so they render on top of that scrolled content while stuck.
+.inandu-sticky-column {
+    z-index: 1;
+    background-color: #fff;
+}
+
+// The `showTotals` grand-total footer row (see InanduGridComponent.showTotalsRow) — pinned to the
+// bottom of the grid's own scroll container via `position: sticky`, the mirror image of the sticky
+// header's `top: 0` treatment. Needs the same opaque background + z-index reasoning `.inandu-sticky-column`
+// documents above, since body rows scroll underneath it too.
+.inandu-totals-row td {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background-color: #fff;
+    font-weight: bold;
+    border-top: 2px solid #999;
+}
+
+// `position: sticky` has to be set via a selector at least as specific as `.xtable th`'s own
+// `position: relative` (needed for the resize handle/filter popup) — a bare `.inandu-sticky-column`
+// rule loses that cascade fight (equal-ish specificity, declared first) and silently falls back to
+// `position: relative`, which then applies the `left` offset as a *shift* instead of a sticky
+// threshold — the (previously real) bug this comment is here to stop from coming back.
+.xtable th.inandu-sticky-column,
+.xtable td.inandu-sticky-column {
+    position: sticky;
+}
+
+.inandu-group-row {
+    font-weight: 600;
+    background-color: #f0f0f0;
+}
+
+.inandu-group-aggregate {
+    margin-inline-start: 12px;
+    font-weight: normal;
+    font-size: 0.85em;
+    color: #555;
+}
+
+.inandu-loading-row td,
+.inandu-error-row td {
+    padding: 12px 8px;
+    text-align: center;
+}
+
+.inandu-error-row td {
+    color: #c62828;
+}
+
+.inandu-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.inandu-pager-button {
+    padding: 2px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1.4;
+}
+
+.inandu-pager-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.inandu-pager-label {
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.inandu-virtual-viewport {
+    display: block;
+    width: 100%;
+}
+
+// Keeps the header row visible while the body scrolls inside the viewport (the viewport is the
+// nearest `overflow` ancestor, so `position: sticky; top: 0` pins against it). Scoped to only
+// apply inside `.inandu-virtual-viewport` — the header markup itself is shared (via `#tableHead`)
+// with the non-virtualized table, which has no scrolling ancestor for this to stick against.
+// `background-color` is needed so rows scrolling underneath don't show through the sticky header.
+// Deliberately kept at the same (class, class, type) specificity as `.xtable th` (no extra `thead`
+// type selector) so a later `.inandu-theme-material`/`.inandu-theme-dark` `.xtable th` background
+// override — declared further down this file — still wins the cascade on a tie; combining
+// `virtualScroll` with a built-in theme keeps that theme's own header background, not this white
+// default. A known, accepted limitation, same posture as the sticky-column "leading run" caveat.
+.inandu-virtual-viewport .xtable th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #fff;
+}
+
+.inandu-caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+// Built-in `theme="..."` presets (see InanduGridComponent.theme). Plain CSS only — none of these
+// depend on @angular/material, even the Material-flavored one; consumers can add their own
+// `.inandu-theme-<name>` rules the same way for any theme name not built in here.
+
+.inandu-theme-material {
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    .xtable th {
+        background-color: #1976d2;
+        color: #fff;
+        border: none;
+        border-bottom: 2px solid #115293;
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.8em;
+        letter-spacing: 0.03em;
+    }
+
+    .xtable th .inandu-sort-button {
+        color: #fff;
+    }
+
+    .xtable td {
+        border: none;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .inandu-row:hover {
+        background-color: #f5f5f5;
+    }
+
+    .xtable th.inandu-sticky-column {
+        background-color: #1976d2;
+    }
+
+    .inandu-row:hover .inandu-sticky-column {
+        background-color: #f5f5f5;
+    }
+
+    .inandu-pager-button {
+        border-radius: 16px;
+        border-color: #1976d2;
+        color: #1976d2;
+    }
+
+    .inandu-filter-input {
+        border-radius: 4px;
+        border-color: #bdbdbd;
+    }
+
+    .inandu-filter-input:focus {
+        outline: none;
+        border-color: #1976d2;
+        box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+    }
+}
+
+.inandu-theme-dark {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-radius: 4px;
+
+    .xtable th {
+        background-color: #2a2a2a;
+        color: #fff;
+        border-color: #3a3a3a;
+    }
+
+    .xtable td {
+        border-color: #3a3a3a;
+    }
+
+    .inandu-row:hover {
+        background-color: #2a2a2a;
+    }
+
+    .xtable th.inandu-sticky-column {
+        background-color: #2a2a2a;
+    }
+
+    .xtable td.inandu-sticky-column {
+        background-color: #1e1e1e;
+    }
+
+    .inandu-row:hover .inandu-sticky-column {
+        background-color: #2a2a2a;
+    }
+
+    .inandu-sort-button,
+    .inandu-pager-button,
+    .inandu-pager-label {
+        color: #e0e0e0;
+    }
+
+    .inandu-pager-button {
+        border-color: #555;
+        background-color: #2a2a2a;
+    }
+
+    .inandu-filter-input,
+    .inandu-column-filter-input,
+    .inandu-cell-edit-input {
+        background-color: #2a2a2a;
+        color: #e0e0e0;
+        border-color: #555;
+    }
+
+    .inandu-cell-edit-input {
+        border-color: #6fb3f2;
+    }
+
+    .inandu-field-error {
+        color: #ef9a9a;
+    }
+
+    .inandu-column-filter-toggle {
+        color: #e0e0e0;
+    }
+
+    .inandu-column-filter-toggle-active {
+        color: #6fb3f2;
+    }
+
+    .inandu-column-filter-popup {
+        background: #2a2a2a;
+        border-color: #555;
+        color: #e0e0e0;
+    }
+
+    .inandu-column-filter-cancel {
+        color: #ccc;
+        border-color: #555;
+        background-color: #333;
+    }
+
+    .inandu-column-toggle-popup {
+        background: #2a2a2a;
+        border-color: #555;
+        color: #e0e0e0;
+    }
+
+    .inandu-group-zone {
+        border-color: #555;
+    }
+
+    .inandu-group-zone-hint {
+        color: #999;
+    }
+
+    .inandu-group-row {
+        background-color: #2a2a2a;
+    }
+
+    .inandu-group-aggregate {
+        color: #bbb;
+    }
+
+    .inandu-error-row td {
+        color: #ef9a9a;
+    }
+
+    .inandu-drag-over,
+    .xtable th.inandu-drag-over {
+        outline-color: #6fb3f2;
+        background-color: rgba(111, 179, 242, 0.12);
+    }
+
+    .inandu-sort-priority {
+        background-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .inandu-column-resize-handle:hover,
+    .inandu-column-resize-handle:active {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+}
+
+.inandu-theme-minimal {
+    .xtable th,
+    .xtable td {
+        border: none;
+        border-bottom: 1px solid #eee;
+    }
+
+    .xtable th {
+        font-weight: 600;
+        border-bottom: 2px solid #333;
+    }
+
+    .inandu-pager-button {
+        border: none;
+        background: transparent;
+    }
+
+    .inandu-filter-input {
+        border: none;
+        border-bottom: 1px solid #ccc;
+        border-radius: 0;
+        padding: 6px 2px;
+    }
+}

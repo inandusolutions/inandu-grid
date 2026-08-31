@@ -1,0 +1,56 @@
+name: Pages
+
+# Builds the demo app + bundles the user manual, deploys to GitHub Pages.
+#   https://inandusolutions.github.io/inandu-grid/            -> the live demo
+#   https://inandusolutions.github.io/inandu-grid/manual.html -> the user manual
+#
+# Pages "Source" must be set to "GitHub Actions" (not "Deploy from a branch").
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build library + demo
+        run: npm run build -- --base-href=/inandu-grid/
+
+      - name: Assemble the site
+        run: |
+          SRC=dist/grid-app/browser
+          [ -d "$SRC" ] || SRC=dist/grid-app
+          mkdir _site
+          cp -r "$SRC"/. _site/
+          cp docs/manual.html docs/screenshot.png _site/
+          cp _site/index.html _site/404.html   # SPA fallback
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

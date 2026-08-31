@@ -1,0 +1,54 @@
+{
+  "name": "@inandu-solutions/grid-angular",
+  "version": "1.0.0",
+  "description": "Standalone Angular data grid: sorting, free-text and per-column filtering, grouping, pagination, row virtualization, inline row editing/creation/deletion with validation, CSV/Excel/PDF export and print, i18n (5 languages) and 3 built-in themes, with a deliberately small dependency footprint.",
+  "keywords": [
+    "angular",
+    "angular-grid",
+    "angular-datagrid",
+    "angular-table",
+    "angular-component",
+    "data-grid",
+    "datagrid",
+    "grid",
+    "table",
+    "data-table",
+    "ag-grid-alternative",
+    "virtual-scroll",
+    "pagination",
+    "grouping",
+    "inline-editing",
+    "csv-export",
+    "excel-export",
+    "i18n",
+    "standalone",
+    "signals"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Inandu SAS",
+    "url": "https://inandu.com"
+  },
+  "homepage": "https://github.com/inandusolutions/inandu-grid#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inandusolutions/inandu-grid.git"
+  },
+  "bugs": {
+    "url": "https://github.com/inandusolutions/inandu-grid/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/core": "^21.2.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "@ngx-translate/core": "^18.0.0",
+    "jspdf": "^4.2.1",
+    "@angular/cdk": "^21.2.0"
+  },
+  "sideEffects": false
+}

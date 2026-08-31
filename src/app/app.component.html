@@ -1,0 +1,165 @@
+<style>
+  :host {
+    display: block;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1b1f24;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .demo {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .demo inandu-grid {
+    display: block;
+  }
+
+  /* Section labels: a 900px-wide centered block (matching the primary grid), so their
+     left edge lines up with the grid instead of stretching the full column width. */
+  .demo > span,
+  .demo > p {
+    align-self: center;
+    width: 900px;
+    max-width: 100%;
+  }
+
+  .demo > span {
+    display: block;
+    margin-top: 2rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #5c6470;
+  }
+
+  .demo > span:first-of-type {
+    margin-top: 0;
+  }
+
+  .demo p {
+    margin: 0.25rem 0 0.75rem;
+    color: #5c6470;
+  }
+
+  .demo br {
+    display: none;
+  }
+</style>
+
+<main class="demo">
+
+  <span>Empieza el componente grid con 4 columnas</span>
+
+  <p>{{ selectedCustomers().length }} cliente(s) seleccionado(s)</p>
+  <inandu-grid id="customers-grid" width="900" height="650" lang="es-AR" filter="true" selectable="true" exportable="true"
+    [data]="gridData" [paging]="customersPaging" (selectionChange)="onCustomersSelectionChange($event)">
+    <inandu-column title="Id" field="Id" width="100" resize="false" reorder="false"></inandu-column>
+    <inandu-column title="Nombre" field="Nombre" width="100" sortable="true"></inandu-column>
+    <inandu-column title="Apellido" field="Apellido" width="50"></inandu-column>
+    <inandu-column title="Ciudad" field="City" width="150" order="0" sortable="true" filter="yes" groupable="true" sticky="true"></inandu-column>
+    <inandu-column title="Puesto" field="ContactTitle" width="150" order="1" groupable="true"></inandu-column>
+    <inandu-column title="Activo" field="Activo" width="110" type="boolean" format="Sí|No" filter="yes"></inandu-column>
+    <inandu-column title="Alta" field="FechaAlta" width="220" type="date" format="DD/MM/YYYY HH:mm:ss" filter="yes"></inandu-column>
+    <inandu-column title="Ventas" field="Ventas" width="160" type="number" format="1.2-2" filter="yes"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con 4 columnas</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid solo para probar alta, edición y borrado por fila (datos locales, sin red) — "➕" agrega una fila (Producto y Precio son obligatorios, Precio no puede ser negativo), click en "Editar" o en "Eliminar" (🗑️, sin confirmación) a la derecha de una fila</span>
+
+  <p><strong>Último cambio:</strong> {{ lastActionSummary() || '(ninguno todavía)' }}</p>
+  <inandu-grid id="edit-demo-grid" width="800" height="250" lang="es-AR" deletable="true" creatable="true" rowReorder="true" showTotals="true"
+    [data]="editDemoData()" (rowSave)="onEditDemoRowSave($event)" (rowDelete)="onEditDemoRowDelete($event)" (rowCreate)="onEditDemoRowCreate($event)" (rowOrderChange)="onEditDemoRowOrderChange($event)">
+    <inandu-column title="Id" field="id" width="50" type="number"></inandu-column>
+    <inandu-column title="Producto" field="product" width="200" editable="true" required="true"></inandu-column>
+    <inandu-column title="Precio" field="price" width="120" type="number" format="1.2-2" editable="true" required="true" min="0" aggregate="sum"></inandu-column>
+    <inandu-column title="En stock" field="inStock" width="100" type="boolean" format="Sí|No" editable="true"></inandu-column>
+    <inandu-column title="Reposición" field="restock" width="130" type="date" format="DD/MM/YYYY" editable="true"></inandu-column>
+    <ng-template let-row>
+      <button type="button" class="inandu-pager-button" (click)="onEditDemoRowDuplicate(row)">Duplicar</button>
+    </ng-template>
+  </inandu-grid>
+
+  <span>Termina el componente grid solo para alta, edición y borrado</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid con datos dinámicos (GET a jsonplaceholder.typicode.com/users) — click en "Editar" a la derecha de una fila (Nombre es obligatorio; POST a la misma API al guardar), o en "Eliminar" (🗑️, pide confirmación) para un DELETE</span>
+
+  <inandu-grid id="users-grid" width="950" height="250" lang="zh-CN" filter="true" filterPlaceholder="Buscar usuario..."
+    deletable="true" deleteConfirmMessage="¿Eliminar este usuario?"
+    [data]="apiGridData()" [paging]="usersPaging" (rowSave)="onApiRowSave($event)" (rowDelete)="onApiRowDelete($event)">
+    <inandu-column title="Id" field="id" width="50" type="number"></inandu-column>
+    <inandu-column title="Nombre" field="name" width="150" sortable="true" editable="true" required="true"></inandu-column>
+    <inandu-column title="Usuario" field="username" width="120"></inandu-column>
+    <inandu-column title="Email" field="email" width="180" sortable="true"></inandu-column>
+    <inandu-column title="Teléfono" field="phone" width="150"></inandu-column>
+    <inandu-column title="Activo" field="active" width="90" type="boolean" format="Activo|Inactivo" editable="true"></inandu-column>
+    <inandu-column title="Alta" field="joined" width="100" type="date" format="DD/MM/YYYY HH:mm:ss"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con datos dinámicos</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid con virtualScroll="true" (5000 filas — solo las filas visibles del viewport de {{ 300 }}px se renderizan en el DOM, sin paginar; probá ordenar por "Precio" para confirmar que igual ordena sobre las 5000, o arrastrar "Categoría" a la zona de agrupar para confirmar que virtualScroll también sigue funcionando agrupado)</span>
+
+  <inandu-grid id="virtual-scroll-grid" width="700" height="300" lang="es-AR" virtualScroll="true" [data]="virtualScrollData">
+    <inandu-column title="Id" field="id" width="70" type="number"></inandu-column>
+    <inandu-column title="Producto" field="product" width="180" sortable="true"></inandu-column>
+    <inandu-column title="Categoría" field="category" width="150" sortable="true" groupable="true"></inandu-column>
+    <inandu-column title="Precio" field="price" width="120" type="number" format="1.2-2" sortable="true" aggregate="sum"></inandu-column>
+    <inandu-column title="En stock" field="inStock" width="100" type="boolean" format="Sí|No"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con virtualScroll="true"</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid con theme "material"</span>
+
+  <inandu-grid id="material-grid" width="700" height="300" theme="material" [data]="gridData" [paging]="themeDemoPaging">
+    <inandu-column title="Id" field="Id" width="100"></inandu-column>
+    <inandu-column title="Nombre" field="Nombre" width="150" sortable="true"></inandu-column>
+    <inandu-column title="Ciudad" field="City" width="150"></inandu-column>
+    <inandu-column title="Activo" field="Activo" width="80" type="boolean" format="Sí|No"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con theme "material"</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid con theme "dark"</span>
+
+  <inandu-grid id="dark-grid" width="700" height="300" theme="dark" [data]="gridData" [paging]="themeDemoPaging">
+    <inandu-column title="Id" field="Id" width="100"></inandu-column>
+    <inandu-column title="Nombre" field="Nombre" width="150" sortable="true"></inandu-column>
+    <inandu-column title="Ciudad" field="City" width="150"></inandu-column>
+    <inandu-column title="Activo" field="Activo" width="80" type="boolean" format="Sí|No"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con theme "dark"</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid con theme "minimal"</span>
+
+  <inandu-grid id="minimal-grid" width="700" height="300" theme="minimal" [data]="gridData" [paging]="themeDemoPaging">
+    <inandu-column title="Id" field="Id" width="100"></inandu-column>
+    <inandu-column title="Nombre" field="Nombre" width="150" sortable="true"></inandu-column>
+    <inandu-column title="Ciudad" field="City" width="150"></inandu-column>
+    <inandu-column title="Activo" field="Activo" width="80" type="boolean" format="Sí|No"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con theme "minimal"</span>
+
+</main>
+
+<router-outlet />

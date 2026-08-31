@@ -1,0 +1,54 @@
+name: Bug report
+description: Something in @inandu-solutions/grid-angular doesn't work as documented
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please search existing issues first.
+        For security issues, do **not** file here — see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: >
+        A StackBlitz link, a small repo, or the smallest template + component
+        snippet that shows the problem. Bugs without a reproduction may be closed.
+      render: html
+    validations:
+      required: true
+  - type: input
+    id: grid-version
+    attributes:
+      label: "@inandu-solutions/grid-angular version"
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: angular-version
+    attributes:
+      label: Angular version
+      placeholder: 21.2.0
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Browser / OS
+      placeholder: Chrome 152 / Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Console errors, screenshots, notes.
+    validations:
+      required: false

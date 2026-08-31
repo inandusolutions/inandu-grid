@@ -1,0 +1,68 @@
+name: CI
+
+# Assumes this repo's root is the Angular workspace (package.json, angular.json
+# at the top level) — i.e. the contents of `grid-app/` from the development
+# monorepo. If the workspace lives in a subdirectory, add `defaults.run.working-directory`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build library
+        run: npm run build:lib
+
+      - name: Unit tests (library)
+        run: npm run test:lib -- --watch=false --browsers=ChromeHeadlessCI
+
+      - name: Unit tests (demo app)
+        run: npm test -- --watch=false --browsers=ChromeHeadlessCI
+
+      - name: Build (library + app)
+        run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        # playwright.config.ts's webServer builds the library and serves the demo on :4202.
+        run: npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

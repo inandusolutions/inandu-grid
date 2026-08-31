@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@inandu-solutions/grid-angular — User Manual</title>
+<style>
+  :root {
+    --paper: #fbfaf7;
+    --surface: #f4f2ec;
+    --surface-2: #efece3;
+    --ink: #1b1f24;
+    --muted: #5c6470;
+    --accent: #0e7c74;
+    --accent-ink: #0a5952;
+    --accent-soft: #e2efed;
+    --rule: #e4e1d9;
+    --code-bg: #f0ede5;
+    --warn: #a9541a;
+    --warn-soft: #f6ece1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #15181b;
+      --surface: #1d2126;
+      --surface-2: #232830;
+      --ink: #e7e4dd;
+      --muted: #9aa1ab;
+      --accent: #4fb3aa;
+      --accent-ink: #7fccc4;
+      --accent-soft: #1f2e2c;
+      --rule: #2c3237;
+      --code-bg: #23282d;
+      --warn: #d69b63;
+      --warn-soft: #2b2419;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .layout {
+    max-width: 1140px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 2.5rem;
+    padding: 0 1.25rem;
+  }
+
+  /* ---- sidebar nav ---- */
+  nav.toc {
+    align-self: start;
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 1.5rem 0.5rem 3rem 0;
+    font-size: 0.86rem;
+  }
+  nav.toc .brand {
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.15rem;
+  }
+  nav.toc .brand .mono { font-family: "Consolas", monospace; color: var(--accent-ink); }
+  nav.toc .ver { color: var(--muted); font-size: 0.75rem; margin-bottom: 1rem; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: sec; }
+  nav.toc > ol > li { margin: 0.1rem 0; }
+  nav.toc a {
+    display: block;
+    padding: 0.25rem 0.5rem;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 5px;
+    border-left: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); background: var(--surface); }
+  nav.toc > ol > li > a::before {
+    counter-increment: sec;
+    content: counter(sec) ". ";
+    color: var(--accent);
+    font-family: "Consolas", monospace;
+  }
+
+  main {
+    padding: 2.5rem 0 6rem;
+    min-width: 0;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.4rem;
+  }
+  .lead {
+    font-size: 1.1rem;
+    color: var(--muted);
+    margin: 0 0 2.5rem;
+    max-width: 62ch;
+  }
+
+  section { scroll-margin-top: 1rem; }
+  h2 {
+    font-size: 1.55rem;
+    margin: 3.5rem 0 1rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 2px solid var(--accent);
+    letter-spacing: -0.01em;
+  }
+  section:first-of-type h2 { margin-top: 0; }
+  h3 { font-size: 1.15rem; margin: 2rem 0 0.6rem; }
+  h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 1.4rem 0 0.4rem;
+  }
+  p { margin: 0 0 1rem; }
+  ul, ol.list { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin: 0.3rem 0; }
+
+  a { color: var(--accent-ink); text-underline-offset: 2px; }
+
+  code {
+    font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+    font-size: 0.86em;
+    background: var(--accent-soft);
+    color: var(--ink);
+    padding: 0.1em 0.38em;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    margin: 0 0 1.2rem;
+    font-size: 0.84rem;
+    line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+  .c { color: var(--muted); }
+  .k { color: var(--accent-ink); }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--rule); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 520px; }
+  th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th { background: var(--surface); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  tbody tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+  td:first-child code { font-weight: 600; }
+
+  .note, .warn {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 8px 8px 0;
+    padding: 0.85rem 1.1rem;
+    margin: 0 0 1.2rem;
+    font-size: 0.94rem;
+  }
+  .note > :last-child, .warn > :last-child { margin-bottom: 0; }
+  .warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note .label, .warn .label {
+    font-family: "Consolas", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+  .warn .label { color: var(--warn); }
+
+  .pill {
+    display: inline-block;
+    font-family: "Consolas", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    padding: 0.1em 0.5em;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+    vertical-align: 0.12em;
+    margin-left: 0.4rem;
+  }
+  .pill.opt-in { background: var(--accent-soft); color: var(--accent-ink); }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    margin-top: 4rem;
+    padding-top: 1.2rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    nav.toc {
+      position: static;
+      max-height: none;
+      overflow: visible;
+      padding: 1.5rem 0 0.5rem;
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 1rem;
+    }
+    nav.toc ol { columns: 2; column-gap: 1.5rem; }
+    main { padding-top: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <p class="brand"><span class="mono">@inandu-solutions/grid-angular</span></p>
+    <p class="ver">User manual · v1.0.0</p>
+    <ol>
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+      <li><a href="#data">Data &amp; rows</a></li>
+      <li><a href="#columns">Columns</a></li>
+      <li><a href="#types">Cell types &amp; formatting</a></li>
+      <li><a href="#sorting">Sorting</a></li>
+      <li><a href="#filtering">Filtering</a></li>
+      <li><a href="#pagination">Pagination</a></li>
+      <li><a href="#virtual">Virtual scroll</a></li>
+      <li><a href="#serverside">Server-side mode</a></li>
+      <li><a href="#infinite">Infinite scroll</a></li>
+      <li><a href="#grouping">Grouping</a></li>
+      <li><a href="#aggregates">Aggregates &amp; totals</a></li>
+      <li><a href="#column-ui">Resize · reorder · visibility · sticky</a></li>
+      <li><a href="#selection">Row selection</a></li>
+      <li><a href="#editing">Editing, creation &amp; deletion</a></li>
+      <li><a href="#validation">Validation</a></li>
+      <li><a href="#rowreorder">Row reorder</a></li>
+      <li><a href="#clipboard">Clipboard &amp; cell ranges</a></li>
+      <li><a href="#templates">Custom templates</a></li>
+      <li><a href="#export">Export &amp; print</a></li>
+      <li><a href="#i18n">Internationalization</a></li>
+      <li><a href="#rtl">RTL</a></li>
+      <li><a href="#theming">Theming</a></li>
+      <li><a href="#state">State persistence</a></li>
+      <li><a href="#a11y">Keyboard &amp; accessibility</a></li>
+      <li><a href="#api">API reference</a></li>
+      <li><a href="#limitations">Known limitations</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <h1>@inandu-solutions/grid-angular — User Manual</h1>
+    <p class="lead">A standalone Angular data grid built from two components. No <code>NgModule</code>s,
+      signal-based inputs and outputs, every feature opt-in, and a deliberately small dependency footprint.</p>
+
+    <!-- 1 -->
+    <section id="intro">
+      <h2>1. Introduction</h2>
+      <p><code>@inandu-solutions/grid-angular</code> renders a <code>&lt;table&gt;</code> from a plain array of row objects. You
+        compose it from two standalone components:</p>
+      <ul>
+        <li><code>&lt;inandu-grid&gt;</code> — the grid itself; you bind <code>[data]</code> and turn features on with inputs.</li>
+        <li><code>&lt;inandu-column&gt;</code> — one per column, projected between the grid's tags. It renders nothing itself; the grid reads these as configuration.</li>
+      </ul>
+      <h4>Design principles</h4>
+      <ul>
+        <li><strong>Opt-in.</strong> Out of the box you get a plain sortless, filterless table. Each capability is a single attribute.</li>
+        <li><strong>The grid never mutates your data.</strong> Edits, deletes, reorders and pastes are emitted as events — you decide whether and how to persist them.</li>
+        <li><strong>Self-contained.</strong> No dependency on Angular Material or any theming engine. Internal dependencies (<code>@angular/cdk</code>, <code>@ngx-translate/core</code>, <code>jspdf</code>) are implementation details you never configure.</li>
+        <li><strong>Rows are identified by object reference.</strong> There is no row-id concept — keep your row objects stable across re-renders (a static array or a signal you update immutably both qualify).</li>
+      </ul>
+    </section>
+
+    <!-- 2 -->
+    <section id="install">
+      <h2>2. Installation</h2>
+      <pre><code>npm install @inandu-solutions/grid-angular</code></pre>
+      <h4>Peer dependencies</h4>
+      <p><code>@angular/core</code> and <code>@angular/common</code> <code>^21.2.0</code> — you almost certainly already have them.</p>
+      <h4>Bundled dependencies (nothing to configure)</h4>
+      <ul>
+        <li><code>@angular/cdk</code> — virtual scroll.</li>
+        <li><code>@ngx-translate/core</code> — internal i18n; each grid instance gets its own isolated translation service.</li>
+        <li><code>jspdf</code> — PDF export, dynamically imported only when <code>exportPdf()</code> is actually called.</li>
+        <li><code>tslib</code>.</li>
+      </ul>
+    </section>
+
+    <!-- 3 -->
+    <section id="quickstart">
+      <h2>3. Quick start</h2>
+      <p>Both components are standalone — add them to your component's <code>imports</code>:</p>
+      <pre><code><span class="k">import</span> { Component } <span class="k">from</span> <span class="c">'@angular/core'</span>;
+<span class="k">import</span> { InanduGridComponent, InanduColumnComponent, InanduGridRow } <span class="k">from</span> <span class="c">'@inandu-solutions/grid-angular'</span>;
+
+@Component({
+  selector: <span class="c">'app-people'</span>,
+  imports: [InanduGridComponent, InanduColumnComponent],
+  template: `
+    &lt;inandu-grid
+      [data]="rows"
+      [paging]="{ pageSize: 10 }"
+      filter="true"
+      lang="en"&gt;
+      &lt;inandu-column field="name"   title="Name"   sortable="true"&gt;&lt;/inandu-column&gt;
+      &lt;inandu-column field="age"    title="Age"    type="number"  sortable="true"&gt;&lt;/inandu-column&gt;
+      &lt;inandu-column field="joined" title="Joined" type="date"    format="DD/MM/YYYY"&gt;&lt;/inandu-column&gt;
+      &lt;inandu-column field="active" title="Active" type="boolean" format="Yes|No"&gt;&lt;/inandu-column&gt;
+    &lt;/inandu-grid&gt;
+  `,
+})
+<span class="k">export class</span> PeopleComponent {
+  rows: InanduGridRow[] = [
+    { name: <span class="c">'Ada Lovelace'</span>, age: 36, joined: <span class="k">new</span> Date(2021, 2, 14), active: <span class="k">true</span> },
+    { name: <span class="c">'Alan Turing'</span>,  age: 41, joined: <span class="k">new</span> Date(2019, 8, 1),  active: <span class="k">false</span> },
+  ];
+}</code></pre>
+      <div class="note"><span class="label">Note</span>
+        Numeric string attributes such as <code>width="400"</code> and boolean-ish attributes such as
+        <code>sortable="true"</code> / bare <code>sortable</code> / <code>filter="yes"</code> are coerced for you.
+        Anything other than the literal string <code>"false"</code> counts as "on".</div>
+    </section>
+
+    <!-- 4 -->
+    <section id="data">
+      <h2>4. Data &amp; rows</h2>
+      <p><code>[data]</code> takes <code>InanduGridRow[]</code>, where <code>InanduGridRow</code> is just
+        <code>Record&lt;string, unknown&gt;</code>. Bind an array or a signal's value:</p>
+      <pre><code>&lt;inandu-grid [data]="rows()"&gt; … &lt;/inandu-grid&gt;</code></pre>
+      <h4>Generic row typing</h4>
+      <p><code>InanduGridComponent&lt;T&gt;</code> infers <code>T</code> from <code>[data]</code>, so every
+        row-bearing output is typed as your row type instead of the untyped default:</p>
+      <pre><code><span class="k">interface</span> Customer { id: <span class="k">number</span>; name: <span class="k">string</span>; }
+<span class="c">// rows: Customer[]  →  (rowSave)="save($event)" gives you { row: Customer, values: Partial&lt;Customer&gt; }</span></code></pre>
+      <p>This does <em>not</em> extend into <code>&lt;inandu-column field="…"&gt;</code> — the field name is a
+        plain string and is not checked against <code>T</code>.</p>
+      <div class="note"><span class="label">Contract</span>
+        The grid consumes a plain array only. Fetching, HTTP, and persistence live in your app — handle the
+        grid's output events and update your own array (and/or your backend) however you like.</div>
+    </section>
+
+    <!-- 5 -->
+    <section id="columns">
+      <h2>5. Columns</h2>
+      <p>Every column is one <code>&lt;inandu-column&gt;</code>. The only required input is <code>field</code>.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Input</th><th>Type</th><th>Default</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>field</code></td><td><code>string</code> (required)</td><td>—</td><td>Key read from each row object.</td></tr>
+          <tr><td><code>title</code></td><td><code>string</code></td><td><code>''</code></td><td>Header text. Falls back to <code>field</code> when empty.</td></tr>
+          <tr><td><code>width</code></td><td><code>number</code></td><td><code>0</code></td><td>Initial column width in px (0 = auto).</td></tr>
+          <tr><td><code>order</code></td><td><code>number</code></td><td>unset</td><td>0-based target slot. See below.</td></tr>
+        </tbody>
+      </table></div>
+      <h4>The <code>order</code> input</h4>
+      <p><code>order</code> is a <strong>target position, not a sort key</strong>. Columns with an explicit
+        <code>order</code> land at that 0-based slot (ties and out-of-range values fall back to declaration
+        order); columns without one fill the remaining slots in declaration order. So
+        <code>order="0"</code> / <code>order="1"</code> on two columns puts them first and second no matter
+        where they appear in the template.</p>
+    </section>
+
+    <!-- 6 -->
+    <section id="types">
+      <h2>6. Cell types &amp; formatting</h2>
+      <p><code>&lt;inandu-column type="…" format="…"&gt;</code> controls how a raw cell value is displayed.
+        <code>type</code> defaults to <code>'string'</code>. <code>null</code> / <code>undefined</code>
+        always render as an empty string regardless of type.</p>
+
+      <h3><code>type="number"</code></h3>
+      <p><code>format</code> is a <code>DecimalPipe</code>-style digits string:
+        <code>'{minIntegerDigits}.{minFractionDigits}-{maxFractionDigits}'</code>. Thousands and decimal
+        separators come from the app's <code>LOCALE_ID</code> — they are not part of <code>format</code>.
+        Defaults to <code>'1.0-3'</code>.</p>
+      <pre><code>&lt;inandu-column field="price" type="number" format="1.2-2"&gt;&lt;/inandu-column&gt;
+<span class="c">// 1234.5  →  "1,234.50"  (en-US)   /   "1.234,50"  (es-*)</span></code></pre>
+
+      <h3><code>type="date"</code></h3>
+      <p><code>format</code> is a <strong>case-sensitive</strong> token pattern using the field names from
+        the ECMA-262 Date Time String Format — <em>not</em> Angular's <code>DatePipe</code> tokens.
+        Any other character passes through literally. Defaults to <code>'YYYY-MM-DD'</code>.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Token</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>YYYY</code></td><td>Full year</td></tr>
+          <tr><td><code>MM</code></td><td>Month (01–12) — <strong>capital</strong></td></tr>
+          <tr><td><code>DD</code></td><td>Day of month</td></tr>
+          <tr><td><code>HH</code></td><td>Hours (00–23)</td></tr>
+          <tr><td><code>mm</code></td><td>Minutes — <strong>lowercase</strong></td></tr>
+          <tr><td><code>ss</code></td><td>Seconds</td></tr>
+          <tr><td><code>sss</code></td><td>Milliseconds</td></tr>
+        </tbody>
+      </table></div>
+      <pre><code>&lt;inandu-column field="joined" type="date" format="DD/MM/YYYY HH:mm"&gt;&lt;/inandu-column&gt;
+<span class="c">// →  "31/12/2025 23:59"</span></code></pre>
+      <p>The raw value may be a <code>Date</code>, an ISO string, or a timestamp. A space-separated
+        <code>"YYYY-MM-DD HH:mm"</code> is normalised to the ISO <code>T</code> form before parsing, so it
+        renders consistently across browsers (Safari's date parser rejects the space form). Unparseable
+        values fall back to <code>String(value)</code>.</p>
+
+      <h3><code>type="boolean"</code></h3>
+      <p><code>format</code> is <code>'&lt;truthy&gt;|&lt;falsy&gt;'</code>, split on <code>|</code>. Defaults to <code>'true|false'</code>.</p>
+      <pre><code>&lt;inandu-column field="active" type="boolean" format="Sí|No"&gt;&lt;/inandu-column&gt;</code></pre>
+    </section>
+
+    <!-- 7 -->
+    <section id="sorting">
+      <h2>7. Sorting <span class="pill opt-in">per column</span></h2>
+      <p><code>&lt;inandu-column sortable="true"&gt;</code> renders a sort button in that header.</p>
+      <ul>
+        <li><strong>Plain click</strong> — sorts ascending; a second click on the same column flips to descending; clicking a different column resets to ascending on the new one. There is no third "clear" click.</li>
+        <li><strong>Shift-click</strong> — appends the column as an additional, lower-priority sort criterion (or flips its direction if already active), building a multi-column sort. A small priority badge (1, 2, 3…) appears once two or more criteria are active.</li>
+      </ul>
+      <p>Comparison: numeric subtraction for two numbers, <code>.getTime()</code> for two <code>Date</code>s,
+        otherwise <code>localeCompare</code> following the app's <code>LOCALE_ID</code>. Nullish values sort first.</p>
+      <p>Programmatic control: <code>setSort(criteria)</code> / <code>clearSort()</code>. Any sort change
+        resets pagination to page 1.</p>
+    </section>
+
+    <!-- 8 -->
+    <section id="filtering">
+      <h2>8. Filtering</h2>
+
+      <h3>Free-text search <span class="pill opt-in">grid</span></h3>
+      <p><code>&lt;inandu-grid filter="true"&gt;</code> adds a single search box above the header row. It matches
+        the query as a substring against every visible column's <em>formatted</em> value (so searching
+        "sí" matches a boolean column formatted <code>Sí|No</code>). <code>filterPlaceholder</code>
+        overrides the placeholder text.</p>
+
+      <h3>Per-column filters <span class="pill opt-in">per column</span></h3>
+      <p><code>&lt;inandu-column filter="yes"&gt;</code> adds a funnel button to that header opening a small popup.
+        Several columns can have it at once; the filters combine with AND, and also AND with the free-text
+        search if that is on. Only one popup is open at a time; a document click outside it closes it.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Column <code>type</code></th><th>Control</th><th>Matches</th></tr></thead>
+        <tbody>
+          <tr><td><code>string</code> (default)</td><td>text input</td><td>substring of the <strong>formatted</strong> value</td></tr>
+          <tr><td><code>number</code></td><td>min / max inputs</td><td>inclusive range on the <strong>raw</strong> number</td></tr>
+          <tr><td><code>date</code></td><td>from / to date pickers</td><td>inclusive range on the raw <code>Date</code> (<code>to</code> covers the whole day)</td></tr>
+          <tr><td><code>boolean</code></td><td>all / true / false select</td><td>exact equality (option labels come from the column's <code>format</code>)</td></tr>
+        </tbody>
+      </table></div>
+      <p>The full pipeline is <strong>data → free-text filter → column filters → sort → paginate</strong>.
+        Any filter change resets pagination to page 1.</p>
+    </section>
+
+    <!-- 9 -->
+    <section id="pagination">
+      <h2>9. Pagination <span class="pill opt-in">grid</span></h2>
+      <p>Bind the <code>paging</code> input to an <code>InanduGridPagingOptions</code> object. Pagination is
+        off (every row renders) when <code>paging</code> is not bound at all; binding <em>any</em> object —
+        even <code>{}</code> — turns it on.</p>
+      <pre><code>readonly paging: InanduGridPagingOptions = { pageSize: 25 };
+
+&lt;inandu-grid [data]="rows" [paging]="paging"&gt; … &lt;/inandu-grid&gt;</code></pre>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>pageSize</code></td><td><code>number</code></td><td><code>10</code></td></tr>
+          <tr><td><code>showFirstButton</code> … <code>showLastButton</code></td><td><code>boolean</code> ×4</td><td><code>true</code></td></tr>
+          <tr><td><code>firstLabel</code> … <code>lastLabel</code></td><td><code>string</code> ×4</td><td>unset → built-in chevron icon</td></tr>
+          <tr><td><code>pageLabel</code></td><td><code>(page, totalPages) =&gt; string</code></td><td>the resolved language's "Page X of Y"</td></tr>
+        </tbody>
+      </table></div>
+      <p>Setting a <code>*Label</code> renders that string literally instead of the icon. Nav buttons carry
+        translated <code>aria-label</code>s regardless of any custom glyph.</p>
+    </section>
+
+    <!-- 10 -->
+    <section id="virtual">
+      <h2>10. Virtual scroll <span class="pill opt-in">grid</span></h2>
+      <p><code>virtualScroll</code> renders only the rows currently in view (plus a small runway), via
+        <code>@angular/cdk</code>. It takes over from pagination entirely — the full sorted/filtered set is
+        fed to the viewport and the pager footer hides itself.</p>
+      <pre><code>&lt;inandu-grid [data]="rows" virtualScroll="true" [height]="400"&gt; … &lt;/inandu-grid&gt;</code></pre>
+      <ul>
+        <li>The viewport needs a bounded height — it reuses the <code>height</code> input (falling back to <code>400</code>).</li>
+        <li><code>virtualRowHeight</code> is an optional px override. Left unset, the grid auto-measures its first rendered row.</li>
+        <li>Works while grouped too (group headers are interleaved into the virtual list), assuming a uniform row height.</li>
+      </ul>
+    </section>
+
+    <!-- 11 -->
+    <section id="serverside">
+      <h2>11. Server-side mode <span class="pill opt-in">grid</span></h2>
+      <p>When <code>serverSide</code> is on, the grid stops sorting, filtering and slicing locally —
+        <code>data()</code> is trusted to be the current page, already processed by your server. Instead
+        the grid emits an event whenever the user changes the relevant control, <strong>including once on
+        init</strong> so you can drive the first fetch from it.</p>
+      <pre><code>&lt;inandu-grid
+  [data]="pageRows()"
+  serverSide="true"
+  [totalItems]="total()"
+  [loading]="loading()"
+  [error]="error()"
+  [paging]="{ pageSize: 50 }"
+  (sortChange)="onSort($event)"
+  (pageChange)="onPage($event)"
+  (filterChange)="onFilter($event)"&gt;
+  …
+&lt;/inandu-grid&gt;</code></pre>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Input / output</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>totalItems</code></td><td>Total row count across all pages — the pager needs it to compute page count. Falls back to <code>data().length</code>.</td></tr>
+          <tr><td><code>loading</code></td><td>Shows a loading row instead of data; disables the export toolbar.</td></tr>
+          <tr><td><code>error</code></td><td>Non-empty string → shows an error row (verbatim; translate it yourself). Wins over <code>loading</code>.</td></tr>
+          <tr><td><code>(sortChange)</code></td><td><code>InanduGridSortCriterion[]</code> — ordered, index 0 first. Empty array = no sort.</td></tr>
+          <tr><td><code>(pageChange)</code></td><td><code>{ page, pageSize }</code></td></tr>
+          <tr><td><code>(filterChange)</code></td><td><code>{ query, columnFilters }</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 12 -->
+    <section id="infinite">
+      <h2>12. Infinite scroll <span class="pill opt-in">grid</span></h2>
+      <p><code>infiniteScroll</code> is a no-op unless <code>virtualScroll</code> <strong>and</strong>
+        <code>serverSide</code> are both on. As the user scrolls within <code>infiniteScrollThreshold</code>
+        rows (default 10) of the end of the loaded data, the grid emits <code>(loadMore)</code> with
+        <code>{ loadedCount }</code> — you fetch the next chunk and <em>append</em> it to <code>data()</code>.
+        It fires at most once per distinct <code>data().length</code>.</p>
+    </section>
+
+    <!-- 13 -->
+    <section id="grouping">
+      <h2>13. Grouping <span class="pill opt-in">per column</span></h2>
+      <p><code>&lt;inandu-column groupable="true"&gt;</code> makes that header draggable onto a drop zone that
+        appears at the top of the grid. Dropping it groups every row by that column's <em>formatted</em>
+        value; dropping a different groupable column switches the grouping. Grouping bypasses pagination —
+        every row shows, in groups, with a per-group header row.</p>
+      <p>Programmatic: <code>setGroupBy(field)</code> (validates against groupable columns) /
+        <code>setGroupBy(undefined)</code> to clear.</p>
+    </section>
+
+    <!-- 14 -->
+    <section id="aggregates">
+      <h2>14. Aggregates &amp; totals</h2>
+      <p><code>&lt;inandu-column aggregate="sum"&gt;</code> (<code>sum</code> · <code>avg</code> · <code>min</code>
+        · <code>max</code> · <code>count</code>) drives two things from the same config:</p>
+      <ul>
+        <li>A <strong>per-group subtotal</strong> shown in each group header row while grouped.</li>
+        <li>With grid-level <code>showTotals</code>, a <strong>grand total</strong> across the whole
+          filtered/sorted set in a sticky footer row.</li>
+      </ul>
+      <p>Non-numeric, blank, <code>null</code> and boolean cells are ignored by <code>sum</code>/<code>avg</code>/<code>min</code>/<code>max</code>
+        (a genuine numeric string still counts); <code>count</code> counts rows. The aggregate kind is
+        shown as a short symbol (<code>Σ</code> / <code>x̄</code> / <code>min</code> / <code>max</code> /
+        <code>#</code>), not a translated word. <code>showTotals</code> is ignored while
+        <code>virtualScroll</code> is on.</p>
+    </section>
+
+    <!-- 15 -->
+    <section id="column-ui">
+      <h2>15. Resize · reorder · visibility · sticky</h2>
+
+      <h3>Resize <span class="pill">opt-out</span></h3>
+      <p>Every column is resizable by default. <code>&lt;inandu-column resize="false"&gt;</code> pins the
+        width. Dragging the handle at a header's edge <strong>overrides</strong> that column's initial
+        <code>width</code> and persists across sort/filter/page changes.</p>
+
+      <h3>Reorder <span class="pill">opt-out</span></h3>
+      <p>Every column is draggable to a new position by default. <code>&lt;inandu-column reorder="false"&gt;</code>
+        pins a column in place — other columns can still be dropped next to it, it just can't be picked up.
+        A dropped column always lands immediately before the drop target.</p>
+
+      <h3>Visibility toggle <span class="pill opt-in">grid</span></h3>
+      <p><code>&lt;inandu-grid columnToggle="true"&gt;</code> adds a toolbar button opening a checklist of
+        columns. <code>&lt;inandu-column hideable="false"&gt;</code> keeps a column out of that list (it can
+        never be hidden). Hiding is refused once only one column is still visible. A hidden column is
+        excluded from filters, editing, grouping <em>and</em> export output.</p>
+
+      <h3>Sticky columns <span class="pill opt-in">per column</span></h3>
+      <p><code>&lt;inandu-column sticky="true"&gt;</code> freezes a column while the grid scrolls horizontally.
+        <code>stickySide="right"</code> freezes it to the right edge instead of the left. The selection
+        checkbox column is always sticky-left when <code>selectable</code> is on.</p>
+      <div class="warn"><span class="label">Limitation</span>
+        For predictable results, sticky columns should form a contiguous run from the first column
+        (or the last, for <code>stickySide="right"</code>). A lone sticky column outside that run can
+        visually overlap non-sticky columns mid-scroll — this is how CSS <code>position: sticky</code>
+        works, not something the library detects.</div>
+    </section>
+
+    <!-- 16 -->
+    <section id="selection">
+      <h2>16. Row selection <span class="pill opt-in">grid</span></h2>
+      <p><code>&lt;inandu-grid selectable="true"&gt;</code> prepends a checkbox column (header "select all" +
+        one per row) and emits the live selection through <code>(selectionChange)</code> as
+        <code>T[]</code>.</p>
+      <ul>
+        <li>Selection is tracked by object reference and is <strong>not</strong> cleared on sort/filter/page changes — rows keep their checked state as they move around.</li>
+        <li>The header checkbox selects/clears the currently <em>visible</em> rows (the current page, or every group's rows while grouped / virtualized), and shows a tri-state <code>indeterminate</code>.</li>
+        <li>Programmatic: <code>selectRows(rows)</code> / <code>deselectAll()</code>; read <code>selectedRowsList()</code>.</li>
+      </ul>
+      <p>Bulk delete: with <code>selectable</code> + <code>deletable</code>, a "Delete selected" toolbar
+        button appears while at least one row is selected. It optionally confirms via
+        <code>bulkDeleteConfirmMessage</code>, emits <code>(rowsDelete)</code> with the selected rows,
+        then clears the selection.</p>
+    </section>
+
+    <!-- 17 -->
+    <section id="editing">
+      <h2>17. Editing, creation &amp; deletion</h2>
+      <p>These share a trailing "actions" column. It renders when any column is <code>editable</code>, or
+        the grid is <code>deletable</code> / <code>creatable</code>, or a <code>rowActionsTemplate</code>
+        is provided.</p>
+
+      <h3>Inline editing <span class="pill opt-in">per column</span></h3>
+      <p><code>&lt;inandu-column editable="true"&gt;</code>. Editing is per <strong>row</strong>: an "Edit"
+        button per row switches every editable field in that row into a type-aware control at once and
+        swaps in Save / Cancel. Only one row edits at a time; other rows' Edit and Delete buttons disable
+        meanwhile.</p>
+      <pre><code>&lt;inandu-grid [data]="rows" (rowSave)="onSave($event)"&gt;
+  &lt;inandu-column field="name"  editable="true"&gt;&lt;/inandu-column&gt;
+  &lt;inandu-column field="price" type="number" editable="true"&gt;&lt;/inandu-column&gt;
+&lt;/inandu-grid&gt;
+
+onSave(e: InanduGridRowSave) {
+  <span class="c">// e.row  = the exact data() row reference (unchanged)</span>
+  <span class="c">// e.values = { name, price } parsed to real types</span>
+  this.rows.update(rs =&gt; rs.map(r =&gt; r === e.row ? { ...r, ...e.values } : r));
+}</code></pre>
+      <p>The grid <strong>never</strong> writes the edit back into <code>data()</code>. An emptied number
+        or date field is omitted from <code>values</code> rather than committed as <code>0</code> / an
+        invalid date.</p>
+
+      <h3>Row creation <span class="pill opt-in">grid</span></h3>
+      <p><code>creatable="true"</code> adds an "Add row" trigger at the top of the body (hidden while
+        grouped). Save emits <code>(rowCreate)</code> with the parsed values — there's no row reference,
+        the row doesn't exist yet.</p>
+
+      <h3>Row deletion <span class="pill opt-in">grid</span></h3>
+      <p><code>deletable="true"</code> adds a Delete button per row. With <code>deleteConfirmMessage</code>
+        set, a native <code>window.confirm()</code> gates it. Emits <code>(rowDelete)</code> with the row
+        reference; you filter it out of your own array.</p>
+    </section>
+
+    <!-- 18 -->
+    <section id="validation">
+      <h2>18. Validation</h2>
+      <p>Configured per column, checked once at save time (there is no live-as-you-type validation). The
+        first failing rule's message is shown inline under the field and blocks the save; edit/create
+        mode stays active so the user can fix it. Rules run in this fixed order:</p>
+      <ol class="list">
+        <li><code>required</code> — fails on an empty text/number/date value (meaningless for <code>boolean</code>).</li>
+        <li><code>min</code> / <code>max</code> — inclusive bounds on the parsed number (<code>number</code> columns only).</li>
+        <li><code>pattern</code> — a <code>RegExp</code> source string tested against the raw string. A malformed pattern is treated as "no pattern", not an error.</li>
+        <li><code>[validator]</code> — <code>(value, row) =&gt; string | null</code>. Runs after every built-in rule passes; <code>row</code> is the in-progress parsed values.</li>
+        <li><code>[asyncValidator]</code> — <code>(value, row) =&gt; Promise&lt;string | null&gt;</code>. All fields' async checks run concurrently; Save / Cancel are disabled while any is pending.</li>
+      </ol>
+      <pre><code>&lt;inandu-column field="code" editable="true"
+  required="true" pattern="^[A-Z]{2}\d{4}$"&gt;&lt;/inandu-column&gt;
+
+&lt;inandu-column field="qty" type="number" editable="true"
+  min="1" [validator]="evenOnly"&gt;&lt;/inandu-column&gt;
+
+evenOnly = (v: unknown) =&gt; typeof v === 'number' &amp;&amp; v % 2 ? 'Must be even' : null;</code></pre>
+      <p>Built-in messages (<code>required</code> / <code>min</code> / <code>max</code> / <code>pattern</code>)
+        are translated; a <code>validator</code>'s returned string is shown verbatim.</p>
+    </section>
+
+    <!-- 19 -->
+    <section id="rowreorder">
+      <h2>19. Row reorder <span class="pill opt-in">grid</span></h2>
+      <p><code>rowReorder="true"</code> prepends a drag-handle column. Dragging a row emits
+        <code>(rowOrderChange)</code> with the <strong>complete</strong> reordered array — you apply it
+        back to your own <code>data()</code>. Ignored while grouped, virtualized, or in server-side mode.
+        Meant to be used without an active sort (a re-sort immediately reverts the visual drag).</p>
+    </section>
+
+    <!-- 20 -->
+    <section id="clipboard">
+      <h2>20. Clipboard &amp; cell ranges</h2>
+      <h3>Clipboard <span class="pill opt-in">grid</span></h3>
+      <p><code>clipboard="true"</code> enables <kbd>Ctrl/Cmd+C</kbd> / <kbd>V</kbd> while a data cell has
+        keyboard focus. Copy puts the focused cell's formatted value on the clipboard; paste reads
+        tab/newline-separated text (exactly what Excel/Sheets copy) and fans it out from the focused cell,
+        emitting one <code>(cellsPaste)</code> array of <code>{ row, field, value }</code> — clipped at
+        the grid edges, skipping non-editable columns. Values are parsed per the target column's
+        <code>type</code>. Works on the flat (non-grouped, non-virtualized) render path only.</p>
+      <h3>Cell range selection <span class="pill opt-in">grid</span></h3>
+      <p><code>cellRangeSelection="true"</code> — click-drag or shift-click across cells selects a
+        rectangle, emitted through <code>(cellRangeChange)</code> as <code>{ rows, fields }</code> (or
+        <code>undefined</code> when cleared). When <code>clipboard</code> is also on, <kbd>Ctrl+C</kbd>
+        copies the whole range as TSV.</p>
+    </section>
+
+    <!-- 21 -->
+    <section id="templates">
+      <h2>21. Custom templates</h2>
+      <h4>Per-column cell &amp; header</h4>
+      <pre><code>&lt;inandu-column field="status"&gt;
+  &lt;ng-template #cellTemplate let-value let-row="row"&gt;
+    &lt;span class="badge" [class.on]="value"&gt;{{ row.name }}&lt;/span&gt;
+  &lt;/ng-template&gt;
+&lt;/inandu-column&gt;</code></pre>
+      <p>Cell context: <code>$implicit</code> = raw value, <code>row</code>. Header context:
+        <code>$implicit</code> = resolved title, <code>field</code>.</p>
+      <h4>Row actions</h4>
+      <p>A <code>&lt;ng-template let-row&gt;</code> placed as a <strong>direct child of
+        <code>&lt;inandu-grid&gt;</code></strong> (not inside a column) renders after the built-in
+        Edit/Delete in each existing row's actions cell.</p>
+    </section>
+
+    <!-- 22 -->
+    <section id="export">
+      <h2>22. Export &amp; print <span class="pill opt-in">grid</span></h2>
+      <p><code>exportable="true"</code> renders a toolbar above the table with four buttons: CSV, Excel,
+        PDF, Print.</p>
+      <ul>
+        <li><strong>CSV</strong> — <code>\r\n</code>-joined, with a UTF-8 BOM so Excel reads accented text correctly.</li>
+        <li><strong>Excel</strong> — a SpreadsheetML <code>.xls</code> (plain XML, opens natively in Excel / LibreOffice / Sheets, zero added dependency). Numeric columns keep a real number type. A binary <code>.xlsx</code> is a <code>@inandu-solutions/grid-pro</code> feature.</li>
+        <li><strong>PDF</strong> — a simple table drawn with <code>jspdf</code> (dynamically imported). Single-line cells, truncated with an ellipsis; header repeats per page.</li>
+        <li><strong>Print</strong> — opens a clean, isolated print document (not the live page) and calls <code>print()</code>.</li>
+      </ul>
+      <p>All four operate on the <strong>currently visible rows</strong> — the current page, or every
+        group's / all rows while grouped or virtualized — and on visible columns in their current order.
+        Buttons disable together when there's nothing to export. The programmatic methods
+        (<code>exportCsv()</code>, <code>exportExcel()</code>, <code>exportPdf()</code>,
+        <code>printTable()</code>) are public.</p>
+    </section>
+
+    <!-- 23 -->
+    <section id="i18n">
+      <h2>23. Internationalization</h2>
+      <p><code>lang</code> is a BCP 47 tag (e.g. <code>lang="es-AR"</code>). Only the primary subtag is
+        matched, so <code>es-AR</code> and <code>es-ES</code> both resolve to <code>es</code>. Built-in:
+        <strong>en, es, fr, it, zh</strong>. Anything else falls back to the browser language, then English.
+        Each grid instance has its own isolated translation service, so two grids on one page can show
+        different languages.</p>
+      <h4>Overriding or adding messages</h4>
+      <pre><code>&lt;inandu-grid [customTranslations]="{
+  en: { MsgNoData: 'Nothing to show' },
+  pt: { MsgNoData: 'Nada para mostrar', MsgFirstPage: 'Primeira' }
+}" lang="pt"&gt; … &lt;/inandu-grid&gt;</code></pre>
+      <p>Merged on top of the built-ins for that language (only the keys you supply change). A brand-new
+        language code works as a fresh entry — this is the only way to add a whole new language.</p>
+    </section>
+
+    <!-- 24 -->
+    <section id="rtl">
+      <h2>24. RTL</h2>
+      <p><code>dir="rtl"</code> (or <code>"auto"</code>) sets a plain <code>dir</code> attribute on the root.
+        It composes with <code>lang</code> rather than replacing it — <code>lang="ar"</code> alone still
+        renders left-to-right unless <code>dir="rtl"</code> is also set. Layout mirrors via CSS logical
+        properties; the pager chevron icons are mirrored too. A consumer-supplied pager label string is
+        never mirrored.</p>
+    </section>
+
+    <!-- 25 -->
+    <section id="theming">
+      <h2>25. Theming</h2>
+      <p><code>theme</code> is an optional plain string. Omitted, the grid is unstyled-plain. Set it and
+        the grid adds an <code>inandu-theme-{value}</code> class. Three presets ship (pure CSS, no
+        engine): <code>material</code>, <code>dark</code>, <code>minimal</code>.</p>
+      <pre><code>&lt;inandu-grid [data]="rows" theme="material"&gt; … &lt;/inandu-grid&gt;</code></pre>
+      <p>Any other value works too — supply a matching <code>.inandu-theme-&lt;name&gt;</code> rule in your
+        own stylesheet.</p>
+      <h4>Styling hooks</h4>
+      <p>Every structural element carries a stable, rule-free class you can target from your global
+        stylesheet: <code>.inandu-grid</code> (root), <code>.inandu-column</code> (<code>&lt;col&gt;</code>
+        and <code>&lt;th&gt;</code>), <code>.inandu-row</code> (each body <code>&lt;tr&gt;</code>), and
+        many feature-specific ones (<code>.inandu-pager-button</code>, <code>.inandu-sort-button</code>,
+        <code>.inandu-filter-input</code>, …).</p>
+      <pre><code>inandu-grid .inandu-row:nth-child(even) { background: #fafafa; }</code></pre>
+    </section>
+
+    <!-- 26 -->
+    <section id="state">
+      <h2>26. State persistence <span class="pill opt-in">grid</span></h2>
+      <p>Give the grid a non-empty <code>stateKey</code> string and it persists column widths, order,
+        visibility, the active sort, and all filters to <code>localStorage</code> — restoring them the
+        next time a grid with the same key mounts (a reload, or navigating away and back). All access is
+        wrapped in <code>try/catch</code>, so private-browsing / quota errors are silently ignored.</p>
+      <pre><code>&lt;inandu-grid [data]="rows" stateKey="customers-grid"&gt; … &lt;/inandu-grid&gt;</code></pre>
+      <div class="warn"><span class="label">Note</span>
+        Give two different grids distinct keys, or they overwrite each other's saved state.</div>
+    </section>
+
+    <!-- 27 -->
+    <section id="a11y">
+      <h2>27. Keyboard &amp; accessibility</h2>
+      <ul>
+        <li>Header and data cells carry <code>role="columnheader"</code> / <code>role="gridcell"</code>; rows carry <code>role="row"</code>.</li>
+        <li>A roving tabindex means one cell is a tab stop at a time. <kbd>Arrow</kbd> keys / <kbd>Home</kbd> / <kbd>End</kbd> move focus between cells.</li>
+        <li>All action buttons (pager, sort, filter toggle, row actions, export) carry a translated <code>aria-label</code> and a <code>title</code>.</li>
+        <li>The select-all checkbox reflects a real <code>indeterminate</code> state.</li>
+      </ul>
+    </section>
+
+    <!-- 28 API -->
+    <section id="api">
+      <h2>28. API reference</h2>
+
+      <h3><code>&lt;inandu-grid&gt;</code> inputs</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Input</th><th>Type</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>data</code></td><td><code>T[]</code></td><td><code>[]</code></td></tr>
+          <tr><td><code>id</code></td><td><code>string</code></td><td><code>''</code> (used as the export filename prefix)</td></tr>
+          <tr><td><code>width</code> / <code>height</code></td><td><code>number</code></td><td><code>0</code></td></tr>
+          <tr><td><code>paging</code></td><td><code>InanduGridPagingOptions</code></td><td>unset → pagination off</td></tr>
+          <tr><td><code>filter</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>filterPlaceholder</code></td><td><code>string</code></td><td>translated default</td></tr>
+          <tr><td><code>virtualScroll</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>virtualRowHeight</code></td><td><code>number</code></td><td>auto-measured</td></tr>
+          <tr><td><code>serverSide</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>totalItems</code></td><td><code>number</code></td><td><code>data().length</code></td></tr>
+          <tr><td><code>loading</code> / <code>error</code></td><td><code>boolean</code> / <code>string</code></td><td><code>false</code> / <code>''</code></td></tr>
+          <tr><td><code>infiniteScroll</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>infiniteScrollThreshold</code></td><td><code>number</code></td><td><code>10</code></td></tr>
+          <tr><td><code>selectable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>columnToggle</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>rowReorder</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>clipboard</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>cellRangeSelection</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>showTotals</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>exportable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>creatable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>deletable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>deleteConfirmMessage</code></td><td><code>string</code></td><td><code>''</code> (no prompt)</td></tr>
+          <tr><td><code>bulkDeleteConfirmMessage</code></td><td><code>string</code></td><td><code>''</code></td></tr>
+          <tr><td><code>stateKey</code></td><td><code>string</code></td><td><code>''</code> (no persistence)</td></tr>
+          <tr><td><code>lang</code></td><td><code>string</code> (BCP 47)</td><td>browser → <code>en</code></td></tr>
+          <tr><td><code>customTranslations</code></td><td><code>InanduGridCustomTranslations</code></td><td>unset</td></tr>
+          <tr><td><code>dir</code></td><td><code>'ltr' | 'rtl' | 'auto'</code></td><td><code>'ltr'</code></td></tr>
+          <tr><td><code>theme</code></td><td><code>string</code></td><td><code>''</code> (no theme class)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3><code>&lt;inandu-grid&gt;</code> outputs</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Output</th><th>Payload</th></tr></thead>
+        <tbody>
+          <tr><td><code>selectionChange</code></td><td><code>T[]</code></td></tr>
+          <tr><td><code>rowSave</code></td><td><code>InanduGridRowSave&lt;T&gt;</code> — <code>{ row, values }</code></td></tr>
+          <tr><td><code>rowCreate</code></td><td><code>InanduGridNewRowValues&lt;T&gt;</code> — parsed values</td></tr>
+          <tr><td><code>rowDelete</code></td><td><code>T</code> — the row reference</td></tr>
+          <tr><td><code>rowsDelete</code></td><td><code>T[]</code></td></tr>
+          <tr><td><code>rowOrderChange</code></td><td><code>T[]</code> — the full reordered array</td></tr>
+          <tr><td><code>cellsPaste</code></td><td><code>InanduGridCellPaste&lt;T&gt;[]</code></td></tr>
+          <tr><td><code>cellRangeChange</code></td><td><code>InanduGridCellRangeSelection&lt;T&gt; | undefined</code></td></tr>
+          <tr><td><code>sortChange</code></td><td><code>InanduGridSortCriterion[]</code> <span class="c">(server-side)</span></td></tr>
+          <tr><td><code>pageChange</code></td><td><code>InanduGridPageState</code> <span class="c">(server-side)</span></td></tr>
+          <tr><td><code>filterChange</code></td><td><code>InanduGridFilterState</code> <span class="c">(server-side)</span></td></tr>
+          <tr><td><code>loadMore</code></td><td><code>InanduGridLoadMoreEvent</code> — <code>{ loadedCount }</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3><code>&lt;inandu-grid&gt;</code> public methods</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>setFilterQuery(q)</code></td><td>Set the free-text query.</td></tr>
+          <tr><td><code>setSort(criteria)</code> / <code>clearSort()</code></td><td>Replace / clear the multi-column sort.</td></tr>
+          <tr><td><code>setGroupBy(field | undefined)</code></td><td>Group / ungroup (validated against groupable columns).</td></tr>
+          <tr><td><code>selectRows(rows)</code> / <code>deselectAll()</code></td><td>Replace / clear the selection.</td></tr>
+          <tr><td><code>goToPage(n)</code></td><td>Jump to a 1-based page (clamped).</td></tr>
+          <tr><td><code>exportCsv()</code> / <code>exportExcel()</code> / <code>exportPdf()</code> / <code>printTable()</code></td><td>Trigger the corresponding export.</td></tr>
+          <tr><td><code>selectedRowsList()</code></td><td>Read-only signal of the current selection.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3><code>&lt;inandu-column&gt;</code> inputs</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Input</th><th>Type</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>field</code></td><td><code>string</code> — required</td><td>—</td></tr>
+          <tr><td><code>title</code></td><td><code>string</code></td><td><code>field</code></td></tr>
+          <tr><td><code>width</code></td><td><code>number</code></td><td><code>0</code></td></tr>
+          <tr><td><code>order</code></td><td><code>number</code></td><td>unset (declaration order)</td></tr>
+          <tr><td><code>type</code></td><td><code>'string' | 'number' | 'boolean' | 'date'</code></td><td><code>'string'</code></td></tr>
+          <tr><td><code>format</code></td><td><code>string</code></td><td>per type</td></tr>
+          <tr><td><code>sortable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>filter</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>groupable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>resize</code></td><td><code>boolean</code></td><td><code>true</code></td></tr>
+          <tr><td><code>reorder</code></td><td><code>boolean</code></td><td><code>true</code></td></tr>
+          <tr><td><code>hideable</code></td><td><code>boolean</code></td><td><code>true</code></td></tr>
+          <tr><td><code>sticky</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>stickySide</code></td><td><code>'left' | 'right'</code></td><td><code>'left'</code></td></tr>
+          <tr><td><code>aggregate</code></td><td><code>'' | 'sum' | 'avg' | 'min' | 'max' | 'count'</code></td><td><code>''</code></td></tr>
+          <tr><td><code>editable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>required</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>min</code> / <code>max</code></td><td><code>number</code></td><td>unset</td></tr>
+          <tr><td><code>pattern</code></td><td><code>string</code> (RegExp source)</td><td><code>''</code></td></tr>
+          <tr><td><code>[validator]</code></td><td><code>InanduColumnValidator</code></td><td>unset</td></tr>
+          <tr><td><code>[asyncValidator]</code></td><td><code>InanduColumnAsyncValidator</code></td><td>unset</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Exported types</h3>
+      <pre><code><span class="k">import type</span> {
+  InanduGridRow,               <span class="c">// Record&lt;string, unknown&gt;</span>
+  InanduGridPagingOptions,
+  InanduGridRowSave,           <span class="c">// { row, values }</span>
+  InanduGridNewRowValues,
+  InanduGridSortCriterion,     <span class="c">// { field, direction }</span>
+  InanduGridPageState,
+  InanduGridFilterState,
+  InanduGridLoadMoreEvent,
+  InanduGridCellPaste,
+  InanduGridCellRangeSelection,
+  InanduGridCustomTranslations,
+  InanduRowActionsContext,
+  SortDirection,               <span class="c">// 'asc' | 'desc'</span>
+  InanduColumnType,
+  InanduColumnValidator,
+  InanduColumnAsyncValidator,
+  InanduColumnStickySide,
+  InanduColumnAggregate,
+  InanduCellTemplateContext,
+  InanduHeaderTemplateContext,
+} <span class="k">from</span> <span class="c">'@inandu-solutions/grid-angular'</span>;</code></pre>
+    </section>
+
+    <!-- 29 -->
+    <section id="limitations">
+      <h2>29. Known limitations</h2>
+      <ul>
+        <li><strong>Sticky columns</strong> outside a contiguous leading (or trailing) run can visually overlap mid-scroll — inherent CSS behaviour.</li>
+        <li><strong>Virtual scroll + grouping</strong> assumes a uniform row height, including group-header rows.</li>
+        <li><strong>PDF export</strong> is single-line only — cells are truncated with an ellipsis, no wrapping.</li>
+        <li><strong>Excel export</strong> is SpreadsheetML <code>.xls</code>. A styled binary <code>.xlsx</code> is a <code>@inandu-solutions/grid-pro</code> feature.</li>
+        <li><strong>Row reorder</strong> with an active sort visually reverts on the next re-render.</li>
+        <li><strong>Master-detail rows</strong> are not part of the MIT core.</li>
+        <li><strong>Safari &lt; 16</strong>: sticky table cells with <code>border-collapse: collapse</code> can be unreliable — current Safari is fine.</li>
+      </ul>
+    </section>
+
+    <footer>
+      @inandu-solutions/grid-angular user manual · v1.0.0 · MIT © Inandu SAS ·
+      <a href="https://github.com/inandusolutions/inandu-grid">source &amp; issues</a>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / usage help
+    url: https://github.com/inandusolutions/inandu-grid/discussions
+    about: Ask and answer questions in Discussions rather than opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/inandusolutions/inandu-grid/security/policy
+    about: Report privately — see the security policy.

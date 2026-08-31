@@ -1,0 +1,26 @@
+{
+  "name": "inandu-grid-stackblitz-example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Minimal Angular app using @inandu-solutions/grid-angular — the StackBlitz playground.",
+  "scripts": {
+    "start": "ng serve",
+    "build": "ng build"
+  },
+  "dependencies": {
+    "@angular/common": "^21.2.19",
+    "@angular/compiler": "^21.2.19",
+    "@angular/core": "^21.2.19",
+    "@angular/platform-browser": "^21.2.19",
+    "@inandu-solutions/grid-angular": "^1.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.1"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.20",
+    "@angular/cli": "^21.2.20",
+    "@angular/compiler-cli": "^21.2.19",
+    "typescript": "~5.9.3"
+  }
+}

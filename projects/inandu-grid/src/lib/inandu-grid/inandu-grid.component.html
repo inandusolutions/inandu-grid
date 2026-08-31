@@ -1,0 +1,609 @@
+<div [class]="rootClasses()" [attr.id]="id() || null" [attr.dir]="dir()" [style.width.px]="width() || null" [style.height.px]="height() || null" [style.--inandu-select-column-width.px]="selectColumnWidthPx" [style.--inandu-row-drag-column-width.px]="rowDragColumnWidthPx" tabindex="-1" (keydown)="onGridKeyDown($event)">
+  @if (exportable() || columnToggle() || (selectable() && deletable())) {
+    <div class="inandu-toolbar">
+      @if (exportable()) {
+        <button type="button" class="inandu-pager-button inandu-icon inandu-icon-export-csv" [disabled]="visibleRowCount() === 0 || loading() || !!error()" [attr.aria-label]="msgExportCsv()" [title]="msgExportCsv()" (click)="exportCsv()"></button>
+        <button type="button" class="inandu-pager-button inandu-icon inandu-icon-export-excel" [disabled]="visibleRowCount() === 0 || loading() || !!error()" [attr.aria-label]="msgExportExcel()" [title]="msgExportExcel()" (click)="exportExcel()"></button>
+        <button type="button" class="inandu-pager-button inandu-icon inandu-icon-export-pdf" [disabled]="visibleRowCount() === 0 || loading() || !!error()" [attr.aria-label]="msgExportPdf()" [title]="msgExportPdf()" (click)="exportPdf()"></button>
+        <button type="button" class="inandu-pager-button inandu-icon inandu-icon-print" [disabled]="visibleRowCount() === 0 || loading() || !!error()" [attr.aria-label]="msgPrint()" [title]="msgPrint()" (click)="printTable()"></button>
+      }
+      @if (selectable() && deletable() && selectedCount() > 0) {
+        <button type="button" class="inandu-pager-button inandu-icon inandu-icon-delete" [attr.aria-label]="deleteSelectedLabel()" [title]="deleteSelectedLabel()" (click)="deleteSelectedRows()"></button>
+      }
+      @if (columnToggle()) {
+        <div class="inandu-column-toggle-wrapper">
+          <button type="button" class="inandu-pager-button inandu-column-toggle-button inandu-icon inandu-icon-columns" [attr.aria-label]="msgToggleColumns()" [title]="msgToggleColumns()" (click)="toggleColumnTogglePopup()"></button>
+          @if (isColumnTogglePopupOpen()) {
+            <div class="inandu-column-toggle-popup">
+              @for (column of hideableColumns(); track column.field()) {
+                <label class="inandu-column-toggle-option">
+                  <input type="checkbox"
+                    [attr.aria-label]="columnToggleLabel(column)"
+                    [checked]="!isColumnHidden(column.field())"
+                    (change)="toggleColumnVisibility(column.field())"
+                  />
+                  {{ column.title() || column.field() }}
+                </label>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+  <ng-template #tableHead>
+    <caption class="inandu-caption">Data grid</caption>
+    <colgroup>
+      @if (hasRowDragHandle()) {
+        <col class="inandu-column inandu-row-drag-column" />
+      }
+      @if (selectable()) {
+        <col class="inandu-column inandu-select-column" />
+      }
+      @for (column of visibleColumns(); track column.field()) {
+        <col class="inandu-column" [style.width.px]="effectiveWidth(column) || null" />
+      }
+      @if (hasRowActions()) {
+        <col class="inandu-column inandu-row-actions-column" />
+      }
+    </colgroup>
+    <thead>
+      @if (groupableColumns().length > 0) {
+        <tr>
+          <td [attr.colspan]="totalColumnCount() || 1">
+            <div class="inandu-group-zone" [class.inandu-drag-over]="isDragOverGroupZone()" (dragover)="onGroupZoneDragOver($event)" (dragleave)="onGroupZoneDragLeave()" (drop)="onGroupZoneDrop($event)">
+              @if (groupByColumn()) {
+                <span class="inandu-group-zone-label">{{ groupByLabel() }}</span>
+                <button type="button" class="inandu-pager-button inandu-icon inandu-icon-cancel" [attr.aria-label]="msgCancelGrouping()" [title]="msgCancelGrouping()" (click)="clearGrouping()"></button>
+              } @else {
+                <span class="inandu-group-zone-hint">{{ msgGroupByHint() }}</span>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+      @if (filter()) {
+        <tr>
+          <td [attr.colspan]="totalColumnCount() || 1">
+            <input
+              type="search"
+              class="inandu-filter-input"
+              [attr.aria-label]="msgFilterPlaceholder()"
+              [placeholder]="filterPlaceholder() || msgFilterPlaceholder()"
+              [value]="filterQuery()"
+              (input)="onFilterInput($event)"
+            />
+          </td>
+        </tr>
+      }
+      @if (hasActiveColumnFilters()) {
+        <tr>
+          <td [attr.colspan]="totalColumnCount() || 1" class="inandu-column-filters-actions">
+            <button type="button" class="inandu-pager-button inandu-icon inandu-icon-clear-filters" [attr.aria-label]="msgCancelAllFilters()" [title]="msgCancelAllFilters()" (click)="clearAllColumnFilters()"></button>
+          </td>
+        </tr>
+      }
+      <tr role="row">
+        @if (hasRowDragHandle()) {
+          <th class="inandu-column inandu-row-drag-cell" scope="col" role="columnheader"></th>
+        }
+        @if (selectable()) {
+          <th class="inandu-column inandu-select-cell inandu-sticky-column" scope="col" role="columnheader" tabindex="0" [style.inset-inline-start.px]="hasRowDragHandle() ? rowDragColumnWidthPx : 0">
+            <input type="checkbox" class="inandu-select-checkbox"
+              [attr.aria-label]="msgSelectAll()"
+              [checked]="allVisibleSelected()"
+              [indeterminate]="someVisibleSelected()"
+              (change)="toggleSelectAll()"
+            />
+          </th>
+        }
+        @for (column of visibleColumns(); track column.field(); let colIndex = $index) {
+          @let headerDraggable = column.groupable() || column.reorder();
+          <th class="inandu-column" scope="col" role="columnheader"
+            [attr.tabindex]="colIndex === 0 && !selectable() ? 0 : -1"
+            [class.inandu-groupable-header]="column.groupable()"
+            [class.inandu-sticky-column]="column.sticky()"
+            [class.inandu-drag-over]="isDragOverHeaderField(column.field())"
+            [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
+            [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+            [attr.draggable]="headerDraggable ? true : null"
+            (dragstart)="headerDraggable && onColumnDragStart($event, column.field())"
+            (dragover)="onColumnHeaderDragOver($event, column.field())"
+            (dragleave)="onColumnHeaderDragLeave(column.field())"
+            (drop)="onColumnHeaderDrop($event, column.field())"
+          >
+            @if (column.headerTemplate(); as headerTpl) {
+              <ng-container *ngTemplateOutlet="headerTpl; context: headerTemplateContext(column)"></ng-container>
+            } @else {
+              {{ column.title() || column.field() }}
+            }
+            @if (column.sortable()) {
+              <button
+                type="button"
+                class="inandu-sort-button inandu-icon"
+                [class.inandu-icon-sort-asc]="sortDirectionFor(column.field()) === 'asc'"
+                [class.inandu-icon-sort-desc]="sortDirectionFor(column.field()) === 'desc'"
+                [class.inandu-icon-sort-none]="sortDirectionFor(column.field()) === undefined"
+                [attr.aria-label]="sortByLabel(column)"
+                (click)="toggleSort(column.field(), $event)"
+              ></button>
+              @if (sortPriorityFor(column.field()); as priority) {
+                <span class="inandu-sort-priority">{{ priority }}</span>
+              }
+            }
+            @if (column.filter()) {
+              <button
+                type="button"
+                class="inandu-column-filter-toggle inandu-icon inandu-icon-filter"
+                [class.inandu-column-filter-toggle-active]="hasColumnFilter(column.field())"
+                [attr.aria-label]="columnFilterLabel(column)"
+                (click)="toggleColumnFilterPopup(column.field())"
+              ></button>
+              @if (isFilterPopupOpen(column.field())) {
+                <div class="inandu-column-filter-popup">
+                  @switch (column.type()) {
+                    @case ('number') {
+                      <input type="number" class="inandu-column-filter-input"
+                        [placeholder]="msgFilterMin()" [value]="columnFilters()[column.field()]?.min ?? ''"
+                        (input)="onColumnFilterInput(column.field(), 'min', $event)" />
+                      <input type="number" class="inandu-column-filter-input"
+                        [placeholder]="msgFilterMax()" [value]="columnFilters()[column.field()]?.max ?? ''"
+                        (input)="onColumnFilterInput(column.field(), 'max', $event)" />
+                    }
+                    @case ('date') {
+                      <input type="date" class="inandu-column-filter-input"
+                        [attr.aria-label]="msgFilterFrom()" [value]="columnFilters()[column.field()]?.from ?? ''"
+                        (input)="onColumnFilterInput(column.field(), 'from', $event)" />
+                      <input type="date" class="inandu-column-filter-input"
+                        [attr.aria-label]="msgFilterTo()" [value]="columnFilters()[column.field()]?.to ?? ''"
+                        (input)="onColumnFilterInput(column.field(), 'to', $event)" />
+                    }
+                    @case ('boolean') {
+                      <select class="inandu-column-filter-input"
+                        [value]="columnFilters()[column.field()]?.bool ?? ''"
+                        (change)="onColumnFilterInput(column.field(), 'bool', $event)">
+                        <option value="">{{ msgAll() }}</option>
+                        <option value="true">{{ booleanFilterLabels(column)[0] }}</option>
+                        <option value="false">{{ booleanFilterLabels(column)[1] }}</option>
+                      </select>
+                    }
+                    @default {
+                      <input type="text" class="inandu-column-filter-input"
+                        [attr.aria-label]="columnFilterLabel(column)" [value]="columnFilters()[column.field()]?.text ?? ''"
+                        (input)="onColumnFilterInput(column.field(), 'text', $event)" />
+                    }
+                  }
+                  <button type="button" class="inandu-column-filter-cancel inandu-icon inandu-icon-cancel"
+                    [attr.aria-label]="msgCancelFilter()" [title]="msgCancelFilter()"
+                    (click)="clearColumnFilter(column.field())"
+                  ></button>
+                </div>
+              }
+            }
+            @if (column.resize()) {
+              <span class="inandu-column-resize-handle" draggable="false"
+                (mousedown)="onResizeHandleMouseDown($event, column)"
+              ></span>
+            }
+          </th>
+        }
+        @if (hasRowActions()) {
+          <th class="inandu-column inandu-row-actions" scope="col"></th>
+        }
+      </tr>
+    </thead>
+  </ng-template>
+
+  @if (virtualScroll()) {
+    <cdk-virtual-scroll-viewport [itemSize]="effectiveVirtualRowHeight()" [style.height.px]="virtualViewportHeight()" class="inandu-virtual-viewport" (scrolledIndexChange)="onVirtualScrolledIndexChange($event)">
+      <table class="xtable" role="grid">
+        <ng-container *ngTemplateOutlet="tableHead"></ng-container>
+        <tbody>
+          @if (error()) {
+            <tr class="inandu-row inandu-error-row">
+              <td [attr.colspan]="totalColumnCount() || 1">{{ error() }}</td>
+            </tr>
+          } @else if (loading()) {
+            <tr class="inandu-row inandu-loading-row">
+              <td [attr.colspan]="totalColumnCount() || 1">{{ msgLoading() }}</td>
+            </tr>
+          } @else {
+            @if (virtualItems().length === 0) {
+              <tr class="inandu-row">
+                <td [attr.colspan]="totalColumnCount() || 1">{{ msgNoData() }}</td>
+              </tr>
+            }
+            <!-- One cdkVirtualFor for both grouped and ungrouped data — see virtualItems()'s doc
+                 comment for why switching between two separate structural directive instances is
+                 deliberately avoided here. -->
+            <tr #virtualRowEl *cdkVirtualFor="let item of virtualItems(); trackBy: trackVirtualItem"
+              [class.inandu-row]="item.kind === 'row'"
+              [class.inandu-group-row]="item.kind === 'group'"
+              [attr.role]="item.kind === 'row' ? 'row' : null"
+            >
+              @if (item.kind === 'group') {
+                <td [attr.colspan]="totalColumnCount() || 1">
+                  {{ groupHeaderLabel(item.column, item.key, item.count) }}
+                  @for (aggCol of groupAggregateColumns(); track aggCol.field()) {
+                    <span class="inandu-group-aggregate">{{ aggregateLabel(aggCol, item.aggregates) }}</span>
+                  }
+                </td>
+              } @else {
+                @if (selectable()) {
+                  <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" style="inset-inline-start: 0">
+                    <input type="checkbox" class="inandu-select-checkbox"
+                      [attr.aria-label]="selectRowLabel(item.indexInGroup)"
+                      [checked]="isRowSelected(item.row)"
+                      (change)="toggleRowSelection(item.row)"
+                    />
+                  </td>
+                }
+                @for (column of visibleColumns(); track column.field()) {
+                  <td role="gridcell" tabindex="-1"
+                    [class.inandu-sticky-column]="column.sticky()"
+                    [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
+                    [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                  >
+                    @if (column.editable() && isEditingRow(item.row)) {
+                      @switch (column.type()) {
+                        @case ('number') {
+                          <input type="number" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
+                        @case ('date') {
+                          <input type="date" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
+                        @case ('boolean') {
+                          <input type="checkbox" class="inandu-cell-edit-checkbox"
+                            [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                            (change)="onRowFieldChange(column, $event)" />
+                        }
+                        @default {
+                          <input type="text" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
+                      }
+                      @if (fieldError(column.field()); as fieldErr) {
+                        <span class="inandu-field-error">{{ fieldErr }}</span>
+                      }
+                    } @else if (column.cellTemplate(); as cellTpl) {
+                      <ng-container *ngTemplateOutlet="cellTpl; context: cellTemplateContext(column, item.row)"></ng-container>
+                    } @else {
+                      {{ formatValue(column, item.row) }}
+                    }
+                  </td>
+                }
+                @if (hasRowActions()) {
+                  <td class="inandu-row-actions">
+                    @if (isEditingRow(item.row)) {
+                      <button type="button" class="inandu-pager-button inandu-icon inandu-icon-save" [disabled]="isValidating()" [attr.aria-label]="msgSaveRow()" [title]="msgSaveRow()" (click)="saveRow(item.row)"></button>
+                      <button type="button" class="inandu-pager-button inandu-icon inandu-icon-cancel" [disabled]="isValidating()" [attr.aria-label]="msgCancelRowEdit()" [title]="msgCancelRowEdit()" (click)="cancelRowEdit()"></button>
+                    } @else {
+                      @if (editableColumns().length > 0) {
+                        <button type="button" class="inandu-pager-button inandu-icon inandu-icon-edit" [disabled]="isAnotherRowEditing(item.row)" [attr.aria-label]="msgEditRow()" [title]="msgEditRow()" (click)="startEditingRow(item.row)"></button>
+                      }
+                      @if (deletable()) {
+                        <button type="button" class="inandu-pager-button inandu-icon inandu-icon-delete" [disabled]="isAnotherRowEditing(item.row)" [attr.aria-label]="msgDeleteRow()" [title]="msgDeleteRow()" (click)="deleteRow(item.row)"></button>
+                      }
+                      @if (rowActionsTemplate(); as actionsTpl) {
+                        <ng-container *ngTemplateOutlet="actionsTpl; context: rowActionsContext(item.row)"></ng-container>
+                      }
+                    }
+                  </td>
+                }
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </cdk-virtual-scroll-viewport>
+  } @else {
+    <table class="xtable" role="grid">
+      <ng-container *ngTemplateOutlet="tableHead"></ng-container>
+    <tbody>
+      @if (error()) {
+        <tr class="inandu-row inandu-error-row">
+          <td [attr.colspan]="totalColumnCount() || 1">{{ error() }}</td>
+        </tr>
+      } @else if (loading()) {
+        <tr class="inandu-row inandu-loading-row">
+          <td [attr.colspan]="totalColumnCount() || 1">{{ msgLoading() }}</td>
+        </tr>
+      } @else if (groupByColumn(); as groupCol) {
+        @for (group of groupedRows(); track group.key) {
+          <tr class="inandu-group-row">
+            <td [attr.colspan]="totalColumnCount() || 1">
+              {{ groupHeaderLabel(groupCol, group.key, group.rows.length) }}
+              @for (aggCol of groupAggregateColumns(); track aggCol.field()) {
+                <span class="inandu-group-aggregate">{{ aggregateLabel(aggCol, group.aggregates) }}</span>
+              }
+            </td>
+          </tr>
+          @for (row of group.rows; track row) {
+            <tr class="inandu-row" role="row">
+              @if (selectable()) {
+                <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" style="inset-inline-start: 0">
+                  <input type="checkbox" class="inandu-select-checkbox"
+                    [attr.aria-label]="selectRowLabel($index)"
+                    [checked]="isRowSelected(row)"
+                    (change)="toggleRowSelection(row)"
+                  />
+                </td>
+              }
+              @for (column of visibleColumns(); track column.field()) {
+                <td role="gridcell" tabindex="-1"
+                  [class.inandu-sticky-column]="column.sticky()"
+                  [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
+                  [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                >
+                  @if (column.editable() && isEditingRow(row)) {
+                    @switch (column.type()) {
+                      @case ('number') {
+                        <input type="number" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                      @case ('date') {
+                        <input type="date" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                      @case ('boolean') {
+                        <input type="checkbox" class="inandu-cell-edit-checkbox"
+                          [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                          (change)="onRowFieldChange(column, $event)" />
+                      }
+                      @default {
+                        <input type="text" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                    }
+                    @if (fieldError(column.field()); as fieldErr) {
+                      <span class="inandu-field-error">{{ fieldErr }}</span>
+                    }
+                  } @else if (column.cellTemplate(); as cellTpl) {
+                    <ng-container *ngTemplateOutlet="cellTpl; context: cellTemplateContext(column, row)"></ng-container>
+                  } @else {
+                    {{ formatValue(column, row) }}
+                  }
+                </td>
+              }
+              @if (hasRowActions()) {
+                <td class="inandu-row-actions">
+                  @if (isEditingRow(row)) {
+                    <button type="button" class="inandu-pager-button inandu-icon inandu-icon-save" [disabled]="isValidating()" [attr.aria-label]="msgSaveRow()" [title]="msgSaveRow()" (click)="saveRow(row)"></button>
+                    <button type="button" class="inandu-pager-button inandu-icon inandu-icon-cancel" [disabled]="isValidating()" [attr.aria-label]="msgCancelRowEdit()" [title]="msgCancelRowEdit()" (click)="cancelRowEdit()"></button>
+                  } @else {
+                    @if (editableColumns().length > 0) {
+                      <button type="button" class="inandu-pager-button inandu-icon inandu-icon-edit" [disabled]="isAnotherRowEditing(row)" [attr.aria-label]="msgEditRow()" [title]="msgEditRow()" (click)="startEditingRow(row)"></button>
+                    }
+                    @if (deletable()) {
+                      <button type="button" class="inandu-pager-button inandu-icon inandu-icon-delete" [disabled]="isAnotherRowEditing(row)" [attr.aria-label]="msgDeleteRow()" [title]="msgDeleteRow()" (click)="deleteRow(row)"></button>
+                    }
+                    @if (rowActionsTemplate(); as actionsTpl) {
+                      <ng-container *ngTemplateOutlet="actionsTpl; context: rowActionsContext(row)"></ng-container>
+                    }
+                  }
+                </td>
+              }
+            </tr>
+          }
+        } @empty {
+          <tr class="inandu-row">
+            <td [attr.colspan]="totalColumnCount() || 1">{{ msgNoData() }}</td>
+          </tr>
+        }
+      } @else {
+        @if (creatable()) {
+          @if (isCreatingRow()) {
+            <tr class="inandu-add-row">
+              @if (hasRowDragHandle()) {
+                <td class="inandu-row-drag-cell"></td>
+              }
+              @if (selectable()) {
+                <td class="inandu-select-cell inandu-sticky-column" [style.inset-inline-start.px]="hasRowDragHandle() ? rowDragColumnWidthPx : 0"></td>
+              }
+              @for (column of visibleColumns(); track column.field()) {
+                <td
+                  [class.inandu-sticky-column]="column.sticky()"
+                  [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
+                  [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                >
+                  @if (column.editable()) {
+                    @switch (column.type()) {
+                      @case ('number') {
+                        <input type="number" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                      @case ('date') {
+                        <input type="date" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                      @case ('boolean') {
+                        <input type="checkbox" class="inandu-cell-edit-checkbox"
+                          [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                          (change)="onRowFieldChange(column, $event)" />
+                      }
+                      @default {
+                        <input type="text" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                    }
+                    @if (fieldError(column.field()); as fieldErr) {
+                      <span class="inandu-field-error">{{ fieldErr }}</span>
+                    }
+                  }
+                </td>
+              }
+              @if (hasRowActions()) {
+                <td class="inandu-row-actions">
+                  <button type="button" class="inandu-pager-button inandu-icon inandu-icon-save" [disabled]="isValidating()" [attr.aria-label]="msgSaveRow()" [title]="msgSaveRow()" (click)="saveNewRow()"></button>
+                  <button type="button" class="inandu-pager-button inandu-icon inandu-icon-cancel" [disabled]="isValidating()" [attr.aria-label]="msgCancelRowEdit()" [title]="msgCancelRowEdit()" (click)="cancelAddRow()"></button>
+                </td>
+              }
+            </tr>
+          } @else {
+            <tr class="inandu-add-row-trigger">
+              <td [attr.colspan]="totalColumnCount() || 1">
+                <button type="button" class="inandu-pager-button inandu-icon inandu-icon-add" [disabled]="isAnyRowEditing()" [attr.aria-label]="msgAddRow()" [title]="msgAddRow()" (click)="startAddingRow()"></button>
+              </td>
+            </tr>
+          }
+        }
+        @for (row of pagedData(); track row; let rowIndex = $index) {
+          <tr class="inandu-row" role="row"
+            [attr.data-row-index]="rowIndex"
+            [class.inandu-drag-over]="hasRowDragHandle() && isDragOverRow(row)"
+            [attr.draggable]="hasRowDragHandle() ? true : null"
+            (dragstart)="hasRowDragHandle() && onRowDragStart($event, row)"
+            (dragover)="hasRowDragHandle() && onRowDragOver($event, row)"
+            (dragleave)="hasRowDragHandle() && onRowDragLeave(row)"
+            (drop)="hasRowDragHandle() && onRowDrop($event, row)"
+          >
+            @if (hasRowDragHandle()) {
+              <td class="inandu-row-drag-cell">
+                <span class="inandu-icon inandu-icon-drag" [attr.aria-label]="msgDragRow()" [title]="msgDragRow()"></span>
+              </td>
+            }
+            @if (selectable()) {
+              <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" [style.inset-inline-start.px]="hasRowDragHandle() ? rowDragColumnWidthPx : 0">
+                <input type="checkbox" class="inandu-select-checkbox"
+                  [attr.aria-label]="selectRowLabel($index)"
+                  [checked]="isRowSelected(row)"
+                  (change)="toggleRowSelection(row)"
+                />
+              </td>
+            }
+            @for (column of visibleColumns(); track column.field(); let colIndex = $index) {
+              <td role="gridcell" tabindex="-1"
+                [attr.data-field]="column.field()"
+                [class.inandu-sticky-column]="column.sticky()"
+                [class.inandu-cell-range-selected]="cellRangeSelection() && isCellInRange(rowIndex, colIndex)"
+                [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
+                [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                (mousedown)="cellRangeSelection() && onCellRangeMouseDown($event, rowIndex, colIndex)"
+                (mouseenter)="cellRangeSelection() && onCellRangeMouseEnter(rowIndex, colIndex)"
+              >
+                @if (column.editable() && isEditingRow(row)) {
+                  @switch (column.type()) {
+                    @case ('number') {
+                      <input type="number" class="inandu-cell-edit-input"
+                        [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                        (input)="onRowFieldChange(column, $event)" />
+                    }
+                    @case ('date') {
+                      <input type="date" class="inandu-cell-edit-input"
+                        [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                        (input)="onRowFieldChange(column, $event)" />
+                    }
+                    @case ('boolean') {
+                      <input type="checkbox" class="inandu-cell-edit-checkbox"
+                        [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                        (change)="onRowFieldChange(column, $event)" />
+                    }
+                    @default {
+                      <input type="text" class="inandu-cell-edit-input"
+                        [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                        (input)="onRowFieldChange(column, $event)" />
+                    }
+                  }
+                  @if (fieldError(column.field()); as fieldErr) {
+                    <span class="inandu-field-error">{{ fieldErr }}</span>
+                  }
+                } @else if (column.cellTemplate(); as cellTpl) {
+                  <ng-container *ngTemplateOutlet="cellTpl; context: cellTemplateContext(column, row)"></ng-container>
+                } @else {
+                  {{ formatValue(column, row) }}
+                }
+              </td>
+            }
+            @if (hasRowActions()) {
+              <td class="inandu-row-actions">
+                @if (isEditingRow(row)) {
+                  <button type="button" class="inandu-pager-button inandu-icon inandu-icon-save" [disabled]="isValidating()" [attr.aria-label]="msgSaveRow()" [title]="msgSaveRow()" (click)="saveRow(row)"></button>
+                  <button type="button" class="inandu-pager-button inandu-icon inandu-icon-cancel" [disabled]="isValidating()" [attr.aria-label]="msgCancelRowEdit()" [title]="msgCancelRowEdit()" (click)="cancelRowEdit()"></button>
+                } @else {
+                  @if (editableColumns().length > 0) {
+                    <button type="button" class="inandu-pager-button inandu-icon inandu-icon-edit" [disabled]="isAnotherRowEditing(row)" [attr.aria-label]="msgEditRow()" [title]="msgEditRow()" (click)="startEditingRow(row)"></button>
+                  }
+                  @if (deletable()) {
+                    <button type="button" class="inandu-pager-button inandu-icon inandu-icon-delete" [disabled]="isAnotherRowEditing(row)" [attr.aria-label]="msgDeleteRow()" [title]="msgDeleteRow()" (click)="deleteRow(row)"></button>
+                  }
+                  @if (rowActionsTemplate(); as actionsTpl) {
+                    <ng-container *ngTemplateOutlet="actionsTpl; context: rowActionsContext(row)"></ng-container>
+                  }
+                }
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr class="inandu-row">
+            <td [attr.colspan]="totalColumnCount() || 1">{{ msgNoData() }}</td>
+          </tr>
+        }
+      }
+    </tbody>
+    @if (showTotalsRow() || (!groupByColumn() && !virtualScroll() && paging())) {
+      <tfoot>
+        @if (showTotalsRow()) {
+          <tr class="inandu-totals-row">
+            @if (hasRowDragHandle()) {
+              <td class="inandu-row-drag-cell"></td>
+            }
+            @if (selectable()) {
+              <td class="inandu-select-cell"></td>
+            }
+            @for (column of visibleColumns(); track column.field()) {
+              <td>{{ totalsCellText(column) }}</td>
+            }
+            @if (hasRowActions()) {
+              <td class="inandu-row-actions"></td>
+            }
+          </tr>
+        }
+        @if (!groupByColumn() && !virtualScroll() && paging(); as pagingConfig) {
+        <tr>
+          <td [attr.colspan]="totalColumnCount() || 1">
+            <div class="inandu-pager">
+              @if (pagingConfig.showFirstButton ?? true) {
+                <button type="button" class="inandu-pager-button" [attr.aria-label]="msgFirstPage()"
+                  [class.inandu-icon]="!pagingConfig.firstLabel" [class.inandu-icon-page-first]="!pagingConfig.firstLabel"
+                  [disabled]="currentPage() === 1" (click)="goToFirstPage()"
+                >{{ pagingConfig.firstLabel ?? '' }}</button>
+              }
+              @if (pagingConfig.showPreviousButton ?? true) {
+                <button type="button" class="inandu-pager-button" [attr.aria-label]="msgPreviousPage()"
+                  [class.inandu-icon]="!pagingConfig.previousLabel" [class.inandu-icon-page-prev]="!pagingConfig.previousLabel"
+                  [disabled]="currentPage() === 1" (click)="goToPreviousPage()"
+                >{{ pagingConfig.previousLabel ?? '' }}</button>
+              }
+              <span class="inandu-pager-label">{{ pageLabelText() }}</span>
+              @if (pagingConfig.showNextButton ?? true) {
+                <button type="button" class="inandu-pager-button" [attr.aria-label]="msgNextPage()"
+                  [class.inandu-icon]="!pagingConfig.nextLabel" [class.inandu-icon-page-next]="!pagingConfig.nextLabel"
+                  [disabled]="currentPage() === totalPages()" (click)="goToNextPage()"
+                >{{ pagingConfig.nextLabel ?? '' }}</button>
+              }
+              @if (pagingConfig.showLastButton ?? true) {
+                <button type="button" class="inandu-pager-button" [attr.aria-label]="msgLastPage()"
+                  [class.inandu-icon]="!pagingConfig.lastLabel" [class.inandu-icon-page-last]="!pagingConfig.lastLabel"
+                  [disabled]="currentPage() === totalPages()" (click)="goToLastPage()"
+                >{{ pagingConfig.lastLabel ?? '' }}</button>
+              }
+            </div>
+          </td>
+        </tr>
+        }
+      </tfoot>
+    }
+    </table>
+  }
+</div>

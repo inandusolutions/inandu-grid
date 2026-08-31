@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest a capability for @inandu-solutions/grid-angular
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Note: some advanced/enterprise features are planned for the separate
+        commercial `@inandu-solutions/grid-pro` package rather than the MIT core.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that the grid doesn't let you do today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would the API look like? (inputs, outputs, template usage)
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
