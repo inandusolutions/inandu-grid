@@ -748,6 +748,113 @@ describe('InanduGridComponent column reorder', () => {
   });
 });
 
+describe('InanduGridComponent setColumnOrder', () => {
+  const headerText = (fixture: ComponentFixture<ReorderHostComponent>) => fixture.debugElement
+    .queryAll(By.css('th')).map(th => th.nativeElement.textContent.trim());
+  const gridInstance = (fixture: ComponentFixture<ReorderHostComponent>) => fixture.debugElement
+    .query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+  it('reorders columns programmatically, without a drag event', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['d', 'a']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['D', 'A', 'B', 'C']);
+  });
+
+  it('appends fields the requested order omits, in their prior relative order', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['c']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['C', 'A', 'B', 'D']);
+  });
+
+  it('ignores fields that do not match any current column', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['nope', 'd']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['D', 'A', 'B', 'C']);
+  });
+
+  it('repositions a column even when it declared reorder="false" — that flag only blocks its own header drag', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['c']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['C', 'A', 'B', 'D']);
+  });
+
+  it('also reorders data cells, matching the new header order', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['d', 'a']);
+    fixture.detectChanges();
+    const cellValues = fixture.debugElement.queryAll(By.css('tbody td')).map(td => td.nativeElement.textContent.trim());
+    expect(cellValues).toEqual(['4', '1', '2', '3']);
+  });
+});
+
+describe('InanduGridComponent runtime column pinning', () => {
+  let fixture: ComponentFixture<StickyHostComponent>;
+  let grid: InanduGridComponent;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [StickyHostComponent] });
+    fixture = TestBed.createComponent(StickyHostComponent);
+    fixture.detectChanges();
+    grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+  });
+
+  // Same layout as the declarative sticky-columns suite above: [select, A(sticky), B(sticky), C].
+  const headers = () => fixture.debugElement.queryAll(By.css('th'));
+  const left = (el: { nativeElement: HTMLElement }) => el.nativeElement.style.insetInlineStart;
+  const columnByField = (field: string) => grid.visibleColumns().find(column => column.field() === field)!;
+
+  it('reflects a column\'s own declared sticky/stickySide by default, with no override set', () => {
+    expect(grid.columnPinnedSide(columnByField('a'))).toBe('left');
+    expect(grid.columnPinnedSide(columnByField('c'))).toBeUndefined();
+  });
+
+  it('pins a column that was not declared sticky, taking effect immediately', () => {
+    grid.setColumnPinned('c', 'left');
+    fixture.detectChanges();
+
+    expect(grid.columnPinnedSide(columnByField('c'))).toBe('left');
+    const cHeader = headers()[3];
+    expect(cHeader.nativeElement.classList).toContain('inandu-sticky-column');
+    // 36 (select) + 50 (A) + 80 (B) — C now stacks after both declared-sticky columns.
+    expect(left(cHeader)).toBe('166px');
+  });
+
+  it('un-pins a column that declared sticky="true", with side undefined', () => {
+    grid.setColumnPinned('a', undefined);
+    fixture.detectChanges();
+
+    expect(grid.columnPinnedSide(columnByField('a'))).toBeUndefined();
+    expect(headers()[1].nativeElement.classList).not.toContain('inandu-sticky-column');
+    // B no longer has a preceding sticky column besides the select checkbox.
+    expect(left(headers()[2])).toBe('36px');
+  });
+
+  it('can move a column to the other side', () => {
+    grid.setColumnPinned('a', 'right');
+    fixture.detectChanges();
+    expect(grid.columnPinnedSide(columnByField('a'))).toBe('right');
+  });
+});
+
 @Component({
   template: `
     <inandu-grid [data]="rows" selectable="true" lang="en" (selectionChange)="onSelectionChange($event)">
@@ -2316,6 +2423,25 @@ describe('InanduGridComponent persisted state', () => {
     fixture2.detectChanges();
     const grid2 = fixture2.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
     expect(grid2.visibleColumns().map(c => c.field())).toEqual(['name']);
+  });
+
+  it('persists setColumnOrder()/setColumnPinned() and restores both on a fresh grid sharing the same stateKey', () => {
+    TestBed.configureTestingModule({ imports: [PersistedStateHostComponent] });
+    const fixture = TestBed.createComponent(PersistedStateHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnOrder(['score', 'name']);
+    grid.setColumnPinned('score', 'left');
+    fixture.detectChanges();
+    expect(grid.displayColumns().map(c => c.field())).toEqual(['score', 'name']);
+    expect(grid.columnPinnedSide(grid.displayColumns()[0])).toBe('left');
+
+    const fixture2 = TestBed.createComponent(PersistedStateHostComponent);
+    fixture2.detectChanges();
+    const grid2 = fixture2.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    expect(grid2.displayColumns().map(c => c.field())).toEqual(['score', 'name']);
+    expect(grid2.columnPinnedSide(grid2.displayColumns()[0])).toBe('left');
   });
 
   it('does not persist anything when stateKey is unset', () => {

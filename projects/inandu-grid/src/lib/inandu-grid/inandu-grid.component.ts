@@ -3,7 +3,7 @@ import { formatNumber, NgTemplateOutlet } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
 import { InanduCellTemplateContext, InanduColumnComponent, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
-import type { InanduColumnAsyncValidator } from '../inandu-column/inandu-column.component';
+import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inandu-column/inandu-column.component';
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
 // in ../core now — framework-agnostic, no `@angular/*` dependency, reusable as-is by a non-Angular
@@ -221,11 +221,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** Guards the one-time `stateKey`-based restore effect in the constructor against re-running. */
   private hasRestoredState = false;
 
-  /** Everything persisted under `stateKey` — column widths/order/visibility, sort, and filters. */
+  /** Everything persisted under `stateKey` — column widths/order/visibility/pin, sort, and filters. */
   private readonly persistableState = computed(() => ({
     columnWidths: this.columnWidths(),
     reorderedFields: this.reorderedFields(),
     hiddenFields: Array.from(this.hiddenFields()),
+    pinnedOverrides: this.pinnedOverrides(),
     sortCriteria: this.sortCriteria(),
     filterQuery: this.filterQuery(),
     columnFilters: this.columnFilters(),
@@ -245,6 +246,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         columnWidths: Record<string, number>;
         reorderedFields: string[];
         hiddenFields: string[];
+        pinnedOverrides: Record<string, InanduColumnStickySide | 'none'>;
         sortCriteria: InanduGridSortCriterion[];
         filterQuery: string;
         columnFilters: Record<string, InanduGridColumnFilterValue>;
@@ -257,6 +259,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       }
       if (Array.isArray(state.hiddenFields)) {
         this.hiddenFields.set(new Set(state.hiddenFields));
+      }
+      if (state.pinnedOverrides) {
+        this.pinnedOverrides.set(state.pinnedOverrides);
       }
       if (Array.isArray(state.sortCriteria)) {
         this.sortCriteria.set(state.sortCriteria);
@@ -585,6 +590,38 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       return;
     }
     this.hiddenFields.update(fields => new Set(fields).add(field));
+  }
+
+  /**
+   * Runtime pin (sticky) overrides, keyed by field — `'left'`/`'right'` pins there regardless of the
+   * column's own declared `sticky()`/`stickySide()`, `'none'` un-pins a column that declared
+   * `sticky="true"`. A field with no entry here just falls through to that column's own declared
+   * default — see `columnPinnedSide()`, the only place this is read.
+   */
+  private readonly pinnedOverrides = signal<Record<string, InanduColumnStickySide | 'none'>>({});
+
+  /**
+   * A column's current pin side, considering any runtime override — an override if `setColumnPinned`
+   * was ever called for this field, else its own declared `sticky()`/`stickySide()`. `undefined`
+   * means not pinned. Every sticky-related render (`<th>`/`<td>` class, `stickyOffset()`/
+   * `stickyOffsetRight()`, both left/right inline-offset bindings) goes through this now instead of
+   * reading `column.sticky()`/`column.stickySide()` directly, so a runtime pin/unpin from e.g. a
+   * consumer-built column panel takes effect everywhere at once.
+   */
+  columnPinnedSide(column: InanduColumnComponent): InanduColumnStickySide | undefined {
+    const override = this.pinnedOverrides()[column.field()];
+    if (override === 'left' || override === 'right') {
+      return override;
+    }
+    if (override === 'none') {
+      return undefined;
+    }
+    return column.sticky() ? column.stickySide() : undefined;
+  }
+
+  /** Pins `field` to `side` at runtime, or un-pins it when `side` is `undefined` — from e.g. a consumer-built column panel's "fix left/right" control. See `columnPinnedSide()`. Persisted under `stateKey` like column order/width/visibility. */
+  setColumnPinned(field: string, side: InanduColumnStickySide | undefined): void {
+    this.pinnedOverrides.update(overrides => ({ ...overrides, [field]: side ?? 'none' }));
   }
 
   /** Field of the column whose visibility toggle popup is open, tracked as a simple flag since there's only one such popup for the whole grid (unlike the per-column filter popups). */
@@ -1709,6 +1746,26 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.reorderedFields.set(fields);
   }
 
+  /**
+   * Sets the full column order directly, bypassing the header drag-and-drop gesture — e.g. from a
+   * consumer-built column-management panel (drag-reorder inside a sidebar list, "move up"/"move
+   * down" buttons, or restoring a saved layout). `fields` should list every column's `field()`, in
+   * the desired order; any field it omits keeps its current relative position and is appended after
+   * the fields it does list (same "flows in at the end" behavior `displayColumns()` already has for
+   * a stale/partial order — see its doc comment) — so passing a subset is safe, it just won't move
+   * the columns you didn't mention. Fields that don't match any current column are ignored. A
+   * `reorder="false"` column can still be repositioned this way — that flag only opts a column's own
+   * header out of *being dragged*, it doesn't lock its position against every other mechanism.
+   */
+  setColumnOrder(fields: readonly string[]): void {
+    const current = this.displayColumns().map(column => column.field());
+    const currentSet = new Set(current);
+    const requested = fields.filter(field => currentSet.has(field));
+    const requestedSet = new Set(requested);
+    const remaining = current.filter(field => !requestedSet.has(field));
+    this.reorderedFields.set([...requested, ...remaining]);
+  }
+
   /** `MsgGroupedBy` interpolated with the grouped column's display label. */
   readonly groupByLabel = computed(() => {
     const column = this.groupByColumn();
@@ -1758,7 +1815,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       if (other === column) {
         break;
       }
-      if (other.sticky() && other.stickySide() === 'left') {
+      if (this.columnPinnedSide(other) === 'left') {
         offset += this.effectiveWidth(other) || 80;
       }
     }
@@ -1780,7 +1837,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         seenColumn = true;
         continue;
       }
-      if (seenColumn && other.sticky() && other.stickySide() === 'right') {
+      if (seenColumn && this.columnPinnedSide(other) === 'right') {
         offset += this.effectiveWidth(other) || 80;
       }
     }

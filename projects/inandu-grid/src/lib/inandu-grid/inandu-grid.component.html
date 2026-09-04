@@ -102,10 +102,10 @@
           <th class="inandu-column" scope="col" role="columnheader"
             [attr.tabindex]="colIndex === 0 && !selectable() ? 0 : -1"
             [class.inandu-groupable-header]="column.groupable()"
-            [class.inandu-sticky-column]="column.sticky()"
+            [class.inandu-sticky-column]="columnPinnedSide(column)"
             [class.inandu-drag-over]="isDragOverHeaderField(column.field())"
-            [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
-            [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+            [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+            [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
             [attr.draggable]="headerDraggable ? true : null"
             (dragstart)="headerDraggable && onColumnDragStart($event, column.field())"
             (dragover)="onColumnHeaderDragOver($event, column.field())"
@@ -240,9 +240,9 @@
                 }
                 @for (column of visibleColumns(); track column.field()) {
                   <td role="gridcell" tabindex="-1"
-                    [class.inandu-sticky-column]="column.sticky()"
-                    [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
-                    [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                    [class.inandu-sticky-column]="columnPinnedSide(column)"
+                    [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+                    [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
                   >
                     @if (column.editable() && isEditingRow(item.row)) {
                       @switch (column.type()) {
@@ -336,9 +336,9 @@
               }
               @for (column of visibleColumns(); track column.field()) {
                 <td role="gridcell" tabindex="-1"
-                  [class.inandu-sticky-column]="column.sticky()"
-                  [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
-                  [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                  [class.inandu-sticky-column]="columnPinnedSide(column)"
+                  [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+                  [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
                 >
                   @if (column.editable() && isEditingRow(row)) {
                     @switch (column.type()) {
@@ -410,9 +410,9 @@
               }
               @for (column of visibleColumns(); track column.field()) {
                 <td
-                  [class.inandu-sticky-column]="column.sticky()"
-                  [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
-                  [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                  [class.inandu-sticky-column]="columnPinnedSide(column)"
+                  [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+                  [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
                 >
                   @if (column.editable()) {
                     @switch (column.type()) {
@@ -485,10 +485,10 @@
             @for (column of visibleColumns(); track column.field(); let colIndex = $index) {
               <td role="gridcell" tabindex="-1"
                 [attr.data-field]="column.field()"
-                [class.inandu-sticky-column]="column.sticky()"
+                [class.inandu-sticky-column]="columnPinnedSide(column)"
                 [class.inandu-cell-range-selected]="cellRangeSelection() && isCellInRange(rowIndex, colIndex)"
-                [style.inset-inline-start.px]="column.sticky() && column.stickySide() !== 'right' ? stickyOffset(column) : null"
-                [style.inset-inline-end.px]="column.sticky() && column.stickySide() === 'right' ? stickyOffsetRight(column) : null"
+                [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+                [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
                 (mousedown)="cellRangeSelection() && onCellRangeMouseDown($event, rowIndex, colIndex)"
                 (mouseenter)="cellRangeSelection() && onCellRangeMouseEnter(rowIndex, colIndex)"
               >
