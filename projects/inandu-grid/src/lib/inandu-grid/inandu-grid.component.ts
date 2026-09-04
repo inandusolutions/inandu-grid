@@ -4,6 +4,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
 import { InanduCellTemplateContext, InanduColumnComponent, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
 import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inandu-column/inandu-column.component';
+import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
@@ -531,7 +532,65 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.requestedPage.set(1);
   }
 
-  readonly columns = contentChildren(InanduColumnComponent);
+  /**
+   * Content queries don't cross a *component* boundary — `directColumns()` below only ever finds
+   * an `<inandu-column>` written directly inside `<inandu-grid>` (or nested in a plain element,
+   * `descendants: true` handles that), never one nested inside `<inandu-column-group>`, since that
+   * makes it `InanduColumnGroupComponent`'s own content child, not this grid's. `columns()` is the
+   * real, complete list every other computed in this file should keep reading — direct columns
+   * first (their own declaration order), then every group's columns (group declaration order,
+   * then that group's own column declaration order). A column's explicit `order()` input is what
+   * `orderedColumns()`/`placeColumnsByOrder()` actually key off for final position — set it
+   * explicitly on every column when mixing grouped and ungrouped ones if this concatenation order
+   * isn't already what you want.
+   */
+  private readonly directColumns = contentChildren(InanduColumnComponent);
+  readonly columns = computed(() => [...this.directColumns(), ...this.columnGroups().flatMap(group => group.columns())]);
+
+  /**
+   * Column groups (#26) — `<inandu-column-group title="…">` wrapping a run of `<inandu-column>`
+   * children, rendered as a shared header cell above them. `columns()` above already merges a
+   * group's columns in, so grouping some doesn't touch ordering/visibility/filtering/sorting
+   * beyond that merge — only `fieldToGroup()`/`columnGroupRuns()` below, which the header template
+   * reads, are group-aware past that point. See `InanduColumnGroupComponent`'s doc comment for the
+   * v1 scope (one level of nesting, no collapsing, export doesn't reflect groups yet).
+   */
+  readonly columnGroups = contentChildren(InanduColumnGroupComponent);
+
+  readonly hasColumnGroups = computed(() => this.columnGroups().length > 0);
+
+  /** Every grouped column's field, mapped to the group it belongs to. A field absent from this map is ungrouped. */
+  private readonly fieldToGroup = computed(() => {
+    const map = new Map<string, InanduColumnGroupComponent>();
+    for (const group of this.columnGroups()) {
+      for (const column of group.columns()) {
+        map.set(column.field(), group);
+      }
+    }
+    return map;
+  });
+
+  /**
+   * `visibleColumns()` chunked into consecutive runs sharing the same group (or no group at all,
+   * for `group: undefined`) — what the group header row actually iterates, one `<th>` per run
+   * (`colspan` = the run's length). If a group's columns end up non-adjacent after a drag-reorder,
+   * the group simply splits into more, smaller runs here rather than merging non-contiguous
+   * columns under one cell — see `InanduColumnGroupComponent`'s doc comment.
+   */
+  readonly columnGroupRuns = computed(() => {
+    const fieldToGroup = this.fieldToGroup();
+    const runs: { group: InanduColumnGroupComponent | undefined; columns: InanduColumnComponent[] }[] = [];
+    for (const column of this.visibleColumns()) {
+      const group = fieldToGroup.get(column.field());
+      const last = runs[runs.length - 1];
+      if (last && last.group === group) {
+        last.columns.push(column);
+      } else {
+        runs.push({ group, columns: [column] });
+      }
+    }
+    return runs;
+  });
 
   readonly orderedColumns = computed(() => placeColumnsByOrder(this.columns()));
 

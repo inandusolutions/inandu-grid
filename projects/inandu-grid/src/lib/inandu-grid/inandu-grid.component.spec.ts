@@ -5,6 +5,7 @@ import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { InanduGridComponent, InanduGridPagingOptions, InanduGridRow, InanduGridRowSave, InanduGridNewRowValues, InanduGridSortCriterion, InanduGridPageState, InanduGridFilterState, InanduGridCellPaste, InanduGridCellRangeSelection, InanduGridLoadMoreEvent } from './inandu-grid.component';
 import { InanduColumnComponent, InanduColumnValidator, InanduColumnAsyncValidator } from '../inandu-column/inandu-column.component';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
+import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
 
 @Component({
   template: `
@@ -3162,6 +3163,91 @@ describe('InanduGridComponent master-detail', () => {
     grid.setGroupBy(undefined);
     fixture.detectChanges();
     expect(fixture.debugElement.queryAll(By.css('tbody .inandu-detail-toggle-cell')).length).toBe(2);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" selectable="true">
+      <inandu-column-group title="Contact">
+        <inandu-column field="email" title="Email"></inandu-column>
+        <inandu-column field="phone" title="Phone"></inandu-column>
+      </inandu-column-group>
+      <inandu-column field="id" title="ID"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent, InanduColumnGroupComponent],
+})
+class ColumnGroupsHostComponent {
+  rows: InanduGridRow[] = [{ id: 1, email: 'a@x.com', phone: '555' }];
+}
+
+describe('InanduGridComponent column groups', () => {
+  it('renders no group header row when no inandu-column-group is declared', () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-group-header-row'))).toBeNull();
+  });
+
+  it('groups a run of columns under one spanning header cell, with a filler above ungrouped/utility columns', () => {
+    // Note on order: columns() concatenates ungrouped columns first, then each group's — a content
+    // query can't see past a component boundary, so there's no way to recover the *true* original
+    // declaration interleaving of a bare <inandu-column> against a <inandu-column-group>'s members.
+    // ID (ungrouped) renders before Email/Phone (grouped) here even though the template above
+    // declares the group first — see InanduGridComponent.columns()'s doc comment. Set an explicit
+    // order() on every column to control this precisely regardless of grouping.
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+
+    const groupCells = fixture.debugElement.queryAll(By.css('.inandu-group-header-row th'));
+    // select-checkbox filler, ID filler (colspan 1), "Contact" (colspan 2) — 3 cells for 4 leaf columns.
+    expect(groupCells.length).toBe(3);
+    expect(groupCells[0].nativeElement.classList).toContain('inandu-select-cell');
+    expect(groupCells[1].nativeElement.textContent.trim()).toBe('');
+    expect(groupCells[1].nativeElement.getAttribute('colspan')).toBe('1');
+    expect(groupCells[2].nativeElement.textContent.trim()).toBe('Contact');
+    expect(groupCells[2].nativeElement.getAttribute('colspan')).toBe('2');
+  });
+
+  it('the leaf header row lists every column, ungrouped-then-grouped, still fully usable', () => {
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+
+    const leafHeaders = fixture.debugElement.queryAll(By.css('thead tr[role="row"] th'));
+    // select checkbox + ID (ungrouped) + Email + Phone (grouped) — see the order note above.
+    const texts = leafHeaders.map(h => h.nativeElement.textContent.trim());
+    expect(texts.slice(1)).toEqual(['ID', 'Email', 'Phone']);
+  });
+
+  it('every header row has the same number of cells, for correct column alignment', () => {
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+
+    const leafCellCount = fixture.debugElement.queryAll(By.css('thead tr[role="row"] th')).length;
+    const groupColspanTotal = fixture.debugElement
+      .queryAll(By.css('.inandu-group-header-row th'))
+      .reduce((sum, th) => sum + Number(th.nativeElement.getAttribute('colspan') ?? '1'), 0);
+    expect(groupColspanTotal).toBe(leafCellCount);
+  });
+
+  it('a group whose columns are no longer adjacent splits into separate runs instead of merging non-contiguous columns', () => {
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnOrder(['email', 'id', 'phone']);
+    fixture.detectChanges();
+
+    const groupCells = fixture.debugElement.queryAll(By.css('.inandu-group-header-row th.inandu-column-group-header'));
+    // "Contact" (email, colspan 1), "" (id, colspan 1), "Contact" (phone, colspan 1) — split in two.
+    expect(groupCells.map(c => c.nativeElement.textContent.trim())).toEqual(['Contact', '', 'Contact']);
+    expect(groupCells.every(c => c.nativeElement.getAttribute('colspan') === '1')).toBeTrue();
   });
 });
 

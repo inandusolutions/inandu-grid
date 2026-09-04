@@ -98,6 +98,18 @@
     position: relative;
 }
 
+// Column groups (#26) — the extra header row above the normal one, see
+// InanduGridComponent.columnGroupRuns(). A slightly muted background tells it apart from the
+// leaf header row at a glance; the filler cells above ungrouped/utility columns share the same
+// treatment (empty content, same border/height) rather than needing a separate rule.
+.inandu-group-header-row th {
+    text-align: center;
+    font-weight: 600;
+}
+.inandu-column-group-header {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
 .inandu-column-resize-handle {
     position: absolute;
     top: 0;

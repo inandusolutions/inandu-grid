@@ -86,6 +86,27 @@
           </td>
         </tr>
       }
+      @if (hasColumnGroups()) {
+        <tr class="inandu-group-header-row">
+          @if (hasMasterDetail()) {
+            <th class="inandu-column inandu-detail-toggle-cell inandu-sticky-column" scope="col" style="inset-inline-start: 0"></th>
+          }
+          @if (hasRowDragHandle()) {
+            <th class="inandu-column inandu-row-drag-cell" scope="col"></th>
+          }
+          @if (selectable()) {
+            <th class="inandu-column inandu-select-cell inandu-sticky-column" scope="col" [style.inset-inline-start.px]="(hasMasterDetail() ? detailToggleColumnWidthPx : 0) + (hasRowDragHandle() ? rowDragColumnWidthPx : 0)"></th>
+          }
+          @for (run of columnGroupRuns(); track run.columns[0].field()) {
+            <th class="inandu-column inandu-column-group-header" scope="colgroup" [attr.colspan]="run.columns.length">
+              {{ run.group?.title() ?? '' }}
+            </th>
+          }
+          @if (hasRowActions()) {
+            <th class="inandu-column inandu-row-actions" scope="col"></th>
+          }
+        </tr>
+      }
       <tr role="row">
         @if (hasMasterDetail()) {
           <th class="inandu-column inandu-detail-toggle-cell inandu-sticky-column" scope="col" role="columnheader" style="inset-inline-start: 0"></th>
