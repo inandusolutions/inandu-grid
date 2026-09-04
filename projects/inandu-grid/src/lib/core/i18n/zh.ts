@@ -35,6 +35,8 @@ export const zh = {
   MsgAddRow: '添加行',
   MsgLoading: '加载中…',
   MsgDragRow: '拖动以重新排序行',
+  MsgExpandDetail: '展开行详情',
+  MsgCollapseDetail: '收起行详情',
   MsgDeleteSelected: '删除所选 ({{count}})',
   MsgValidationRequired: '此字段为必填项',
   MsgValidationMin: '不得小于 {{min}}',

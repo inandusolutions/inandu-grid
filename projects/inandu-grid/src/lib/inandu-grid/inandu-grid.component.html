@@ -1,4 +1,4 @@
-<div [class]="rootClasses()" [attr.id]="id() || null" [attr.dir]="dir()" [style.width.px]="width() || null" [style.height.px]="height() || null" [style.--inandu-select-column-width.px]="selectColumnWidthPx" [style.--inandu-row-drag-column-width.px]="rowDragColumnWidthPx" tabindex="-1" (keydown)="onGridKeyDown($event)">
+<div [class]="rootClasses()" [attr.id]="id() || null" [attr.dir]="dir()" [style.width.px]="width() || null" [style.height.px]="height() || null" [style.--inandu-select-column-width.px]="selectColumnWidthPx" [style.--inandu-row-drag-column-width.px]="rowDragColumnWidthPx" [style.--inandu-detail-toggle-column-width.px]="detailToggleColumnWidthPx" tabindex="-1" (keydown)="onGridKeyDown($event)">
   @if (exportable() || columnToggle() || (selectable() && deletable())) {
     <div class="inandu-toolbar">
       @if (exportable()) {
@@ -34,6 +34,9 @@
   <ng-template #tableHead>
     <caption class="inandu-caption">Data grid</caption>
     <colgroup>
+      @if (hasMasterDetail()) {
+        <col class="inandu-column inandu-detail-toggle-column" />
+      }
       @if (hasRowDragHandle()) {
         <col class="inandu-column inandu-row-drag-column" />
       }
@@ -84,11 +87,14 @@
         </tr>
       }
       <tr role="row">
+        @if (hasMasterDetail()) {
+          <th class="inandu-column inandu-detail-toggle-cell inandu-sticky-column" scope="col" role="columnheader" style="inset-inline-start: 0"></th>
+        }
         @if (hasRowDragHandle()) {
           <th class="inandu-column inandu-row-drag-cell" scope="col" role="columnheader"></th>
         }
         @if (selectable()) {
-          <th class="inandu-column inandu-select-cell inandu-sticky-column" scope="col" role="columnheader" tabindex="0" [style.inset-inline-start.px]="hasRowDragHandle() ? rowDragColumnWidthPx : 0">
+          <th class="inandu-column inandu-select-cell inandu-sticky-column" scope="col" role="columnheader" tabindex="0" [style.inset-inline-start.px]="(hasMasterDetail() ? detailToggleColumnWidthPx : 0) + (hasRowDragHandle() ? rowDragColumnWidthPx : 0)">
             <input type="checkbox" class="inandu-select-checkbox"
               [attr.aria-label]="msgSelectAll()"
               [checked]="allVisibleSelected()"
@@ -402,11 +408,14 @@
         @if (creatable()) {
           @if (isCreatingRow()) {
             <tr class="inandu-add-row">
+              @if (hasMasterDetail()) {
+                <td class="inandu-detail-toggle-cell inandu-sticky-column" style="inset-inline-start: 0"></td>
+              }
               @if (hasRowDragHandle()) {
                 <td class="inandu-row-drag-cell"></td>
               }
               @if (selectable()) {
-                <td class="inandu-select-cell inandu-sticky-column" [style.inset-inline-start.px]="hasRowDragHandle() ? rowDragColumnWidthPx : 0"></td>
+                <td class="inandu-select-cell inandu-sticky-column" [style.inset-inline-start.px]="(hasMasterDetail() ? detailToggleColumnWidthPx : 0) + (hasRowDragHandle() ? rowDragColumnWidthPx : 0)"></td>
               }
               @for (column of visibleColumns(); track column.field()) {
                 <td
@@ -468,13 +477,24 @@
             (dragleave)="hasRowDragHandle() && onRowDragLeave(row)"
             (drop)="hasRowDragHandle() && onRowDrop($event, row)"
           >
+            @if (hasMasterDetail()) {
+              <td class="inandu-detail-toggle-cell inandu-sticky-column" role="gridcell" style="inset-inline-start: 0">
+                <button type="button" class="inandu-icon"
+                  [class.inandu-icon-detail-expanded]="isRowExpanded(row)"
+                  [class.inandu-icon-detail-collapsed]="!isRowExpanded(row)"
+                  [attr.aria-expanded]="isRowExpanded(row)"
+                  [attr.aria-label]="detailToggleLabel(row)"
+                  (click)="toggleRowExpanded(row)"
+                ></button>
+              </td>
+            }
             @if (hasRowDragHandle()) {
               <td class="inandu-row-drag-cell">
                 <span class="inandu-icon inandu-icon-drag" [attr.aria-label]="msgDragRow()" [title]="msgDragRow()"></span>
               </td>
             }
             @if (selectable()) {
-              <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" [style.inset-inline-start.px]="hasRowDragHandle() ? rowDragColumnWidthPx : 0">
+              <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" [style.inset-inline-start.px]="(hasMasterDetail() ? detailToggleColumnWidthPx : 0) + (hasRowDragHandle() ? rowDragColumnWidthPx : 0)">
                 <input type="checkbox" class="inandu-select-checkbox"
                   [attr.aria-label]="selectRowLabel($index)"
                   [checked]="isRowSelected(row)"
@@ -544,6 +564,15 @@
               </td>
             }
           </tr>
+          @if (hasMasterDetail() && isRowExpanded(row)) {
+            <tr class="inandu-row inandu-detail-row">
+              <td [attr.colspan]="totalColumnCount() || 1">
+                @if (detailTemplate(); as detailTpl) {
+                  <ng-container *ngTemplateOutlet="detailTpl; context: detailContext(row)"></ng-container>
+                }
+              </td>
+            </tr>
+          }
         } @empty {
           <tr class="inandu-row">
             <td [attr.colspan]="totalColumnCount() || 1">{{ msgNoData() }}</td>
@@ -555,6 +584,9 @@
       <tfoot>
         @if (showTotalsRow()) {
           <tr class="inandu-totals-row">
+            @if (hasMasterDetail()) {
+              <td class="inandu-detail-toggle-cell"></td>
+            }
             @if (hasRowDragHandle()) {
               <td class="inandu-row-drag-cell"></td>
             }

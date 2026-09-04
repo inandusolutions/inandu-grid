@@ -17,8 +17,10 @@ export type {
   InanduGridColumnFilterValue,
   InanduGridCustomTranslations,
   InanduRowActionsContext,
+  InanduDetailTemplateContext,
   SortDirection,
 } from './lib/inandu-grid/inandu-grid.component';
+export { InanduDetailTemplateDirective } from './lib/inandu-grid/inandu-detail-template.directive';
 export { InanduColumnComponent } from './lib/inandu-column/inandu-column.component';
 export type {
   InanduColumnType,

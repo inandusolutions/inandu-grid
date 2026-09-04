@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { InanduGridComponent, InanduGridPagingOptions, InanduGridRow, InanduGridRowSave, InanduGridNewRowValues, InanduGridSortCriterion, InanduGridPageState, InanduGridFilterState, InanduGridCellPaste, InanduGridCellRangeSelection, InanduGridLoadMoreEvent } from './inandu-grid.component';
 import { InanduColumnComponent, InanduColumnValidator, InanduColumnAsyncValidator } from '../inandu-column/inandu-column.component';
+import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 
 @Component({
   template: `
@@ -2984,6 +2985,183 @@ describe('InanduGridComponent custom row actions', () => {
     const children = actionsCell.queryAll(By.css('button'));
     expect(children[0].nativeElement.getAttribute('aria-label')).toBe('Delete');
     expect(children[1].nativeElement.textContent.trim()).toBe('Duplicate Alice');
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" [virtualScroll]="virtual">
+      <inandu-column title="Name" field="name" groupable="true"></inandu-column>
+      <ng-template inanduDetailTemplate let-row>
+        <p class="detail-content">Details for {{ row.name }}</p>
+      </ng-template>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent, InanduDetailTemplateDirective],
+})
+class MasterDetailHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Alice' }, { name: 'Bob' }];
+  virtual = false;
+}
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" [singleDetailExpand]="single">
+      <inandu-column title="Name" field="name"></inandu-column>
+      <ng-template inanduDetailTemplate let-row>
+        <p class="detail-content">Details for {{ row.name }}</p>
+      </ng-template>
+      <ng-template let-row>
+        <button type="button" class="custom-action">Action {{ row.name }}</button>
+      </ng-template>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent, InanduDetailTemplateDirective],
+})
+class MasterDetailWithRowActionsHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Alice' }, { name: 'Bob' }, { name: 'Carol' }];
+  single = false;
+}
+
+describe('InanduGridComponent master-detail', () => {
+  it('does not render a toggle column for a grid with no detailTemplate', () => {
+    @Component({
+      template: `<inandu-grid [data]="rows"><inandu-column title="Name" field="name"></inandu-column></inandu-grid>`,
+      imports: [InanduGridComponent, InanduColumnComponent],
+    })
+    class NoDetailHostComponent {
+      rows: InanduGridRow[] = [{ name: 'Alice' }];
+    }
+    TestBed.configureTestingModule({ imports: [NoDetailHostComponent] });
+    const fixture = TestBed.createComponent(NoDetailHostComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-toggle-cell'))).toBeNull();
+  });
+
+  it('a detailTemplate alone renders the toggle column, collapsed by default', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('tbody .inandu-detail-toggle-cell')).length).toBe(2);
+    expect(fixture.debugElement.query(By.css('.inandu-detail-row'))).toBeNull();
+    const toggle = fixture.debugElement.query(By.css('.inandu-detail-toggle-cell button'));
+    expect(toggle.nativeElement.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.nativeElement.getAttribute('aria-label')).toBe('Expand row details');
+  });
+
+  it('clicking the toggle expands the detail row with the right row bound to let-row', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    const firstToggle = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0];
+    firstToggle.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(firstToggle.nativeElement.getAttribute('aria-expanded')).toBe('true');
+    expect(firstToggle.nativeElement.getAttribute('aria-label')).toBe('Collapse row details');
+    const detailRows = fixture.debugElement.queryAll(By.css('.inandu-detail-row'));
+    expect(detailRows.length).toBe(1);
+    expect(detailRows[0].query(By.css('.detail-content')).nativeElement.textContent.trim()).toBe('Details for Alice');
+  });
+
+  it('the detail row spans every column via totalColumnCount()', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0].nativeElement.click();
+    fixture.detectChanges();
+
+    const cell = fixture.debugElement.query(By.css('.inandu-detail-row td'));
+    expect(Number(cell.nativeElement.getAttribute('colspan'))).toBe(grid.totalColumnCount());
+  });
+
+  it('clicking the toggle again collapses the detail row', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    const toggle = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0];
+    toggle.nativeElement.click();
+    fixture.detectChanges();
+    toggle.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-row'))).toBeNull();
+  });
+
+  it('multiple rows can be expanded at once by default', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    const toggles = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'));
+    toggles[0].nativeElement.click();
+    toggles[1].nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('.inandu-detail-row')).length).toBe(2);
+  });
+
+  it('singleDetailExpand="true" collapses any other expanded row', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailWithRowActionsHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailWithRowActionsHostComponent);
+    fixture.componentInstance.single = true;
+    fixture.detectChanges();
+
+    const toggles = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'));
+    toggles[0].nativeElement.click();
+    fixture.detectChanges();
+    toggles[1].nativeElement.click();
+    fixture.detectChanges();
+
+    const detailRows = fixture.debugElement.queryAll(By.css('.inandu-detail-row'));
+    expect(detailRows.length).toBe(1);
+    expect(detailRows[0].query(By.css('.detail-content')).nativeElement.textContent.trim()).toBe('Details for Bob');
+  });
+
+  it('coexists with a separate, unmarked rowActionsTemplate — each renders its own content', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailWithRowActionsHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailWithRowActionsHostComponent);
+    fixture.detectChanges();
+
+    const firstRow = fixture.debugElement.queryAll(By.css('tbody tr.inandu-row'))[0];
+    expect(firstRow.query(By.css('.inandu-detail-toggle-cell'))).not.toBeNull();
+    expect(firstRow.query(By.css('.inandu-row-actions .custom-action')).nativeElement.textContent.trim()).toBe('Action Alice');
+
+    fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0].nativeElement.click();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.detail-content')).nativeElement.textContent.trim()).toBe('Details for Alice');
+  });
+
+  it('is disabled (no toggle column) while virtualScroll is on, to avoid misaligning columns', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.componentInstance.virtual = true;
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-toggle-cell'))).toBeNull();
+  });
+
+  it('is disabled (no toggle column) while grouped, to avoid misaligning columns', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    expect(fixture.debugElement.queryAll(By.css('tbody .inandu-detail-toggle-cell')).length).toBe(2);
+
+    grid.setGroupBy('name');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-toggle-cell'))).toBeNull();
+
+    grid.setGroupBy(undefined);
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('tbody .inandu-detail-toggle-cell')).length).toBe(2);
   });
 });
 

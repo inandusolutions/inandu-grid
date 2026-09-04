@@ -56,6 +56,13 @@
 .inandu-icon-page-next     { --inandu-icon: url("@{icon-head}%3Cpath d='M10 6l6 6-6 6'/%3E@{icon-tail}"); }
 .inandu-icon-page-last     { --inandu-icon: url("@{icon-head}%3Cpath d='M7 6l6 6-6 6M13 6l6 6-6 6'/%3E@{icon-tail}"); }
 .inandu-icon-drag          { --inandu-icon: url("@{icon-head}%3Ccircle cx='9' cy='6' r='0.1'/%3E%3Ccircle cx='15' cy='6' r='0.1'/%3E%3Ccircle cx='9' cy='12' r='0.1'/%3E%3Ccircle cx='15' cy='12' r='0.1'/%3E%3Ccircle cx='9' cy='18' r='0.1'/%3E%3Ccircle cx='15' cy='18' r='0.1'/%3E@{icon-tail}"); }
+// Master-detail (#4) expand/collapse toggle — a right-pointing chevron when collapsed (like
+// inandu-icon-page-next), rotating to point down once expanded, rather than two separate glyphs.
+.inandu-icon-detail-collapsed, .inandu-icon-detail-expanded {
+    --inandu-icon: url("@{icon-head}%3Cpath d='M9 6l6 6-6 6'/%3E@{icon-tail}");
+    transition: transform 0.15s ease;
+}
+.inandu-icon-detail-expanded { transform: rotate(90deg); }
 
 // The four pager chevrons are drawn pointing physically left/right; under `dir="rtl"` (see
 // InanduGridComponent.dir) "first/previous" should point toward the *end* of the reading direction
@@ -319,6 +326,32 @@
 .inandu-row-drag-cell {
     text-align: center;
     cursor: grab;
+}
+
+// The master-detail (#4) toggle column — leading-most of all, always sticky-left when present
+// (see InanduGridComponent.hasMasterDetail/stickyOffset). Same fallback caveat as the two above.
+.inandu-detail-toggle-column {
+    width: var(--inandu-detail-toggle-column-width, 32px);
+}
+
+.inandu-detail-toggle-cell {
+    text-align: center;
+}
+.inandu-detail-toggle-cell button {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+}
+
+// The expanded detail row's single full-width cell (see InanduGridComponent.detailTemplate) — a
+// faint tint distinguishes it from ordinary data rows. Still carries `inandu-row` too (see the
+// template), so it gets the same hover highlight as a real row for free; nothing else about
+// `inandu-row` styling assumes a fixed cell count, so sharing the class is harmless.
+.inandu-detail-row > td {
+    background-color: rgba(0, 0, 0, 0.02);
+    padding: 12px;
 }
 
 // Cell range selection (see InanduGridComponent.cellRangeSelection) — a lighter tint than the

@@ -5,11 +5,13 @@ import { provideChildTranslateService, TranslateService } from '@ngx-translate/c
 import { InanduCellTemplateContext, InanduColumnComponent, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
 import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inandu-column/inandu-column.component';
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
+import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
 // in ../core now — framework-agnostic, no `@angular/*` dependency, reusable as-is by a non-Angular
 // port. This component is the Angular binding layer over it.
 import {
   AGGREGATE_SYMBOLS,
+  DETAIL_TOGGLE_COLUMN_WIDTH,
   MIN_COLUMN_WIDTH,
   ROW_DRAG_COLUMN_WIDTH,
   SELECT_COLUMN_WIDTH,
@@ -59,6 +61,12 @@ export type InanduGridCustomTranslations = Record<string, Record<string, string>
 
 /** Template context for `InanduGridComponent.rowActionsTemplate` — `$implicit`/`row` is the row that trailing actions cell belongs to. */
 export interface InanduRowActionsContext<T extends InanduGridRow = InanduGridRow> {
+  $implicit: T;
+  row: T;
+}
+
+/** Template context for `InanduGridComponent.detailTemplate` (#4 master-detail) — `$implicit`/`row` is the row the expanded detail row belongs to. */
+export interface InanduDetailTemplateContext<T extends InanduGridRow = InanduGridRow> {
   $implicit: T;
   row: T;
 }
@@ -381,6 +389,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly msgAddRow = this.translate.translate('MsgAddRow', undefined, this.resolvedLang);
   readonly msgLoading = this.translate.translate('MsgLoading', undefined, this.resolvedLang);
   readonly msgDragRow = this.translate.translate('MsgDragRow', undefined, this.resolvedLang);
+  readonly msgExpandDetail = this.translate.translate('MsgExpandDetail', undefined, this.resolvedLang);
+  readonly msgCollapseDetail = this.translate.translate('MsgCollapseDetail', undefined, this.resolvedLang);
 
   constructor() {
     registerInanduGridTranslations(this.translate);
@@ -676,7 +686,95 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * yet to act on there). Setting this alone (with no `editable` column, `deletable`, or `creatable`)
    * is enough to make the actions column appear — see `hasRowActions`.
    */
-  readonly rowActionsTemplate = contentChild(TemplateRef<InanduRowActionsContext<T>>);
+  private readonly allActionOrDetailTemplateRefs = contentChildren(TemplateRef);
+  private readonly allActionOrDetailTemplateAnchors = contentChildren(TemplateRef, { read: ElementRef });
+
+  /**
+   * `<ng-template inanduDetailTemplate>`'s anchor, matched up by DOM node identity against
+   * `allActionOrDetailTemplateAnchors()` — the same reason `InanduColumnComponent.headerTemplate`
+   * does this instead of comparing `TemplateRef` instances directly: two separately-resolved
+   * content queries against the very same `<ng-template>` can return wrapper objects that are
+   * `!==` each other despite representing the same template.
+   */
+  private readonly detailAnchor = contentChild(InanduDetailTemplateDirective, { read: ElementRef });
+  private readonly detailTemplateIndex = computed(() => {
+    const anchor = this.detailAnchor();
+    return anchor ? this.allActionOrDetailTemplateAnchors().findIndex(candidate => candidate.nativeElement === anchor.nativeElement) : -1;
+  });
+
+  /**
+   * Master-detail (#4) content — declare `<ng-template inanduDetailTemplate let-row>…</ng-template>`
+   * as a *direct* child of `<inandu-grid>`. `let-row` (the template's `$implicit`) is the full row
+   * object. Its presence alone is enough to enable the feature (an expand/collapse toggle column,
+   * see `hasMasterDetail`) — there's no separate boolean input. Only supported in the plain flat/
+   * paged render path: not while `groupByColumn()` is set, and not with `virtualScroll()` (same
+   * "documented as unsupported" territory as grouped+virtual already occupy — see the toggle cell
+   * in the template, which simply doesn't render outside that path).
+   */
+  readonly detailTemplate = computed(() => {
+    const index = this.detailTemplateIndex();
+    return index === -1 ? undefined : (this.allActionOrDetailTemplateRefs()[index] as TemplateRef<InanduDetailTemplateContext<T>>);
+  });
+
+  /** The `*ngTemplateOutlet` context for `detailTemplate()` — `$implicit`/`row` is the full row object. */
+  detailContext(row: T): InanduDetailTemplateContext<T> {
+    return { $implicit: row, row };
+  }
+
+  /**
+   * Whether the master-detail expand/collapse toggle column should render — a `detailTemplate()`
+   * alone isn't enough: also `false` while grouped or `virtualScroll()` is on, since neither of
+   * those render paths has a detail-toggle cell (see the template) — rendering the column in the
+   * header/colgroup but not in the body would misalign every other column. Recomputes live, so
+   * clearing the grouping (or turning off `virtualScroll`) brings the toggle column right back.
+   */
+  readonly hasMasterDetail = computed(() => !!this.detailTemplate() && !this.groupByColumn() && !this.virtualScroll());
+
+  /** Rows currently expanded to show their detail content — by reference, like `isRowSelected`/`isEditingRow`. */
+  private readonly expandedRows = signal<Set<T>>(new Set());
+
+  isRowExpanded(row: T): boolean {
+    return this.expandedRows().has(row);
+  }
+
+  /** `MsgCollapseDetail`/`MsgExpandDetail` depending on `row`'s current state — the toggle button's `aria-label`. */
+  detailToggleLabel(row: T): string {
+    return this.isRowExpanded(row) ? this.msgCollapseDetail() : this.msgExpandDetail();
+  }
+
+  /**
+   * Toggles `row`'s detail visibility. Multiple rows can be expanded at once by default; pass
+   * `singleDetailExpand="true"` to collapse any other expanded row first, accordion-style.
+   */
+  toggleRowExpanded(row: T): void {
+    this.expandedRows.update(expanded => {
+      const next = this.singleDetailExpand() ? new Set<T>() : new Set(expanded);
+      if (expanded.has(row)) {
+        next.delete(row);
+      } else {
+        next.add(row);
+      }
+      return next;
+    });
+  }
+
+  /** See `toggleRowExpanded`. Off (any number of rows can be expanded at once) by default. */
+  readonly singleDetailExpand = input(false, { transform: booleanAttribute });
+
+  /**
+   * Custom, consumer-supplied buttons for the trailing row-actions cell, alongside (after) the
+   * built-in Edit/Delete — declare a plain `<ng-template let-row>…</ng-template>` as a *direct*
+   * child of `<inandu-grid>` (not nested inside an `<inandu-column>`, which is where a column's own
+   * `cellTemplate` lives instead, and not marked `inanduDetailTemplate`, which is `detailTemplate`
+   * above). `let-row` (the template's `$implicit`) is the full row object; only rendered for an
+   * *existing* row's actions cell, not while adding a new row (there's no row yet to act on there).
+   * Setting this alone (with no `editable` column, `deletable`, or `creatable`) is enough to make
+   * the actions column appear — see `hasRowActions`.
+   */
+  readonly rowActionsTemplate = computed(() => {
+    const detailIndex = this.detailTemplateIndex();
+    return this.allActionOrDetailTemplateRefs().find((_, index) => index !== detailIndex) as TemplateRef<InanduRowActionsContext<T>> | undefined;
+  });
 
   /** The `*ngTemplateOutlet` context for `rowActionsTemplate()` — `$implicit`/`row` is the full row object. */
   rowActionsContext(row: T): InanduRowActionsContext<T> {
@@ -686,9 +784,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** Whether the trailing row-actions column should render at all — row editing, row deletion, row creation, a custom `rowActionsTemplate`, or any combination. */
   readonly hasRowActions = computed(() => this.editableColumns().length > 0 || this.deletable() || this.creatable() || !!this.rowActionsTemplate());
 
-  /** Header + optional select/actions columns — the colspan every full-width row (search, group zone, empty state, pager) should span. */
+  /** Header + optional select/actions/detail-toggle columns — the colspan every full-width row (search, group zone, empty state, pager) should span. */
   readonly totalColumnCount = computed(() =>
-    this.visibleColumns().length + (this.hasRowDragHandle() ? 1 : 0) + (this.selectable() ? 1 : 0) + (this.hasRowActions() ? 1 : 0)
+    this.visibleColumns().length + (this.hasMasterDetail() ? 1 : 0) + (this.hasRowDragHandle() ? 1 : 0) + (this.selectable() ? 1 : 0) + (this.hasRowActions() ? 1 : 0)
   );
 
   readonly filterableColumns = computed(() => this.visibleColumns().filter(column => column.filter()));
@@ -1809,16 +1907,19 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** The drag-handle column's width, exposed the same way `selectColumnWidthPx` is — see its doc comment. */
   protected readonly rowDragColumnWidthPx = ROW_DRAG_COLUMN_WIDTH;
 
+  /** The master-detail toggle column's width, exposed the same way `selectColumnWidthPx` is — see its doc comment. It's the leading-most column of all, when present. */
+  protected readonly detailToggleColumnWidthPx = DETAIL_TOGGLE_COLUMN_WIDTH;
+
   /**
    * The `left` offset (px) a `stickySide="left"` (the default) sticky column's `<th>`/`<td>` needs:
-   * the select-checkbox column's width (it's always sticky-left when `selectable()` is on — see the
-   * template) plus every *other* left-sticky column's `effectiveWidth()` that renders before this
-   * one in `visibleColumns()`. A hidden column never contributes (it has no rendered `<th>`/`<td>`
-   * to occupy any width at all). Non-sticky and right-sticky columns never contribute either,
-   * regardless of where they sit.
+   * the detail-toggle and select-checkbox columns' widths (each always sticky-left when present —
+   * see the template) plus every *other* left-sticky column's `effectiveWidth()` that renders
+   * before this one in `visibleColumns()`. A hidden column never contributes (it has no rendered
+   * `<th>`/`<td>` to occupy any width at all). Non-sticky and right-sticky columns never
+   * contribute either, regardless of where they sit.
    */
   stickyOffset(column: InanduColumnComponent): number {
-    let offset = (this.hasRowDragHandle() ? ROW_DRAG_COLUMN_WIDTH : 0) + (this.selectable() ? SELECT_COLUMN_WIDTH : 0);
+    let offset = (this.hasMasterDetail() ? DETAIL_TOGGLE_COLUMN_WIDTH : 0) + (this.hasRowDragHandle() ? ROW_DRAG_COLUMN_WIDTH : 0) + (this.selectable() ? SELECT_COLUMN_WIDTH : 0);
     for (const other of this.visibleColumns()) {
       if (other === column) {
         break;

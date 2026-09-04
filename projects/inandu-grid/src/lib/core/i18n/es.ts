@@ -35,6 +35,8 @@ export const es = {
   MsgAddRow: 'Agregar fila',
   MsgLoading: 'Cargando…',
   MsgDragRow: 'Arrastrar para reordenar fila',
+  MsgExpandDetail: 'Expandir detalle de fila',
+  MsgCollapseDetail: 'Contraer detalle de fila',
   MsgDeleteSelected: 'Eliminar seleccionados ({{count}})',
   MsgValidationRequired: 'Este campo es obligatorio',
   MsgValidationMin: 'Debe ser como mínimo {{min}}',
