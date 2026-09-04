@@ -662,6 +662,36 @@ describe('InanduGridComponent column resize', () => {
     fixture.detectChanges();
     expect(colWidths(fixture)).toEqual(['30px', '60px']);
   });
+
+  it('setColumnWidth() sets a column\'s width programmatically, same effect as dragging', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnWidth('name', 200);
+    fixture.detectChanges();
+    expect(colWidths(fixture)).toEqual(['200px', '60px']);
+  });
+
+  it('setColumnWidth() clamps to the same minimum the drag handle enforces', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnWidth('name', 5);
+    fixture.detectChanges();
+    expect(colWidths(fixture)).toEqual(['30px', '60px']);
+  });
+
+  it('setColumnWidth() ignores a field that does not match any current column', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnWidth('nope', 999);
+    fixture.detectChanges();
+    expect(colWidths(fixture)).toEqual(['100px', '60px']);
+  });
 });
 
 @Component({

@@ -1788,6 +1788,14 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     return this.columnWidths()[column.field()] ?? column.width();
   }
 
+  /** Sets a column's width directly, bypassing the resize-handle drag — e.g. to restore a saved layout. Clamped to `MIN_COLUMN_WIDTH`, same floor the drag handle already enforces. Silently does nothing if `field` doesn't match any current column. */
+  setColumnWidth(field: string, width: number): void {
+    if (!this.displayColumns().some(column => column.field() === field)) {
+      return;
+    }
+    this.columnWidths.update(widths => ({ ...widths, [field]: Math.max(MIN_COLUMN_WIDTH, width) }));
+  }
+
   /**
    * The select-checkbox column's width, as the template's `[style.--inandu-select-column-width.px]`
    * binding on the root `<div>` — the *only* other place `SELECT_COLUMN_WIDTH` is referenced, so the
