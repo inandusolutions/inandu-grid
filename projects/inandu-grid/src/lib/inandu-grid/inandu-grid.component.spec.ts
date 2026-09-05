@@ -258,6 +258,62 @@ describe('InanduGridComponent filter', () => {
   });
 });
 
+@Component({
+  template: `
+    <inandu-grid [data]="rows" [extraRowFilter]="predicate" filter="true">
+      <inandu-column field="name" title="Name" filter="true"></inandu-column>
+      <inandu-column field="qty" title="Qty" type="number"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class ExtraRowFilterHostComponent {
+  rows: InanduGridRow[] = [
+    { name: 'Apple', qty: 3 },
+    { name: 'Banana', qty: 8 },
+    { name: 'Cherry', qty: 15 },
+  ];
+  predicate: ((row: InanduGridRow) => boolean) | undefined = undefined;
+}
+
+describe('InanduGridComponent extraRowFilter', () => {
+  let fixture: ComponentFixture<ExtraRowFilterHostComponent>;
+  const names = () =>
+    fixture.debugElement.queryAll(By.css('tbody tr td:first-child')).map((c) => c.nativeElement.textContent.trim());
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(ExtraRowFilterHostComponent);
+    fixture.detectChanges();
+  });
+
+  it('no predicate → every row shows', () => {
+    expect(names()).toEqual(['Apple', 'Banana', 'Cherry']);
+  });
+
+  it('applies the predicate on top of the built-in filters', () => {
+    fixture.componentInstance.predicate = (row) => (row['qty'] as number) >= 8;
+    fixture.detectChanges();
+    expect(names()).toEqual(['Banana', 'Cherry']);
+
+    // free-text search still narrows within the predicate's result
+    const input = fixture.debugElement.query(By.css('.inandu-filter-input')).nativeElement as HTMLInputElement;
+    input.value = 'cherry';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(names()).toEqual(['Cherry']);
+  });
+
+  it('a fresh closure re-filters', () => {
+    fixture.componentInstance.predicate = (row) => row['name'] === 'Apple';
+    fixture.detectChanges();
+    expect(names()).toEqual(['Apple']);
+
+    fixture.componentInstance.predicate = (row) => row['name'] === 'Banana';
+    fixture.detectChanges();
+    expect(names()).toEqual(['Banana']);
+  });
+});
+
 describe('InanduGridComponent lang', () => {
   it('renders the empty-state text, sort aria-label, and pager aria-labels/page text in the given language', () => {
     const fixture = TestBed.createComponent(SpanishLangHostComponent);

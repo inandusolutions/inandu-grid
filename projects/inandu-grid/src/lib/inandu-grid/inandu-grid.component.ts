@@ -182,6 +182,16 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly data = input<T[]>([]);
 
   /**
+   * An extra per-row predicate applied on top of the free-text search and the per-column filters —
+   * a row must return `true` from this *and* pass every built-in filter to show. Use it to plug in
+   * a filter the grid doesn't model itself (a nested AND/OR query builder, a "only my rows" toggle,
+   * a date-relative rule): bind a plain `(row) => boolean`. Recomputed like any signal input, so
+   * returning a fresh closure re-filters. Ignored while `serverSide()` is on (the server already
+   * filtered). Unset ⇒ no effect.
+   */
+  readonly extraRowFilter = input<((row: T) => boolean) | undefined>(undefined);
+
+  /**
    * Opts the grid out of local sort/filter/pagination entirely: `data()` is trusted to already be
    * the current page's rows, already sorted/filtered by the consumer. Instead of computing results
    * itself, the grid emits `sortChange`/`filterChange`/`pageChange` whenever the user interacts with
@@ -1225,6 +1235,11 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       rows = rows.filter(row =>
         columns.every(column => matchesColumnFilter(column, row, filters[column.field()] ?? {}, this.locale, this.numberFormatter))
       );
+    }
+
+    const extra = this.extraRowFilter();
+    if (extra) {
+      rows = rows.filter(extra);
     }
 
     return rows;
