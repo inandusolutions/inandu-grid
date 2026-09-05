@@ -25,6 +25,33 @@ alternative to the big commercial Angular grids.
 &nbsp;·&nbsp; ⚡ **StackBlitz:** [editable example](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz)
 &nbsp;·&nbsp; 📘 **Full manual** (every feature + API reference): <https://inandusolutions.github.io/inandu-grid/manual.html>
 
+## Hello grid
+
+```bash
+ng add @inandu-solutions/grid-angular
+```
+
+```ts
+import { InanduGridComponent, InanduColumnComponent } from '@inandu-solutions/grid-angular';
+
+@Component({
+  imports: [InanduGridComponent, InanduColumnComponent],
+  template: `
+    <inandu-grid [data]="people" filter="true">
+      <inandu-column field="name" title="Name" sortable="true" />
+      <inandu-column field="age" title="Age" type="number" sortable="true" />
+    </inandu-grid>
+  `,
+})
+export class PeopleComponent {
+  people = [{ name: 'Ada', age: 36 }, { name: 'Alan', age: 41 }];
+}
+```
+
+Two standalone components, a plain array in, click-to-sort and free-text search out. Everything
+else — grouping, virtual scroll, inline editing, export, i18n, theming — is opt-in from here; see
+**[Quick start](#quick-start)** below and the [manual](https://inandusolutions.github.io/inandu-grid/manual.html).
+
 ## Why this vs the big grids?
 
 Row grouping, Excel export, cell-range selection and aggregation are **all free here** —
