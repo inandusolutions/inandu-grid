@@ -2320,6 +2320,123 @@ describe('InanduGridComponent custom header templates', () => {
 
 @Component({
   template: `
+    <inandu-grid [data]="rows" (rowSave)="lastSave = $event">
+      <inandu-column title="Name" field="name" editable="true"></inandu-column>
+      <inandu-column title="Status" field="status" editable="true">
+        <ng-template #inanduEditTemplate let-value let-setValue="setValue">
+          <select class="status-editor" [value]="value" (change)="setValue($any($event.target).value)">
+            <option value="draft">draft</option>
+            <option value="live">live</option>
+          </select>
+        </ng-template>
+      </inandu-column>
+      <inandu-column title="Tier" field="tier" editable="true" required="true">
+        <ng-template #inanduHeaderTemplate>Tier ★</ng-template>
+        <ng-template let-value><b class="tier-cell">{{ value }}</b></ng-template>
+        <ng-template #inanduEditTemplate let-value let-setValue="setValue" let-field="field" let-error="error">
+          <input class="tier-editor" [attr.data-field]="field" [value]="value"
+            (input)="setValue($any($event.target).value)" />
+          @if (error) { <i class="tier-editor-error">{{ error }}</i> }
+        </ng-template>
+      </inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class EditTemplateHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Alice', status: 'draft', tier: 'gold' }];
+  lastSave: InanduGridRowSave | undefined;
+}
+
+describe('InanduGridComponent custom edit templates', () => {
+  let fixture: ComponentFixture<EditTemplateHostComponent>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [EditTemplateHostComponent] });
+    fixture = TestBed.createComponent(EditTemplateHostComponent);
+    fixture.detectChanges();
+  });
+
+  const dataRow = () => fixture.debugElement.queryAll(By.css('tbody tr.inandu-row'))[0];
+  const actionButtons = () => dataRow().query(By.css('.inandu-row-actions')).queryAll(By.css('button'));
+  const editButton = () => actionButtons()[0].nativeElement as HTMLButtonElement;
+
+  it('leaves display rendering untouched while the row is not in edit mode', () => {
+    expect(fixture.debugElement.query(By.css('.status-editor'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('td[data-field="status"]')).nativeElement.textContent.trim()).toBe('draft');
+    // the tier column's cellTemplate still owns the non-edit cell
+    expect(fixture.debugElement.query(By.css('.tier-cell')).nativeElement.textContent.trim()).toBe('gold');
+  });
+
+  it('renders the editTemplate in place of the built-in input once the row enters edit mode, seeded with the draft value', () => {
+    editButton().click();
+    fixture.detectChanges();
+
+    const statusCell = fixture.debugElement.query(By.css('td[data-field="status"]'));
+    expect(statusCell.query(By.css('.inandu-cell-edit-input'))).toBeNull();
+    const select = statusCell.query(By.css('.status-editor')).nativeElement as HTMLSelectElement;
+    expect(select.value).toBe('draft');
+
+    // a plain editable column with no editTemplate still gets the built-in input
+    const nameCell = fixture.debugElement.query(By.css('td[data-field="name"]'));
+    expect(nameCell.query(By.css('.inandu-cell-edit-input'))).toBeTruthy();
+  });
+
+  it('setValue from the template feeds the same draft the built-in control does — value is parsed and emitted on Save', async () => {
+    editButton().click();
+    fixture.detectChanges();
+
+    const select = fixture.debugElement.query(By.css('.status-editor')).nativeElement as HTMLSelectElement;
+    select.value = 'live';
+    select.dispatchEvent(new Event('change'));
+    const tierInput = fixture.debugElement.query(By.css('.tier-editor')).nativeElement as HTMLInputElement;
+    tierInput.value = 'platinum';
+    tierInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    actionButtons()[0].nativeElement.click(); // Save
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.lastSave?.values).toEqual({ name: 'Alice', status: 'live', tier: 'platinum' });
+  });
+
+  it('editTemplate coexists with both a headerTemplate and a cellTemplate on the same column', () => {
+    expect(fixture.debugElement.query(By.css('th')).nativeElement.textContent).toContain('Name');
+    const tierHeader = fixture.debugElement.queryAll(By.css('th.inandu-column'))[2];
+    expect(tierHeader.nativeElement.textContent.trim()).toBe('Tier ★');
+    expect(fixture.debugElement.query(By.css('.tier-cell')).nativeElement.textContent.trim()).toBe('gold');
+
+    editButton().click();
+    fixture.detectChanges();
+    // in edit mode the editTemplate wins for that column, cellTemplate steps aside
+    expect(fixture.debugElement.query(By.css('.tier-cell'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.tier-editor'))).toBeTruthy();
+  });
+
+  it('save-time validation still applies to an editTemplate column — error reaches both the built-in span and the template context', async () => {
+    editButton().click();
+    fixture.detectChanges();
+
+    const tierInput = fixture.debugElement.query(By.css('.tier-editor')).nativeElement as HTMLInputElement;
+    tierInput.value = '';
+    tierInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    actionButtons()[0].nativeElement.click(); // Save — blocked by required
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.lastSave).toBeUndefined();
+    const tierCell = fixture.debugElement.query(By.css('td[data-field="tier"]'));
+    expect(tierCell.query(By.css('.inandu-field-error'))).toBeTruthy();
+    // the same message is handed to the template via the `error` context key
+    expect(tierCell.query(By.css('.tier-editor-error'))).toBeTruthy();
+  });
+});
+
+@Component({
+  template: `
     <inandu-grid [data]="rows">
       <inandu-column title="Dept" field="dept" sortable="true"></inandu-column>
       <inandu-column title="Name" field="name" sortable="true"></inandu-column>

@@ -31,4 +31,5 @@ export type {
   InanduColumnAggregate,
   InanduCellTemplateContext,
   InanduHeaderTemplateContext,
+  InanduEditTemplateContext,
 } from './lib/inandu-column/inandu-column.component';

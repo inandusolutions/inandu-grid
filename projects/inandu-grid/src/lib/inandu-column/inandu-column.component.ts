@@ -26,6 +26,24 @@ export interface InanduHeaderTemplateContext {
 }
 
 /**
+ * Template context for a column's custom **edit** template (see `InanduColumnComponent.editTemplate`),
+ * rendered in place of the built-in type-aware `<input>` while its row is in edit/create mode:
+ * `$implicit`/`value` is the field's current draft value (the raw control shape — a string for
+ * `'string'`/`'number'`/`'date'`, a boolean for `'boolean'`), `row` is the row being edited (`{}`
+ * for the add-new-row), `field` is the raw field name, `setValue` writes a new draft value back
+ * (pass the same raw shape the built-in control would produce, so save-time parsing/validation still
+ * applies), and `error` is that field's current inline validation message (`''` when valid).
+ */
+export interface InanduEditTemplateContext {
+  $implicit: unknown;
+  value: unknown;
+  row: Record<string, unknown>;
+  field: string;
+  setValue: (value: unknown) => void;
+  error: string;
+}
+
+/**
  * Custom per-column validation, run (alongside `required`/`min`/`max`/`pattern`) when a row-edit or
  * row-create draft is saved. `value` is that field's already-parsed value (a real `number`/`Date`/
  * `boolean`, per the column's `type`); `row` is every editable field's parsed value for the row
@@ -249,6 +267,28 @@ export class InanduColumnComponent {
   });
 
   /**
+   * Custom editor for this column's cells while their row is in edit/create mode, in place of the
+   * built-in type-aware `<input>` — declare a `<ng-template #inanduEditTemplate let-value
+   * let-setValue="setValue">…</ng-template>` (that exact reference-variable name is required) as this
+   * column's content, alongside (in any order) an optional `cellTemplate` and/or `headerTemplate`.
+   * See `InanduEditTemplateContext` for the full context. The column must still be `editable`; save,
+   * validation and `fieldError()` are unchanged — the template only replaces the input control.
+   * Resolved by its own named anchor, the same way `headerTemplate` is.
+   */
+  private readonly editAnchor = contentChild('inanduEditTemplate', { read: ElementRef });
+
+  /** This column's index into `allTemplateRefs()`/`allTemplateAnchors()` that `editAnchor()` points at, or `-1` if there's no edit template. */
+  private readonly editTemplateIndex = computed(() => {
+    const anchor = this.editAnchor();
+    return anchor ? this.allTemplateAnchors().findIndex(candidate => candidate.nativeElement === anchor.nativeElement) : -1;
+  });
+
+  readonly editTemplate = computed(() => {
+    const index = this.editTemplateIndex();
+    return index === -1 ? undefined : (this.allTemplateRefs()[index] as TemplateRef<InanduEditTemplateContext>);
+  });
+
+  /**
    * Custom rendering for this column's cells, in place of the built-in `type`/`format` formatting —
    * declare a plain `<ng-template let-value let-row="row">…</ng-template>` as this column's content.
    * `let-value` (the template's `$implicit`) is the cell's raw value; `let-row="row"` is the full row
@@ -256,18 +296,18 @@ export class InanduColumnComponent {
    * *display* (non-edit) rendering of a cell — a row in edit/create mode still shows the normal
    * type-aware input control for an `editable` column, regardless of `cellTemplate`.
    *
-   * Resolved as "whichever declared `<ng-template>` isn't at `headerTemplateIndex()`" rather than a
-   * second, separately-named `contentChild` query — a plain unqualified `contentChild(TemplateRef)`
-   * matches *any* `<ng-template>` regardless of its own reference-variable name, so if `headerTemplate`
-   * were simply left alongside the original unqualified query, a column declaring *only* a header
-   * template (no cell template at all) would have that same query mistakenly resolve to the header
-   * template, silently misrendering every cell in that column. This sidesteps that: with just a cell
-   * template, behavior is unchanged from before `headerTemplate` existed (`headerTemplateIndex()` is
-   * `-1`, so nothing is excluded); with just a header template, `cellTemplate()` correctly comes back
-   * `undefined`.
+   * Resolved as "whichever declared `<ng-template>` isn't the header one or the edit one" rather than
+   * a separately-named `contentChild` query — a plain unqualified `contentChild(TemplateRef)` matches
+   * *any* `<ng-template>` regardless of its own reference-variable name, so a column declaring only a
+   * header and/or edit template (no cell template) would have that query mistakenly resolve to one of
+   * them, silently misrendering every cell. Excluding both known indices sidesteps that: with just a
+   * cell template both indices are `-1`, so nothing is excluded and behavior is unchanged.
    */
   readonly cellTemplate = computed(() => {
     const headerIndex = this.headerTemplateIndex();
-    return this.allTemplateRefs().find((_, index) => index !== headerIndex) as TemplateRef<InanduCellTemplateContext> | undefined;
+    const editIndex = this.editTemplateIndex();
+    return this.allTemplateRefs().find((_, index) => index !== headerIndex && index !== editIndex) as
+      | TemplateRef<InanduCellTemplateContext>
+      | undefined;
   });
 }

@@ -2,7 +2,7 @@ import { booleanAttribute, ChangeDetectionStrategy, Component, computed, content
 import { formatNumber, NgTemplateOutlet } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
-import { InanduCellTemplateContext, InanduColumnComponent, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
+import { InanduCellTemplateContext, InanduColumnComponent, InanduEditTemplateContext, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
 import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inandu-column/inandu-column.component';
 import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
@@ -1670,6 +1670,25 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     return { $implicit: title, title, field: column.field() };
   }
 
+  /**
+   * The `*ngTemplateOutlet` context for `column.editTemplate()` — a custom editor replacing the
+   * built-in row-edit `<input>` for this column. `row` is `{}` for the add-new-row (there's no
+   * source row yet). `setValue` writes straight into the same draft the built-in control feeds, so
+   * save-time parse/validation is unchanged; `value` is that draft's current raw value for the field.
+   */
+  editTemplateContext(column: InanduColumnComponent, row: T | Record<string, unknown> = {}): InanduEditTemplateContext {
+    const field = column.field();
+    const value = this.rowDraft()[field];
+    return {
+      $implicit: value,
+      value,
+      row: row as Record<string, unknown>,
+      field,
+      setValue: (next: unknown) => this.setRowDraftValue(field, next),
+      error: this.fieldError(field),
+    };
+  }
+
   /** Columns whose header can be dragged onto the group-by drop zone. The zone only renders when this is non-empty — a hidden column's header isn't rendered at all, so it can't be dragged from anyway. */
   readonly groupableColumns = computed(() => this.visibleColumns().filter(column => column.groupable()));
 
@@ -2274,6 +2293,20 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     const target = event.target as HTMLInputElement;
     const raw = column.type() === 'boolean' ? target.checked : target.value;
     this.rowDraft.update(draft => ({ ...draft, [column.field()]: raw }));
+  }
+
+  /**
+   * Writes a value into the in-progress row-edit/create draft for `field` — the programmatic
+   * counterpart to `onRowFieldChange()`, for a custom `editTemplate()` (see `editTemplateContext()`'s
+   * `setValue`). Pass the same *raw control shape* the built-in input would produce (a string for a
+   * `'string'`/`'number'`/`'date'` column, a boolean for `'boolean'`); it's parsed and validated at
+   * Save time exactly like a typed-in value. A no-op if no row is currently being edited or added.
+   */
+  setRowDraftValue(field: string, value: unknown): void {
+    if (!this.editingRow() && !this.isAddingRow()) {
+      return;
+    }
+    this.rowDraft.update(draft => ({ ...draft, [field]: value }));
   }
 
   /** "Cancel" — discards the draft and exits edit mode without emitting `rowSave`. */

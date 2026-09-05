@@ -272,26 +272,30 @@
                     [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
                   >
                     @if (column.editable() && isEditingRow(item.row)) {
-                      @switch (column.type()) {
-                        @case ('number') {
-                          <input type="number" class="inandu-cell-edit-input"
-                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                            (input)="onRowFieldChange(column, $event)" />
-                        }
-                        @case ('date') {
-                          <input type="date" class="inandu-cell-edit-input"
-                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                            (input)="onRowFieldChange(column, $event)" />
-                        }
-                        @case ('boolean') {
-                          <input type="checkbox" class="inandu-cell-edit-checkbox"
-                            [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
-                            (change)="onRowFieldChange(column, $event)" />
-                        }
-                        @default {
-                          <input type="text" class="inandu-cell-edit-input"
-                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                            (input)="onRowFieldChange(column, $event)" />
+                      @if (column.editTemplate(); as editTpl) {
+                        <ng-container *ngTemplateOutlet="editTpl; context: editTemplateContext(column, item.row)"></ng-container>
+                      } @else {
+                        @switch (column.type()) {
+                          @case ('number') {
+                            <input type="number" class="inandu-cell-edit-input"
+                              [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                              (input)="onRowFieldChange(column, $event)" />
+                          }
+                          @case ('date') {
+                            <input type="date" class="inandu-cell-edit-input"
+                              [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                              (input)="onRowFieldChange(column, $event)" />
+                          }
+                          @case ('boolean') {
+                            <input type="checkbox" class="inandu-cell-edit-checkbox"
+                              [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                              (change)="onRowFieldChange(column, $event)" />
+                          }
+                          @default {
+                            <input type="text" class="inandu-cell-edit-input"
+                              [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                              (input)="onRowFieldChange(column, $event)" />
+                          }
                         }
                       }
                       @if (fieldError(column.field()); as fieldErr) {
@@ -368,26 +372,30 @@
                   [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
                 >
                   @if (column.editable() && isEditingRow(row)) {
-                    @switch (column.type()) {
-                      @case ('number') {
-                        <input type="number" class="inandu-cell-edit-input"
-                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                          (input)="onRowFieldChange(column, $event)" />
-                      }
-                      @case ('date') {
-                        <input type="date" class="inandu-cell-edit-input"
-                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                          (input)="onRowFieldChange(column, $event)" />
-                      }
-                      @case ('boolean') {
-                        <input type="checkbox" class="inandu-cell-edit-checkbox"
-                          [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
-                          (change)="onRowFieldChange(column, $event)" />
-                      }
-                      @default {
-                        <input type="text" class="inandu-cell-edit-input"
-                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                          (input)="onRowFieldChange(column, $event)" />
+                    @if (column.editTemplate(); as editTpl) {
+                      <ng-container *ngTemplateOutlet="editTpl; context: editTemplateContext(column, row)"></ng-container>
+                    } @else {
+                      @switch (column.type()) {
+                        @case ('number') {
+                          <input type="number" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
+                        @case ('date') {
+                          <input type="date" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
+                        @case ('boolean') {
+                          <input type="checkbox" class="inandu-cell-edit-checkbox"
+                            [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                            (change)="onRowFieldChange(column, $event)" />
+                        }
+                        @default {
+                          <input type="text" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
                       }
                     }
                     @if (fieldError(column.field()); as fieldErr) {
@@ -445,26 +453,30 @@
                   [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
                 >
                   @if (column.editable()) {
-                    @switch (column.type()) {
-                      @case ('number') {
-                        <input type="number" class="inandu-cell-edit-input"
-                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                          (input)="onRowFieldChange(column, $event)" />
-                      }
-                      @case ('date') {
-                        <input type="date" class="inandu-cell-edit-input"
-                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                          (input)="onRowFieldChange(column, $event)" />
-                      }
-                      @case ('boolean') {
-                        <input type="checkbox" class="inandu-cell-edit-checkbox"
-                          [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
-                          (change)="onRowFieldChange(column, $event)" />
-                      }
-                      @default {
-                        <input type="text" class="inandu-cell-edit-input"
-                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                          (input)="onRowFieldChange(column, $event)" />
+                    @if (column.editTemplate(); as editTpl) {
+                      <ng-container *ngTemplateOutlet="editTpl; context: editTemplateContext(column)"></ng-container>
+                    } @else {
+                      @switch (column.type()) {
+                        @case ('number') {
+                          <input type="number" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
+                        @case ('date') {
+                          <input type="date" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
+                        @case ('boolean') {
+                          <input type="checkbox" class="inandu-cell-edit-checkbox"
+                            [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                            (change)="onRowFieldChange(column, $event)" />
+                        }
+                        @default {
+                          <input type="text" class="inandu-cell-edit-input"
+                            [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                            (input)="onRowFieldChange(column, $event)" />
+                        }
                       }
                     }
                     @if (fieldError(column.field()); as fieldErr) {
@@ -534,26 +546,30 @@
                 (mouseenter)="cellRangeSelection() && onCellRangeMouseEnter(rowIndex, colIndex)"
               >
                 @if (column.editable() && isEditingRow(row)) {
-                  @switch (column.type()) {
-                    @case ('number') {
-                      <input type="number" class="inandu-cell-edit-input"
-                        [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                        (input)="onRowFieldChange(column, $event)" />
-                    }
-                    @case ('date') {
-                      <input type="date" class="inandu-cell-edit-input"
-                        [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                        (input)="onRowFieldChange(column, $event)" />
-                    }
-                    @case ('boolean') {
-                      <input type="checkbox" class="inandu-cell-edit-checkbox"
-                        [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
-                        (change)="onRowFieldChange(column, $event)" />
-                    }
-                    @default {
-                      <input type="text" class="inandu-cell-edit-input"
-                        [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
-                        (input)="onRowFieldChange(column, $event)" />
+                  @if (column.editTemplate(); as editTpl) {
+                    <ng-container *ngTemplateOutlet="editTpl; context: editTemplateContext(column, row)"></ng-container>
+                  } @else {
+                    @switch (column.type()) {
+                      @case ('number') {
+                        <input type="number" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                      @case ('date') {
+                        <input type="date" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
+                      @case ('boolean') {
+                        <input type="checkbox" class="inandu-cell-edit-checkbox"
+                          [attr.aria-label]="cellEditLabel(column)" [checked]="rowDraftChecked(column.field())"
+                          (change)="onRowFieldChange(column, $event)" />
+                      }
+                      @default {
+                        <input type="text" class="inandu-cell-edit-input"
+                          [attr.aria-label]="cellEditLabel(column)" [value]="rowDraftText(column.field())"
+                          (input)="onRowFieldChange(column, $event)" />
+                      }
                     }
                   }
                   @if (fieldError(column.field()); as fieldErr) {
