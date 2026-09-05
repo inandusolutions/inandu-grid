@@ -73,7 +73,23 @@ a kitchen sink: no pivoting, no integrated charts, no built-in server-side row m
 ## Installation
 
 ```bash
+ng add @inandu-solutions/grid-angular
+```
+
+Installs the package and scaffolds a ready-to-run `GridDemoComponent` (skip it with
+`--skip-example`). Show it by routing to `GridDemoComponent` or dropping
+`<app-grid-demo></app-grid-demo>` into a template, then `ng serve`.
+
+Prefer to wire it up yourself:
+
+```bash
 npm install @inandu-solutions/grid-angular
+```
+
+You can also scaffold an example component into an existing app at any time:
+
+```bash
+ng generate @inandu-solutions/grid-angular:grid my-grid
 ```
 
 ### Dependencies

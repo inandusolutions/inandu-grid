@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../node_modules/@angular-devkit/schematics/collection-schema.json",
+  "schematics": {
+    "ng-add": {
+      "description": "Run when `ng add @inandu-solutions/grid-angular` is invoked — scaffolds a working example component and prints next steps.",
+      "factory": "./ng-add/index#ngAdd",
+      "schema": "./ng-add/schema.json"
+    },
+    "grid": {
+      "description": "Generate a standalone component that renders an <inandu-grid> with sample columns and data, ready to run.",
+      "factory": "./grid/index#grid",
+      "schema": "./grid/schema.json",
+      "aliases": ["g"]
+    }
+  }
+}

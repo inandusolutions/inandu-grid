@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "InanduGridGridSchematic",
+  "title": "inandu-grid example component",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the generated component.",
+      "default": "grid-demo",
+      "x-prompt": "What name should the example grid component have?"
+    },
+    "path": {
+      "type": "string",
+      "description": "Path where the component folder is created, relative to the workspace root.",
+      "default": "src/app",
+      "visible": false
+    },
+    "prefix": {
+      "type": "string",
+      "description": "Selector prefix for the generated component.",
+      "default": "app"
+    }
+  },
+  "required": []
+}
