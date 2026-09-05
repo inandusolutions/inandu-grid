@@ -260,9 +260,9 @@ describe('InanduGridComponent filter', () => {
 
 @Component({
   template: `
-    <inandu-grid [data]="rows" [extraRowFilter]="predicate" filter="true">
+    <inandu-grid [data]="rows" [extraRowFilter]="predicate" [serverSide]="serverSide" filter="true">
       <inandu-column field="name" title="Name" filter="true"></inandu-column>
-      <inandu-column field="qty" title="Qty" type="number"></inandu-column>
+      <inandu-column field="qty" title="Qty" type="number" filter="true"></inandu-column>
     </inandu-grid>
   `,
   imports: [InanduGridComponent, InanduColumnComponent],
@@ -272,8 +272,10 @@ class ExtraRowFilterHostComponent {
     { name: 'Apple', qty: 3 },
     { name: 'Banana', qty: 8 },
     { name: 'Cherry', qty: 15 },
+    { name: 'Date', qty: 20 },
   ];
   predicate: ((row: InanduGridRow) => boolean) | undefined = undefined;
+  serverSide = false;
 }
 
 describe('InanduGridComponent extraRowFilter', () => {
@@ -287,13 +289,13 @@ describe('InanduGridComponent extraRowFilter', () => {
   });
 
   it('no predicate → every row shows', () => {
-    expect(names()).toEqual(['Apple', 'Banana', 'Cherry']);
+    expect(names()).toEqual(['Apple', 'Banana', 'Cherry', 'Date']);
   });
 
   it('applies the predicate on top of the built-in filters', () => {
     fixture.componentInstance.predicate = (row) => (row['qty'] as number) >= 8;
     fixture.detectChanges();
-    expect(names()).toEqual(['Banana', 'Cherry']);
+    expect(names()).toEqual(['Banana', 'Cherry', 'Date']);
 
     // free-text search still narrows within the predicate's result
     const input = fixture.debugElement.query(By.css('.inandu-filter-input')).nativeElement as HTMLInputElement;
@@ -301,6 +303,16 @@ describe('InanduGridComponent extraRowFilter', () => {
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     expect(names()).toEqual(['Cherry']);
+  });
+
+  it('composes with a per-column filter as AND', () => {
+    // predicate: qty >= 8  ∧  column filter: qty <= 15
+    fixture.componentInstance.predicate = (row) => (row['qty'] as number) >= 8;
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.css('inandu-grid')).componentInstance as InanduGridComponent;
+    grid.updateColumnFilter('qty', { max: '15' });
+    fixture.detectChanges();
+    expect(names()).toEqual(['Banana', 'Cherry']);
   });
 
   it('a fresh closure re-filters', () => {
@@ -311,6 +323,25 @@ describe('InanduGridComponent extraRowFilter', () => {
     fixture.componentInstance.predicate = (row) => row['name'] === 'Banana';
     fixture.detectChanges();
     expect(names()).toEqual(['Banana']);
+  });
+
+  it('clearing the predicate (back to undefined) restores every row', () => {
+    const grid = fixture.debugElement.query(By.css('inandu-grid')).componentInstance as InanduGridComponent;
+
+    fixture.componentInstance.predicate = () => false;
+    fixture.detectChanges();
+    expect(grid.visibleRowCount()).toBe(0);
+
+    fixture.componentInstance.predicate = undefined;
+    fixture.detectChanges();
+    expect(names()).toEqual(['Apple', 'Banana', 'Cherry', 'Date']);
+  });
+
+  it('is ignored under serverSide (the server already filtered)', () => {
+    fixture.componentInstance.serverSide = true;
+    fixture.componentInstance.predicate = (row) => (row['qty'] as number) >= 100; // would hide all
+    fixture.detectChanges();
+    expect(names()).toEqual(['Apple', 'Banana', 'Cherry', 'Date']);
   });
 });
 
