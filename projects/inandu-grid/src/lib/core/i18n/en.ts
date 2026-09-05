@@ -35,6 +35,8 @@ export const en = {
   MsgAddRow: 'Add row',
   MsgLoading: 'Loading…',
   MsgDragRow: 'Drag to reorder row',
+  MsgExpandDetail: 'Expand row details',
+  MsgCollapseDetail: 'Collapse row details',
   MsgDeleteSelected: 'Delete selected ({{count}})',
   MsgValidationRequired: 'This field is required',
   MsgValidationMin: 'Must be at least {{min}}',

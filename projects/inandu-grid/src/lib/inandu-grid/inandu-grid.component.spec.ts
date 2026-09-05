@@ -4,6 +4,8 @@ import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { InanduGridComponent, InanduGridPagingOptions, InanduGridRow, InanduGridRowSave, InanduGridNewRowValues, InanduGridSortCriterion, InanduGridPageState, InanduGridFilterState, InanduGridCellPaste, InanduGridCellRangeSelection, InanduGridLoadMoreEvent } from './inandu-grid.component';
 import { InanduColumnComponent, InanduColumnValidator, InanduColumnAsyncValidator } from '../inandu-column/inandu-column.component';
+import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
+import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
 
 @Component({
   template: `
@@ -662,6 +664,36 @@ describe('InanduGridComponent column resize', () => {
     fixture.detectChanges();
     expect(colWidths(fixture)).toEqual(['30px', '60px']);
   });
+
+  it('setColumnWidth() sets a column\'s width programmatically, same effect as dragging', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnWidth('name', 200);
+    fixture.detectChanges();
+    expect(colWidths(fixture)).toEqual(['200px', '60px']);
+  });
+
+  it('setColumnWidth() clamps to the same minimum the drag handle enforces', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnWidth('name', 5);
+    fixture.detectChanges();
+    expect(colWidths(fixture)).toEqual(['30px', '60px']);
+  });
+
+  it('setColumnWidth() ignores a field that does not match any current column', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnWidth('nope', 999);
+    fixture.detectChanges();
+    expect(colWidths(fixture)).toEqual(['100px', '60px']);
+  });
 });
 
 @Component({
@@ -745,6 +777,113 @@ describe('InanduGridComponent column reorder', () => {
 
     const cellValues = fixture.debugElement.queryAll(By.css('tbody td')).map(td => td.nativeElement.textContent.trim());
     expect(cellValues).toEqual(['2', '1', '3', '4']);
+  });
+});
+
+describe('InanduGridComponent setColumnOrder', () => {
+  const headerText = (fixture: ComponentFixture<ReorderHostComponent>) => fixture.debugElement
+    .queryAll(By.css('th')).map(th => th.nativeElement.textContent.trim());
+  const gridInstance = (fixture: ComponentFixture<ReorderHostComponent>) => fixture.debugElement
+    .query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+  it('reorders columns programmatically, without a drag event', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['d', 'a']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['D', 'A', 'B', 'C']);
+  });
+
+  it('appends fields the requested order omits, in their prior relative order', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['c']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['C', 'A', 'B', 'D']);
+  });
+
+  it('ignores fields that do not match any current column', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['nope', 'd']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['D', 'A', 'B', 'C']);
+  });
+
+  it('repositions a column even when it declared reorder="false" — that flag only blocks its own header drag', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['c']);
+    fixture.detectChanges();
+    expect(headerText(fixture)).toEqual(['C', 'A', 'B', 'D']);
+  });
+
+  it('also reorders data cells, matching the new header order', () => {
+    const fixture = TestBed.createComponent(ReorderHostComponent);
+    fixture.detectChanges();
+    const grid = gridInstance(fixture);
+
+    grid.setColumnOrder(['d', 'a']);
+    fixture.detectChanges();
+    const cellValues = fixture.debugElement.queryAll(By.css('tbody td')).map(td => td.nativeElement.textContent.trim());
+    expect(cellValues).toEqual(['4', '1', '2', '3']);
+  });
+});
+
+describe('InanduGridComponent runtime column pinning', () => {
+  let fixture: ComponentFixture<StickyHostComponent>;
+  let grid: InanduGridComponent;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [StickyHostComponent] });
+    fixture = TestBed.createComponent(StickyHostComponent);
+    fixture.detectChanges();
+    grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+  });
+
+  // Same layout as the declarative sticky-columns suite above: [select, A(sticky), B(sticky), C].
+  const headers = () => fixture.debugElement.queryAll(By.css('th'));
+  const left = (el: { nativeElement: HTMLElement }) => el.nativeElement.style.insetInlineStart;
+  const columnByField = (field: string) => grid.visibleColumns().find(column => column.field() === field)!;
+
+  it('reflects a column\'s own declared sticky/stickySide by default, with no override set', () => {
+    expect(grid.columnPinnedSide(columnByField('a'))).toBe('left');
+    expect(grid.columnPinnedSide(columnByField('c'))).toBeUndefined();
+  });
+
+  it('pins a column that was not declared sticky, taking effect immediately', () => {
+    grid.setColumnPinned('c', 'left');
+    fixture.detectChanges();
+
+    expect(grid.columnPinnedSide(columnByField('c'))).toBe('left');
+    const cHeader = headers()[3];
+    expect(cHeader.nativeElement.classList).toContain('inandu-sticky-column');
+    // 36 (select) + 50 (A) + 80 (B) — C now stacks after both declared-sticky columns.
+    expect(left(cHeader)).toBe('166px');
+  });
+
+  it('un-pins a column that declared sticky="true", with side undefined', () => {
+    grid.setColumnPinned('a', undefined);
+    fixture.detectChanges();
+
+    expect(grid.columnPinnedSide(columnByField('a'))).toBeUndefined();
+    expect(headers()[1].nativeElement.classList).not.toContain('inandu-sticky-column');
+    // B no longer has a preceding sticky column besides the select checkbox.
+    expect(left(headers()[2])).toBe('36px');
+  });
+
+  it('can move a column to the other side', () => {
+    grid.setColumnPinned('a', 'right');
+    fixture.detectChanges();
+    expect(grid.columnPinnedSide(columnByField('a'))).toBe('right');
   });
 });
 
@@ -2181,6 +2320,123 @@ describe('InanduGridComponent custom header templates', () => {
 
 @Component({
   template: `
+    <inandu-grid [data]="rows" (rowSave)="lastSave = $event">
+      <inandu-column title="Name" field="name" editable="true"></inandu-column>
+      <inandu-column title="Status" field="status" editable="true">
+        <ng-template #inanduEditTemplate let-value let-setValue="setValue">
+          <select class="status-editor" [value]="value" (change)="setValue($any($event.target).value)">
+            <option value="draft">draft</option>
+            <option value="live">live</option>
+          </select>
+        </ng-template>
+      </inandu-column>
+      <inandu-column title="Tier" field="tier" editable="true" required="true">
+        <ng-template #inanduHeaderTemplate>Tier ★</ng-template>
+        <ng-template let-value><b class="tier-cell">{{ value }}</b></ng-template>
+        <ng-template #inanduEditTemplate let-value let-setValue="setValue" let-field="field" let-error="error">
+          <input class="tier-editor" [attr.data-field]="field" [value]="value"
+            (input)="setValue($any($event.target).value)" />
+          @if (error) { <i class="tier-editor-error">{{ error }}</i> }
+        </ng-template>
+      </inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class EditTemplateHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Alice', status: 'draft', tier: 'gold' }];
+  lastSave: InanduGridRowSave | undefined;
+}
+
+describe('InanduGridComponent custom edit templates', () => {
+  let fixture: ComponentFixture<EditTemplateHostComponent>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [EditTemplateHostComponent] });
+    fixture = TestBed.createComponent(EditTemplateHostComponent);
+    fixture.detectChanges();
+  });
+
+  const dataRow = () => fixture.debugElement.queryAll(By.css('tbody tr.inandu-row'))[0];
+  const actionButtons = () => dataRow().query(By.css('.inandu-row-actions')).queryAll(By.css('button'));
+  const editButton = () => actionButtons()[0].nativeElement as HTMLButtonElement;
+
+  it('leaves display rendering untouched while the row is not in edit mode', () => {
+    expect(fixture.debugElement.query(By.css('.status-editor'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('td[data-field="status"]')).nativeElement.textContent.trim()).toBe('draft');
+    // the tier column's cellTemplate still owns the non-edit cell
+    expect(fixture.debugElement.query(By.css('.tier-cell')).nativeElement.textContent.trim()).toBe('gold');
+  });
+
+  it('renders the editTemplate in place of the built-in input once the row enters edit mode, seeded with the draft value', () => {
+    editButton().click();
+    fixture.detectChanges();
+
+    const statusCell = fixture.debugElement.query(By.css('td[data-field="status"]'));
+    expect(statusCell.query(By.css('.inandu-cell-edit-input'))).toBeNull();
+    const select = statusCell.query(By.css('.status-editor')).nativeElement as HTMLSelectElement;
+    expect(select.value).toBe('draft');
+
+    // a plain editable column with no editTemplate still gets the built-in input
+    const nameCell = fixture.debugElement.query(By.css('td[data-field="name"]'));
+    expect(nameCell.query(By.css('.inandu-cell-edit-input'))).toBeTruthy();
+  });
+
+  it('setValue from the template feeds the same draft the built-in control does — value is parsed and emitted on Save', async () => {
+    editButton().click();
+    fixture.detectChanges();
+
+    const select = fixture.debugElement.query(By.css('.status-editor')).nativeElement as HTMLSelectElement;
+    select.value = 'live';
+    select.dispatchEvent(new Event('change'));
+    const tierInput = fixture.debugElement.query(By.css('.tier-editor')).nativeElement as HTMLInputElement;
+    tierInput.value = 'platinum';
+    tierInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    actionButtons()[0].nativeElement.click(); // Save
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.lastSave?.values).toEqual({ name: 'Alice', status: 'live', tier: 'platinum' });
+  });
+
+  it('editTemplate coexists with both a headerTemplate and a cellTemplate on the same column', () => {
+    expect(fixture.debugElement.query(By.css('th')).nativeElement.textContent).toContain('Name');
+    const tierHeader = fixture.debugElement.queryAll(By.css('th.inandu-column'))[2];
+    expect(tierHeader.nativeElement.textContent.trim()).toBe('Tier ★');
+    expect(fixture.debugElement.query(By.css('.tier-cell')).nativeElement.textContent.trim()).toBe('gold');
+
+    editButton().click();
+    fixture.detectChanges();
+    // in edit mode the editTemplate wins for that column, cellTemplate steps aside
+    expect(fixture.debugElement.query(By.css('.tier-cell'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.tier-editor'))).toBeTruthy();
+  });
+
+  it('save-time validation still applies to an editTemplate column — error reaches both the built-in span and the template context', async () => {
+    editButton().click();
+    fixture.detectChanges();
+
+    const tierInput = fixture.debugElement.query(By.css('.tier-editor')).nativeElement as HTMLInputElement;
+    tierInput.value = '';
+    tierInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    actionButtons()[0].nativeElement.click(); // Save — blocked by required
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.lastSave).toBeUndefined();
+    const tierCell = fixture.debugElement.query(By.css('td[data-field="tier"]'));
+    expect(tierCell.query(By.css('.inandu-field-error'))).toBeTruthy();
+    // the same message is handed to the template via the `error` context key
+    expect(tierCell.query(By.css('.tier-editor-error'))).toBeTruthy();
+  });
+});
+
+@Component({
+  template: `
     <inandu-grid [data]="rows">
       <inandu-column title="Dept" field="dept" sortable="true"></inandu-column>
       <inandu-column title="Name" field="name" sortable="true"></inandu-column>
@@ -2316,6 +2572,25 @@ describe('InanduGridComponent persisted state', () => {
     fixture2.detectChanges();
     const grid2 = fixture2.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
     expect(grid2.visibleColumns().map(c => c.field())).toEqual(['name']);
+  });
+
+  it('persists setColumnOrder()/setColumnPinned() and restores both on a fresh grid sharing the same stateKey', () => {
+    TestBed.configureTestingModule({ imports: [PersistedStateHostComponent] });
+    const fixture = TestBed.createComponent(PersistedStateHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnOrder(['score', 'name']);
+    grid.setColumnPinned('score', 'left');
+    fixture.detectChanges();
+    expect(grid.displayColumns().map(c => c.field())).toEqual(['score', 'name']);
+    expect(grid.columnPinnedSide(grid.displayColumns()[0])).toBe('left');
+
+    const fixture2 = TestBed.createComponent(PersistedStateHostComponent);
+    fixture2.detectChanges();
+    const grid2 = fixture2.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    expect(grid2.displayColumns().map(c => c.field())).toEqual(['score', 'name']);
+    expect(grid2.columnPinnedSide(grid2.displayColumns()[0])).toBe('left');
   });
 
   it('does not persist anything when stateKey is unset', () => {
@@ -2828,6 +3103,268 @@ describe('InanduGridComponent custom row actions', () => {
     const children = actionsCell.queryAll(By.css('button'));
     expect(children[0].nativeElement.getAttribute('aria-label')).toBe('Delete');
     expect(children[1].nativeElement.textContent.trim()).toBe('Duplicate Alice');
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" [virtualScroll]="virtual">
+      <inandu-column title="Name" field="name" groupable="true"></inandu-column>
+      <ng-template inanduDetailTemplate let-row>
+        <p class="detail-content">Details for {{ row.name }}</p>
+      </ng-template>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent, InanduDetailTemplateDirective],
+})
+class MasterDetailHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Alice' }, { name: 'Bob' }];
+  virtual = false;
+}
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" [singleDetailExpand]="single">
+      <inandu-column title="Name" field="name"></inandu-column>
+      <ng-template inanduDetailTemplate let-row>
+        <p class="detail-content">Details for {{ row.name }}</p>
+      </ng-template>
+      <ng-template let-row>
+        <button type="button" class="custom-action">Action {{ row.name }}</button>
+      </ng-template>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent, InanduDetailTemplateDirective],
+})
+class MasterDetailWithRowActionsHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Alice' }, { name: 'Bob' }, { name: 'Carol' }];
+  single = false;
+}
+
+describe('InanduGridComponent master-detail', () => {
+  it('does not render a toggle column for a grid with no detailTemplate', () => {
+    @Component({
+      template: `<inandu-grid [data]="rows"><inandu-column title="Name" field="name"></inandu-column></inandu-grid>`,
+      imports: [InanduGridComponent, InanduColumnComponent],
+    })
+    class NoDetailHostComponent {
+      rows: InanduGridRow[] = [{ name: 'Alice' }];
+    }
+    TestBed.configureTestingModule({ imports: [NoDetailHostComponent] });
+    const fixture = TestBed.createComponent(NoDetailHostComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-toggle-cell'))).toBeNull();
+  });
+
+  it('a detailTemplate alone renders the toggle column, collapsed by default', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('tbody .inandu-detail-toggle-cell')).length).toBe(2);
+    expect(fixture.debugElement.query(By.css('.inandu-detail-row'))).toBeNull();
+    const toggle = fixture.debugElement.query(By.css('.inandu-detail-toggle-cell button'));
+    expect(toggle.nativeElement.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.nativeElement.getAttribute('aria-label')).toBe('Expand row details');
+  });
+
+  it('clicking the toggle expands the detail row with the right row bound to let-row', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    const firstToggle = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0];
+    firstToggle.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(firstToggle.nativeElement.getAttribute('aria-expanded')).toBe('true');
+    expect(firstToggle.nativeElement.getAttribute('aria-label')).toBe('Collapse row details');
+    const detailRows = fixture.debugElement.queryAll(By.css('.inandu-detail-row'));
+    expect(detailRows.length).toBe(1);
+    expect(detailRows[0].query(By.css('.detail-content')).nativeElement.textContent.trim()).toBe('Details for Alice');
+  });
+
+  it('the detail row spans every column via totalColumnCount()', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0].nativeElement.click();
+    fixture.detectChanges();
+
+    const cell = fixture.debugElement.query(By.css('.inandu-detail-row td'));
+    expect(Number(cell.nativeElement.getAttribute('colspan'))).toBe(grid.totalColumnCount());
+  });
+
+  it('clicking the toggle again collapses the detail row', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    const toggle = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0];
+    toggle.nativeElement.click();
+    fixture.detectChanges();
+    toggle.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-row'))).toBeNull();
+  });
+
+  it('multiple rows can be expanded at once by default', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+
+    const toggles = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'));
+    toggles[0].nativeElement.click();
+    toggles[1].nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('.inandu-detail-row')).length).toBe(2);
+  });
+
+  it('singleDetailExpand="true" collapses any other expanded row', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailWithRowActionsHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailWithRowActionsHostComponent);
+    fixture.componentInstance.single = true;
+    fixture.detectChanges();
+
+    const toggles = fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'));
+    toggles[0].nativeElement.click();
+    fixture.detectChanges();
+    toggles[1].nativeElement.click();
+    fixture.detectChanges();
+
+    const detailRows = fixture.debugElement.queryAll(By.css('.inandu-detail-row'));
+    expect(detailRows.length).toBe(1);
+    expect(detailRows[0].query(By.css('.detail-content')).nativeElement.textContent.trim()).toBe('Details for Bob');
+  });
+
+  it('coexists with a separate, unmarked rowActionsTemplate — each renders its own content', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailWithRowActionsHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailWithRowActionsHostComponent);
+    fixture.detectChanges();
+
+    const firstRow = fixture.debugElement.queryAll(By.css('tbody tr.inandu-row'))[0];
+    expect(firstRow.query(By.css('.inandu-detail-toggle-cell'))).not.toBeNull();
+    expect(firstRow.query(By.css('.inandu-row-actions .custom-action')).nativeElement.textContent.trim()).toBe('Action Alice');
+
+    fixture.debugElement.queryAll(By.css('.inandu-detail-toggle-cell button'))[0].nativeElement.click();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.detail-content')).nativeElement.textContent.trim()).toBe('Details for Alice');
+  });
+
+  it('is disabled (no toggle column) while virtualScroll is on, to avoid misaligning columns', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.componentInstance.virtual = true;
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-toggle-cell'))).toBeNull();
+  });
+
+  it('is disabled (no toggle column) while grouped, to avoid misaligning columns', () => {
+    TestBed.configureTestingModule({ imports: [MasterDetailHostComponent] });
+    const fixture = TestBed.createComponent(MasterDetailHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    expect(fixture.debugElement.queryAll(By.css('tbody .inandu-detail-toggle-cell')).length).toBe(2);
+
+    grid.setGroupBy('name');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-detail-toggle-cell'))).toBeNull();
+
+    grid.setGroupBy(undefined);
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('tbody .inandu-detail-toggle-cell')).length).toBe(2);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" selectable="true">
+      <inandu-column-group title="Contact">
+        <inandu-column field="email" title="Email"></inandu-column>
+        <inandu-column field="phone" title="Phone"></inandu-column>
+      </inandu-column-group>
+      <inandu-column field="id" title="ID"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent, InanduColumnGroupComponent],
+})
+class ColumnGroupsHostComponent {
+  rows: InanduGridRow[] = [{ id: 1, email: 'a@x.com', phone: '555' }];
+}
+
+describe('InanduGridComponent column groups', () => {
+  it('renders no group header row when no inandu-column-group is declared', () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.inandu-group-header-row'))).toBeNull();
+  });
+
+  it('groups a run of columns under one spanning header cell, with a filler above ungrouped/utility columns', () => {
+    // Note on order: columns() concatenates ungrouped columns first, then each group's — a content
+    // query can't see past a component boundary, so there's no way to recover the *true* original
+    // declaration interleaving of a bare <inandu-column> against a <inandu-column-group>'s members.
+    // ID (ungrouped) renders before Email/Phone (grouped) here even though the template above
+    // declares the group first — see InanduGridComponent.columns()'s doc comment. Set an explicit
+    // order() on every column to control this precisely regardless of grouping.
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+
+    const groupCells = fixture.debugElement.queryAll(By.css('.inandu-group-header-row th'));
+    // select-checkbox filler, ID filler (colspan 1), "Contact" (colspan 2) — 3 cells for 4 leaf columns.
+    expect(groupCells.length).toBe(3);
+    expect(groupCells[0].nativeElement.classList).toContain('inandu-select-cell');
+    expect(groupCells[1].nativeElement.textContent.trim()).toBe('');
+    expect(groupCells[1].nativeElement.getAttribute('colspan')).toBe('1');
+    expect(groupCells[2].nativeElement.textContent.trim()).toBe('Contact');
+    expect(groupCells[2].nativeElement.getAttribute('colspan')).toBe('2');
+  });
+
+  it('the leaf header row lists every column, ungrouped-then-grouped, still fully usable', () => {
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+
+    const leafHeaders = fixture.debugElement.queryAll(By.css('thead tr[role="row"] th'));
+    // select checkbox + ID (ungrouped) + Email + Phone (grouped) — see the order note above.
+    const texts = leafHeaders.map(h => h.nativeElement.textContent.trim());
+    expect(texts.slice(1)).toEqual(['ID', 'Email', 'Phone']);
+  });
+
+  it('every header row has the same number of cells, for correct column alignment', () => {
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+
+    const leafCellCount = fixture.debugElement.queryAll(By.css('thead tr[role="row"] th')).length;
+    const groupColspanTotal = fixture.debugElement
+      .queryAll(By.css('.inandu-group-header-row th'))
+      .reduce((sum, th) => sum + Number(th.nativeElement.getAttribute('colspan') ?? '1'), 0);
+    expect(groupColspanTotal).toBe(leafCellCount);
+  });
+
+  it('a group whose columns are no longer adjacent splits into separate runs instead of merging non-contiguous columns', () => {
+    TestBed.configureTestingModule({ imports: [ColumnGroupsHostComponent] });
+    const fixture = TestBed.createComponent(ColumnGroupsHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.setColumnOrder(['email', 'id', 'phone']);
+    fixture.detectChanges();
+
+    const groupCells = fixture.debugElement.queryAll(By.css('.inandu-group-header-row th.inandu-column-group-header'));
+    // "Contact" (email, colspan 1), "" (id, colspan 1), "Contact" (phone, colspan 1) — split in two.
+    expect(groupCells.map(c => c.nativeElement.textContent.trim())).toEqual(['Contact', '', 'Contact']);
+    expect(groupCells.every(c => c.nativeElement.getAttribute('colspan') === '1')).toBeTrue();
   });
 });
 

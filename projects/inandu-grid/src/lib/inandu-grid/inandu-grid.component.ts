@@ -2,14 +2,17 @@ import { booleanAttribute, ChangeDetectionStrategy, Component, computed, content
 import { formatNumber, NgTemplateOutlet } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
-import { InanduCellTemplateContext, InanduColumnComponent, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
-import type { InanduColumnAsyncValidator } from '../inandu-column/inandu-column.component';
+import { InanduCellTemplateContext, InanduColumnComponent, InanduEditTemplateContext, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
+import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inandu-column/inandu-column.component';
+import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
+import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
 // in ../core now — framework-agnostic, no `@angular/*` dependency, reusable as-is by a non-Angular
 // port. This component is the Angular binding layer over it.
 import {
   AGGREGATE_SYMBOLS,
+  DETAIL_TOGGLE_COLUMN_WIDTH,
   MIN_COLUMN_WIDTH,
   ROW_DRAG_COLUMN_WIDTH,
   SELECT_COLUMN_WIDTH,
@@ -59,6 +62,12 @@ export type InanduGridCustomTranslations = Record<string, Record<string, string>
 
 /** Template context for `InanduGridComponent.rowActionsTemplate` — `$implicit`/`row` is the row that trailing actions cell belongs to. */
 export interface InanduRowActionsContext<T extends InanduGridRow = InanduGridRow> {
+  $implicit: T;
+  row: T;
+}
+
+/** Template context for `InanduGridComponent.detailTemplate` (#4 master-detail) — `$implicit`/`row` is the row the expanded detail row belongs to. */
+export interface InanduDetailTemplateContext<T extends InanduGridRow = InanduGridRow> {
   $implicit: T;
   row: T;
 }
@@ -221,11 +230,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** Guards the one-time `stateKey`-based restore effect in the constructor against re-running. */
   private hasRestoredState = false;
 
-  /** Everything persisted under `stateKey` — column widths/order/visibility, sort, and filters. */
+  /** Everything persisted under `stateKey` — column widths/order/visibility/pin, sort, and filters. */
   private readonly persistableState = computed(() => ({
     columnWidths: this.columnWidths(),
     reorderedFields: this.reorderedFields(),
     hiddenFields: Array.from(this.hiddenFields()),
+    pinnedOverrides: this.pinnedOverrides(),
     sortCriteria: this.sortCriteria(),
     filterQuery: this.filterQuery(),
     columnFilters: this.columnFilters(),
@@ -245,6 +255,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         columnWidths: Record<string, number>;
         reorderedFields: string[];
         hiddenFields: string[];
+        pinnedOverrides: Record<string, InanduColumnStickySide | 'none'>;
         sortCriteria: InanduGridSortCriterion[];
         filterQuery: string;
         columnFilters: Record<string, InanduGridColumnFilterValue>;
@@ -257,6 +268,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       }
       if (Array.isArray(state.hiddenFields)) {
         this.hiddenFields.set(new Set(state.hiddenFields));
+      }
+      if (state.pinnedOverrides) {
+        this.pinnedOverrides.set(state.pinnedOverrides);
       }
       if (Array.isArray(state.sortCriteria)) {
         this.sortCriteria.set(state.sortCriteria);
@@ -376,6 +390,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly msgAddRow = this.translate.translate('MsgAddRow', undefined, this.resolvedLang);
   readonly msgLoading = this.translate.translate('MsgLoading', undefined, this.resolvedLang);
   readonly msgDragRow = this.translate.translate('MsgDragRow', undefined, this.resolvedLang);
+  readonly msgExpandDetail = this.translate.translate('MsgExpandDetail', undefined, this.resolvedLang);
+  readonly msgCollapseDetail = this.translate.translate('MsgCollapseDetail', undefined, this.resolvedLang);
 
   constructor() {
     registerInanduGridTranslations(this.translate);
@@ -516,7 +532,65 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.requestedPage.set(1);
   }
 
-  readonly columns = contentChildren(InanduColumnComponent);
+  /**
+   * Content queries don't cross a *component* boundary — `directColumns()` below only ever finds
+   * an `<inandu-column>` written directly inside `<inandu-grid>` (or nested in a plain element,
+   * `descendants: true` handles that), never one nested inside `<inandu-column-group>`, since that
+   * makes it `InanduColumnGroupComponent`'s own content child, not this grid's. `columns()` is the
+   * real, complete list every other computed in this file should keep reading — direct columns
+   * first (their own declaration order), then every group's columns (group declaration order,
+   * then that group's own column declaration order). A column's explicit `order()` input is what
+   * `orderedColumns()`/`placeColumnsByOrder()` actually key off for final position — set it
+   * explicitly on every column when mixing grouped and ungrouped ones if this concatenation order
+   * isn't already what you want.
+   */
+  private readonly directColumns = contentChildren(InanduColumnComponent);
+  readonly columns = computed(() => [...this.directColumns(), ...this.columnGroups().flatMap(group => group.columns())]);
+
+  /**
+   * Column groups (#26) — `<inandu-column-group title="…">` wrapping a run of `<inandu-column>`
+   * children, rendered as a shared header cell above them. `columns()` above already merges a
+   * group's columns in, so grouping some doesn't touch ordering/visibility/filtering/sorting
+   * beyond that merge — only `fieldToGroup()`/`columnGroupRuns()` below, which the header template
+   * reads, are group-aware past that point. See `InanduColumnGroupComponent`'s doc comment for the
+   * v1 scope (one level of nesting, no collapsing, export doesn't reflect groups yet).
+   */
+  readonly columnGroups = contentChildren(InanduColumnGroupComponent);
+
+  readonly hasColumnGroups = computed(() => this.columnGroups().length > 0);
+
+  /** Every grouped column's field, mapped to the group it belongs to. A field absent from this map is ungrouped. */
+  private readonly fieldToGroup = computed(() => {
+    const map = new Map<string, InanduColumnGroupComponent>();
+    for (const group of this.columnGroups()) {
+      for (const column of group.columns()) {
+        map.set(column.field(), group);
+      }
+    }
+    return map;
+  });
+
+  /**
+   * `visibleColumns()` chunked into consecutive runs sharing the same group (or no group at all,
+   * for `group: undefined`) — what the group header row actually iterates, one `<th>` per run
+   * (`colspan` = the run's length). If a group's columns end up non-adjacent after a drag-reorder,
+   * the group simply splits into more, smaller runs here rather than merging non-contiguous
+   * columns under one cell — see `InanduColumnGroupComponent`'s doc comment.
+   */
+  readonly columnGroupRuns = computed(() => {
+    const fieldToGroup = this.fieldToGroup();
+    const runs: { group: InanduColumnGroupComponent | undefined; columns: InanduColumnComponent[] }[] = [];
+    for (const column of this.visibleColumns()) {
+      const group = fieldToGroup.get(column.field());
+      const last = runs[runs.length - 1];
+      if (last && last.group === group) {
+        last.columns.push(column);
+      } else {
+        runs.push({ group, columns: [column] });
+      }
+    }
+    return runs;
+  });
 
   readonly orderedColumns = computed(() => placeColumnsByOrder(this.columns()));
 
@@ -587,6 +661,38 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.hiddenFields.update(fields => new Set(fields).add(field));
   }
 
+  /**
+   * Runtime pin (sticky) overrides, keyed by field — `'left'`/`'right'` pins there regardless of the
+   * column's own declared `sticky()`/`stickySide()`, `'none'` un-pins a column that declared
+   * `sticky="true"`. A field with no entry here just falls through to that column's own declared
+   * default — see `columnPinnedSide()`, the only place this is read.
+   */
+  private readonly pinnedOverrides = signal<Record<string, InanduColumnStickySide | 'none'>>({});
+
+  /**
+   * A column's current pin side, considering any runtime override — an override if `setColumnPinned`
+   * was ever called for this field, else its own declared `sticky()`/`stickySide()`. `undefined`
+   * means not pinned. Every sticky-related render (`<th>`/`<td>` class, `stickyOffset()`/
+   * `stickyOffsetRight()`, both left/right inline-offset bindings) goes through this now instead of
+   * reading `column.sticky()`/`column.stickySide()` directly, so a runtime pin/unpin from e.g. a
+   * consumer-built column panel takes effect everywhere at once.
+   */
+  columnPinnedSide(column: InanduColumnComponent): InanduColumnStickySide | undefined {
+    const override = this.pinnedOverrides()[column.field()];
+    if (override === 'left' || override === 'right') {
+      return override;
+    }
+    if (override === 'none') {
+      return undefined;
+    }
+    return column.sticky() ? column.stickySide() : undefined;
+  }
+
+  /** Pins `field` to `side` at runtime, or un-pins it when `side` is `undefined` — from e.g. a consumer-built column panel's "fix left/right" control. See `columnPinnedSide()`. Persisted under `stateKey` like column order/width/visibility. */
+  setColumnPinned(field: string, side: InanduColumnStickySide | undefined): void {
+    this.pinnedOverrides.update(overrides => ({ ...overrides, [field]: side ?? 'none' }));
+  }
+
   /** Field of the column whose visibility toggle popup is open, tracked as a simple flag since there's only one such popup for the whole grid (unlike the per-column filter popups). */
   private readonly columnTogglePopupOpen = signal(false);
 
@@ -639,7 +745,95 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * yet to act on there). Setting this alone (with no `editable` column, `deletable`, or `creatable`)
    * is enough to make the actions column appear — see `hasRowActions`.
    */
-  readonly rowActionsTemplate = contentChild(TemplateRef<InanduRowActionsContext<T>>);
+  private readonly allActionOrDetailTemplateRefs = contentChildren(TemplateRef);
+  private readonly allActionOrDetailTemplateAnchors = contentChildren(TemplateRef, { read: ElementRef });
+
+  /**
+   * `<ng-template inanduDetailTemplate>`'s anchor, matched up by DOM node identity against
+   * `allActionOrDetailTemplateAnchors()` — the same reason `InanduColumnComponent.headerTemplate`
+   * does this instead of comparing `TemplateRef` instances directly: two separately-resolved
+   * content queries against the very same `<ng-template>` can return wrapper objects that are
+   * `!==` each other despite representing the same template.
+   */
+  private readonly detailAnchor = contentChild(InanduDetailTemplateDirective, { read: ElementRef });
+  private readonly detailTemplateIndex = computed(() => {
+    const anchor = this.detailAnchor();
+    return anchor ? this.allActionOrDetailTemplateAnchors().findIndex(candidate => candidate.nativeElement === anchor.nativeElement) : -1;
+  });
+
+  /**
+   * Master-detail (#4) content — declare `<ng-template inanduDetailTemplate let-row>…</ng-template>`
+   * as a *direct* child of `<inandu-grid>`. `let-row` (the template's `$implicit`) is the full row
+   * object. Its presence alone is enough to enable the feature (an expand/collapse toggle column,
+   * see `hasMasterDetail`) — there's no separate boolean input. Only supported in the plain flat/
+   * paged render path: not while `groupByColumn()` is set, and not with `virtualScroll()` (same
+   * "documented as unsupported" territory as grouped+virtual already occupy — see the toggle cell
+   * in the template, which simply doesn't render outside that path).
+   */
+  readonly detailTemplate = computed(() => {
+    const index = this.detailTemplateIndex();
+    return index === -1 ? undefined : (this.allActionOrDetailTemplateRefs()[index] as TemplateRef<InanduDetailTemplateContext<T>>);
+  });
+
+  /** The `*ngTemplateOutlet` context for `detailTemplate()` — `$implicit`/`row` is the full row object. */
+  detailContext(row: T): InanduDetailTemplateContext<T> {
+    return { $implicit: row, row };
+  }
+
+  /**
+   * Whether the master-detail expand/collapse toggle column should render — a `detailTemplate()`
+   * alone isn't enough: also `false` while grouped or `virtualScroll()` is on, since neither of
+   * those render paths has a detail-toggle cell (see the template) — rendering the column in the
+   * header/colgroup but not in the body would misalign every other column. Recomputes live, so
+   * clearing the grouping (or turning off `virtualScroll`) brings the toggle column right back.
+   */
+  readonly hasMasterDetail = computed(() => !!this.detailTemplate() && !this.groupByColumn() && !this.virtualScroll());
+
+  /** Rows currently expanded to show their detail content — by reference, like `isRowSelected`/`isEditingRow`. */
+  private readonly expandedRows = signal<Set<T>>(new Set());
+
+  isRowExpanded(row: T): boolean {
+    return this.expandedRows().has(row);
+  }
+
+  /** `MsgCollapseDetail`/`MsgExpandDetail` depending on `row`'s current state — the toggle button's `aria-label`. */
+  detailToggleLabel(row: T): string {
+    return this.isRowExpanded(row) ? this.msgCollapseDetail() : this.msgExpandDetail();
+  }
+
+  /**
+   * Toggles `row`'s detail visibility. Multiple rows can be expanded at once by default; pass
+   * `singleDetailExpand="true"` to collapse any other expanded row first, accordion-style.
+   */
+  toggleRowExpanded(row: T): void {
+    this.expandedRows.update(expanded => {
+      const next = this.singleDetailExpand() ? new Set<T>() : new Set(expanded);
+      if (expanded.has(row)) {
+        next.delete(row);
+      } else {
+        next.add(row);
+      }
+      return next;
+    });
+  }
+
+  /** See `toggleRowExpanded`. Off (any number of rows can be expanded at once) by default. */
+  readonly singleDetailExpand = input(false, { transform: booleanAttribute });
+
+  /**
+   * Custom, consumer-supplied buttons for the trailing row-actions cell, alongside (after) the
+   * built-in Edit/Delete — declare a plain `<ng-template let-row>…</ng-template>` as a *direct*
+   * child of `<inandu-grid>` (not nested inside an `<inandu-column>`, which is where a column's own
+   * `cellTemplate` lives instead, and not marked `inanduDetailTemplate`, which is `detailTemplate`
+   * above). `let-row` (the template's `$implicit`) is the full row object; only rendered for an
+   * *existing* row's actions cell, not while adding a new row (there's no row yet to act on there).
+   * Setting this alone (with no `editable` column, `deletable`, or `creatable`) is enough to make
+   * the actions column appear — see `hasRowActions`.
+   */
+  readonly rowActionsTemplate = computed(() => {
+    const detailIndex = this.detailTemplateIndex();
+    return this.allActionOrDetailTemplateRefs().find((_, index) => index !== detailIndex) as TemplateRef<InanduRowActionsContext<T>> | undefined;
+  });
 
   /** The `*ngTemplateOutlet` context for `rowActionsTemplate()` — `$implicit`/`row` is the full row object. */
   rowActionsContext(row: T): InanduRowActionsContext<T> {
@@ -649,9 +843,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** Whether the trailing row-actions column should render at all — row editing, row deletion, row creation, a custom `rowActionsTemplate`, or any combination. */
   readonly hasRowActions = computed(() => this.editableColumns().length > 0 || this.deletable() || this.creatable() || !!this.rowActionsTemplate());
 
-  /** Header + optional select/actions columns — the colspan every full-width row (search, group zone, empty state, pager) should span. */
+  /** Header + optional select/actions/detail-toggle columns — the colspan every full-width row (search, group zone, empty state, pager) should span. */
   readonly totalColumnCount = computed(() =>
-    this.visibleColumns().length + (this.hasRowDragHandle() ? 1 : 0) + (this.selectable() ? 1 : 0) + (this.hasRowActions() ? 1 : 0)
+    this.visibleColumns().length + (this.hasMasterDetail() ? 1 : 0) + (this.hasRowDragHandle() ? 1 : 0) + (this.selectable() ? 1 : 0) + (this.hasRowActions() ? 1 : 0)
   );
 
   readonly filterableColumns = computed(() => this.visibleColumns().filter(column => column.filter()));
@@ -1476,6 +1670,25 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     return { $implicit: title, title, field: column.field() };
   }
 
+  /**
+   * The `*ngTemplateOutlet` context for `column.editTemplate()` — a custom editor replacing the
+   * built-in row-edit `<input>` for this column. `row` is `{}` for the add-new-row (there's no
+   * source row yet). `setValue` writes straight into the same draft the built-in control feeds, so
+   * save-time parse/validation is unchanged; `value` is that draft's current raw value for the field.
+   */
+  editTemplateContext(column: InanduColumnComponent, row: T | Record<string, unknown> = {}): InanduEditTemplateContext {
+    const field = column.field();
+    const value = this.rowDraft()[field];
+    return {
+      $implicit: value,
+      value,
+      row: row as Record<string, unknown>,
+      field,
+      setValue: (next: unknown) => this.setRowDraftValue(field, next),
+      error: this.fieldError(field),
+    };
+  }
+
   /** Columns whose header can be dragged onto the group-by drop zone. The zone only renders when this is non-empty — a hidden column's header isn't rendered at all, so it can't be dragged from anyway. */
   readonly groupableColumns = computed(() => this.visibleColumns().filter(column => column.groupable()));
 
@@ -1709,6 +1922,26 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.reorderedFields.set(fields);
   }
 
+  /**
+   * Sets the full column order directly, bypassing the header drag-and-drop gesture — e.g. from a
+   * consumer-built column-management panel (drag-reorder inside a sidebar list, "move up"/"move
+   * down" buttons, or restoring a saved layout). `fields` should list every column's `field()`, in
+   * the desired order; any field it omits keeps its current relative position and is appended after
+   * the fields it does list (same "flows in at the end" behavior `displayColumns()` already has for
+   * a stale/partial order — see its doc comment) — so passing a subset is safe, it just won't move
+   * the columns you didn't mention. Fields that don't match any current column are ignored. A
+   * `reorder="false"` column can still be repositioned this way — that flag only opts a column's own
+   * header out of *being dragged*, it doesn't lock its position against every other mechanism.
+   */
+  setColumnOrder(fields: readonly string[]): void {
+    const current = this.displayColumns().map(column => column.field());
+    const currentSet = new Set(current);
+    const requested = fields.filter(field => currentSet.has(field));
+    const requestedSet = new Set(requested);
+    const remaining = current.filter(field => !requestedSet.has(field));
+    this.reorderedFields.set([...requested, ...remaining]);
+  }
+
   /** `MsgGroupedBy` interpolated with the grouped column's display label. */
   readonly groupByLabel = computed(() => {
     const column = this.groupByColumn();
@@ -1731,6 +1964,14 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     return this.columnWidths()[column.field()] ?? column.width();
   }
 
+  /** Sets a column's width directly, bypassing the resize-handle drag — e.g. to restore a saved layout. Clamped to `MIN_COLUMN_WIDTH`, same floor the drag handle already enforces. Silently does nothing if `field` doesn't match any current column. */
+  setColumnWidth(field: string, width: number): void {
+    if (!this.displayColumns().some(column => column.field() === field)) {
+      return;
+    }
+    this.columnWidths.update(widths => ({ ...widths, [field]: Math.max(MIN_COLUMN_WIDTH, width) }));
+  }
+
   /**
    * The select-checkbox column's width, as the template's `[style.--inandu-select-column-width.px]`
    * binding on the root `<div>` — the *only* other place `SELECT_COLUMN_WIDTH` is referenced, so the
@@ -1744,21 +1985,24 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** The drag-handle column's width, exposed the same way `selectColumnWidthPx` is — see its doc comment. */
   protected readonly rowDragColumnWidthPx = ROW_DRAG_COLUMN_WIDTH;
 
+  /** The master-detail toggle column's width, exposed the same way `selectColumnWidthPx` is — see its doc comment. It's the leading-most column of all, when present. */
+  protected readonly detailToggleColumnWidthPx = DETAIL_TOGGLE_COLUMN_WIDTH;
+
   /**
    * The `left` offset (px) a `stickySide="left"` (the default) sticky column's `<th>`/`<td>` needs:
-   * the select-checkbox column's width (it's always sticky-left when `selectable()` is on — see the
-   * template) plus every *other* left-sticky column's `effectiveWidth()` that renders before this
-   * one in `visibleColumns()`. A hidden column never contributes (it has no rendered `<th>`/`<td>`
-   * to occupy any width at all). Non-sticky and right-sticky columns never contribute either,
-   * regardless of where they sit.
+   * the detail-toggle and select-checkbox columns' widths (each always sticky-left when present —
+   * see the template) plus every *other* left-sticky column's `effectiveWidth()` that renders
+   * before this one in `visibleColumns()`. A hidden column never contributes (it has no rendered
+   * `<th>`/`<td>` to occupy any width at all). Non-sticky and right-sticky columns never
+   * contribute either, regardless of where they sit.
    */
   stickyOffset(column: InanduColumnComponent): number {
-    let offset = (this.hasRowDragHandle() ? ROW_DRAG_COLUMN_WIDTH : 0) + (this.selectable() ? SELECT_COLUMN_WIDTH : 0);
+    let offset = (this.hasMasterDetail() ? DETAIL_TOGGLE_COLUMN_WIDTH : 0) + (this.hasRowDragHandle() ? ROW_DRAG_COLUMN_WIDTH : 0) + (this.selectable() ? SELECT_COLUMN_WIDTH : 0);
     for (const other of this.visibleColumns()) {
       if (other === column) {
         break;
       }
-      if (other.sticky() && other.stickySide() === 'left') {
+      if (this.columnPinnedSide(other) === 'left') {
         offset += this.effectiveWidth(other) || 80;
       }
     }
@@ -1780,7 +2024,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         seenColumn = true;
         continue;
       }
-      if (seenColumn && other.sticky() && other.stickySide() === 'right') {
+      if (seenColumn && this.columnPinnedSide(other) === 'right') {
         offset += this.effectiveWidth(other) || 80;
       }
     }
@@ -2049,6 +2293,20 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     const target = event.target as HTMLInputElement;
     const raw = column.type() === 'boolean' ? target.checked : target.value;
     this.rowDraft.update(draft => ({ ...draft, [column.field()]: raw }));
+  }
+
+  /**
+   * Writes a value into the in-progress row-edit/create draft for `field` — the programmatic
+   * counterpart to `onRowFieldChange()`, for a custom `editTemplate()` (see `editTemplateContext()`'s
+   * `setValue`). Pass the same *raw control shape* the built-in input would produce (a string for a
+   * `'string'`/`'number'`/`'date'` column, a boolean for `'boolean'`); it's parsed and validated at
+   * Save time exactly like a typed-in value. A no-op if no row is currently being edited or added.
+   */
+  setRowDraftValue(field: string, value: unknown): void {
+    if (!this.editingRow() && !this.isAddingRow()) {
+      return;
+    }
+    this.rowDraft.update(draft => ({ ...draft, [field]: value }));
   }
 
   /** "Cancel" — discards the draft and exits edit mode without emitting `rowSave`. */
