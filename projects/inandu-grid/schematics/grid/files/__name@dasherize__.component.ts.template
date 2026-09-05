@@ -1,0 +1,33 @@
+import { Component } from '@angular/core';
+import { InanduGridComponent, InanduColumnComponent } from '@inandu-solutions/grid-angular';
+import type { InanduGridRow } from '@inandu-solutions/grid-angular';
+
+interface Person extends InanduGridRow {
+  name: string;
+  age: number;
+  joined: Date;
+  active: boolean;
+}
+
+@Component({
+  selector: '<%= prefix %>-<%= dasherize(name) %>',
+  imports: [InanduGridComponent, InanduColumnComponent],
+  template: `
+    <inandu-grid [data]="rows" [paging]="{ pageSize: 10 }" filter="true" theme="minimal">
+      <inandu-column field="name"   title="Name"   sortable="true" filter="true"></inandu-column>
+      <inandu-column field="age"    title="Age"    type="number"  sortable="true"></inandu-column>
+      <inandu-column field="joined" title="Joined" type="date"    format="DD/MM/YYYY" sortable="true"></inandu-column>
+      <inandu-column field="active" title="Active" type="boolean" format="Yes|No"></inandu-column>
+    </inandu-grid>
+  `,
+})
+export class <%= classify(name) %>Component {
+  // The grid only ever reads this array — you own fetching, saving and persistence.
+  rows: Person[] = [
+    { name: 'Ada Lovelace', age: 36, joined: new Date(2021, 2, 14), active: true },
+    { name: 'Alan Turing', age: 41, joined: new Date(2019, 8, 1), active: false },
+    { name: 'Grace Hopper', age: 45, joined: new Date(2020, 0, 20), active: true },
+    { name: 'Katherine Johnson', age: 52, joined: new Date(2018, 5, 9), active: true },
+    { name: 'Edsger Dijkstra', age: 48, joined: new Date(2022, 10, 30), active: false },
+  ];
+}

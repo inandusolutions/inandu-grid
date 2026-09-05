@@ -86,8 +86,13 @@ nothing to configure. See [`projects/inandu-grid/README.md`](projects/inandu-gri
 ## Quick start (using the library in your app)
 
 ```bash
-npm install @inandu-solutions/grid-angular
+ng add @inandu-solutions/grid-angular
 ```
+
+Installs it and drops in a runnable `GridDemoComponent` (`--skip-example` to skip). Or install
+plain with `npm install @inandu-solutions/grid-angular` and add the two standalone components
+(`InanduGridComponent`, `InanduColumnComponent`) to a component's `imports`. `ng generate
+@inandu-solutions/grid-angular:grid <name>` scaffolds an example into an existing app any time.
 
 See [`projects/inandu-grid/README.md`](projects/inandu-grid/README.md) for the full
 component API, inputs/outputs, and examples.
@@ -97,10 +102,11 @@ component API, inputs/outputs, and examples.
 ```bash
 npm install          # install dependencies
 npm start            # build the library, then ng serve — http://localhost:4200
-npm run build:lib    # build the library only (dist/inandu-grid)
+npm run build:lib    # build the library only (dist/inandu-grid) — includes the schematics
 npm run build        # build library + demo app
 npm run lint         # lint both projects
 npm run test:lib     # unit tests for the library (Karma/Jasmine, headless Chrome)
+npm run test:schematics  # ng-add / generate schematics (node:test)
 npm test             # unit tests for the demo app
 npm run e2e          # Playwright end-to-end tests against the built demo
 ```
