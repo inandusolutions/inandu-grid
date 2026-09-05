@@ -8,6 +8,10 @@
       "type": "string",
       "description": "Name of the generated component.",
       "default": "grid-demo",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
       "x-prompt": "What name should the example grid component have?"
     },
     "path": {

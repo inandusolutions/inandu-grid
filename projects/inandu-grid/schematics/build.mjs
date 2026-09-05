@@ -7,13 +7,14 @@
  * Run after `ng build inandu-grid` (see the root `build:lib` script). Zero dependencies.
  */
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const outDir = join(here, '../../../dist/inandu-grid/schematics');
+const distRoot = join(here, '../../../dist/inandu-grid');
+const outDir = join(distRoot, 'schematics');
 const tsc = createRequire(import.meta.url).resolve('typescript/bin/tsc');
 
 execFileSync(process.execPath, [tsc, '-p', join(here, 'tsconfig.json')], { stdio: 'inherit' });
@@ -23,6 +24,13 @@ execFileSync(process.execPath, [tsc, '-p', join(here, 'tsconfig.json')], { stdio
 // their .js as ESM — for the published package and for `test:schematics` alike.
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'package.json'), JSON.stringify({ type: 'commonjs' }, null, 2) + '\n');
+
+// ...but ng-packagr also writes a `.npmignore` with `**/package.json`, which would strip that
+// marker from the published tarball. Re-include it (and future nested markers under schematics/).
+const npmignore = join(distRoot, '.npmignore');
+if (existsSync(npmignore) && !readFileSync(npmignore, 'utf8').includes('!schematics/**/package.json')) {
+  appendFileSync(npmignore, '\n# keep the CommonJS marker(s) for the schematics\n!schematics/package.json\n!schematics/**/package.json\n');
+}
 
 /** Walk `dir` and copy every file matching `keep(relPath)` into the mirrored spot under `outDir`. */
 function copyAssets(dir, keep) {
