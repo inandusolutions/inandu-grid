@@ -45,4 +45,16 @@ export interface InanduGridColumnFilterValue {
   to?: string;
   /** `'boolean'` columns: `''` (no filter), `'true'`, or `'false'`. */
   bool?: string;
+  /**
+   * Excel-style "set filter" — an explicit list of the column's own *formatted* display values to
+   * match (OR within the column, same as every other filter key combines with AND across
+   * columns). Works the same regardless of `type` — unlike `text`/`min`/`max`/`from`/`to`/`bool`,
+   * which are each specific to one `type` — since it compares against the already-formatted
+   * string, not the raw value. Whenever this key is *present* (defined) at all, it takes over
+   * matching for the column entirely and the type-specific keys above are ignored — including an
+   * **empty array**, which means "every value unchecked" and matches nothing, not "no
+   * constraint". Omit the key (or set it to `undefined`) for "no constraint" instead. See
+   * `matchesColumnFilter`/`hasMeaningfulFilterValue`.
+   */
+  values?: string[];
 }

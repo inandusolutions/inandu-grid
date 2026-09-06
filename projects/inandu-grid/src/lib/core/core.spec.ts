@@ -204,6 +204,15 @@ describe('pure: hasMeaningfulFilterValue', () => {
     expect(hasMeaningfulFilterValue({ text: 'x' })).toBeTrue();
     expect(hasMeaningfulFilterValue({ min: '0' })).toBeTrue();
   });
+  it('an empty values array → true — unlike every other key, presence is what counts, not length', () => {
+    expect(hasMeaningfulFilterValue({ values: [] })).toBeTrue();
+  });
+  it('a non-empty values array → true', () => {
+    expect(hasMeaningfulFilterValue({ values: ['a'] })).toBeTrue();
+  });
+  it('values explicitly undefined → false, same as omitting the key', () => {
+    expect(hasMeaningfulFilterValue({ values: undefined })).toBeFalse();
+  });
 });
 
 describe('pure: matchesColumnFilter', () => {
@@ -231,6 +240,31 @@ describe('pure: matchesColumnFilter', () => {
     const col = fakeColumn({ field: 'b', type: 'boolean' });
     expect(matchesColumnFilter(col, { b: true }, { bool: 'true' }, locale)).toBeTrue();
     expect(matchesColumnFilter(col, { b: true }, { bool: 'false' }, locale)).toBeFalse();
+  });
+  it('values (set filter): matches against the formatted value, OR within the set', () => {
+    const col = fakeColumn({ field: 'city', type: 'string' });
+    expect(matchesColumnFilter(col, { city: 'Lima' }, { values: ['Lima', 'Quito'] }, locale)).toBeTrue();
+    expect(matchesColumnFilter(col, { city: 'Bogotá' }, { values: ['Lima', 'Quito'] }, locale)).toBeFalse();
+  });
+  it('values works the same regardless of column type, unlike text/min/max/from/to/bool', () => {
+    const col = fakeColumn({ field: 'n', type: 'number', format: '1.2-2' });
+    // The set holds the *formatted* value ("5.00"), not the raw number.
+    expect(matchesColumnFilter(col, { n: 5 }, { values: ['5.00'] }, locale)).toBeTrue();
+    expect(matchesColumnFilter(col, { n: 6 }, { values: ['5.00'] }, locale)).toBeFalse();
+  });
+  it('values takes over entirely once present, ignoring the type-specific keys', () => {
+    const col = fakeColumn({ field: 'n', type: 'number' });
+    // min/max would reject 5, but a defined `values` bypasses them.
+    expect(matchesColumnFilter(col, { n: 5 }, { min: '10', values: ['5'] }, locale)).toBeTrue();
+  });
+  it('an empty values array matches nothing — "every checkbox unchecked", not "no constraint"', () => {
+    const col = fakeColumn({ field: 'city', type: 'string' });
+    // Even with a `text` that would otherwise match, a defined-but-empty `values` wins.
+    expect(matchesColumnFilter(col, { city: 'Lima' }, { values: [], text: 'lim' }, locale)).toBeFalse();
+  });
+  it('values left undefined falls through to the type-specific keys, same as omitting it', () => {
+    const col = fakeColumn({ field: 'city', type: 'string' });
+    expect(matchesColumnFilter(col, { city: 'Lima' }, { values: undefined, text: 'lim' }, locale)).toBeTrue();
   });
 });
 

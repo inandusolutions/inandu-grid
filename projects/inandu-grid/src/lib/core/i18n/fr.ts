@@ -35,6 +35,8 @@ export const fr = {
   MsgAddRow: 'Ajouter une ligne',
   MsgLoading: 'Chargement…',
   MsgDragRow: 'Glisser pour réordonner la ligne',
+  MsgExpandDetail: 'Développer les détails de la ligne',
+  MsgCollapseDetail: 'Réduire les détails de la ligne',
   MsgDeleteSelected: 'Supprimer la sélection ({{count}})',
   MsgValidationRequired: 'Ce champ est obligatoire',
   MsgValidationMin: 'Doit être au moins {{min}}',

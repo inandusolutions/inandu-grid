@@ -35,6 +35,8 @@ export const it = {
   MsgAddRow: 'Aggiungi riga',
   MsgLoading: 'Caricamento…',
   MsgDragRow: 'Trascina per riordinare la riga',
+  MsgExpandDetail: 'Espandi dettagli riga',
+  MsgCollapseDetail: 'Comprimi dettagli riga',
   MsgDeleteSelected: 'Elimina selezionati ({{count}})',
   MsgValidationRequired: 'Questo campo è obbligatorio',
   MsgValidationMin: 'Deve essere almeno {{min}}',

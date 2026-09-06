@@ -17,8 +17,11 @@ export type {
   InanduGridColumnFilterValue,
   InanduGridCustomTranslations,
   InanduRowActionsContext,
+  InanduDetailTemplateContext,
   SortDirection,
 } from './lib/inandu-grid/inandu-grid.component';
+export { InanduDetailTemplateDirective } from './lib/inandu-grid/inandu-detail-template.directive';
+export { InanduColumnGroupComponent } from './lib/inandu-column-group/inandu-column-group.component';
 export { InanduColumnComponent } from './lib/inandu-column/inandu-column.component';
 export type {
   InanduColumnType,
@@ -28,4 +31,5 @@ export type {
   InanduColumnAggregate,
   InanduCellTemplateContext,
   InanduHeaderTemplateContext,
+  InanduEditTemplateContext,
 } from './lib/inandu-column/inandu-column.component';
