@@ -81,7 +81,7 @@ a kitchen sink: no pivoting, no integrated charts, no built-in server-side row m
 | **Row selection** | `selectable="true"` — checkbox column + `(selectionChange)` output |
 | **Clipboard & cell ranges** | `clipboard` → `(cellsPaste)`; `cellRangeSelection` → `(cellRangeChange)` |
 | **Inline editing / creation / deletion** | `<inandu-column editable="true">`, grid-level `creatable` / `deletable`; emits `rowSave` / `rowCreate` / `rowDelete` / `rowsDelete` — the grid never mutates your data |
-| **Validation** | `required` / `min` / `max` / `pattern` / `[validator]` / `[asyncValidator]` per column, checked at save time |
+| **Validation** | `required` / `min` / `max` / `pattern` / `[validator]` / `[asyncValidator]` per column, checked at save time. `grid.validateCell(column, value, row?)` runs the same synchronous chain against any value — for a whole-grid check |
 | **Custom cell & header templates** | `<ng-template>` with `InanduCellTemplateContext` / `InanduHeaderTemplateContext` |
 | **Custom row actions** | project your own buttons via the row-actions slot (`InanduRowActionsContext`) |
 | **Export & print** | `exportable="true"` — CSV (UTF-8 BOM), Excel (SpreadsheetML `.xls`, dependency-free), PDF (`jspdf`), and print. Real `.xlsx` is a `@inandu-solutions/grid-pro` feature. |

@@ -2054,6 +2054,36 @@ describe('InanduGridComponent column validation', () => {
     expect(fixture.componentInstance.created).toEqual([]);
     expect(addRowCells()[1].query(By.css('.inandu-field-error')).nativeElement.textContent.trim()).toBe('Must be even');
   });
+
+  describe('validateCell() — the public per-cell check for a whole-grid view (#13)', () => {
+    const grid = () => fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    const col = (i: number) => grid().displayColumns()[i];
+
+    it('runs required / pattern / min-max / validator against an arbitrary value', () => {
+      const g = grid();
+      // code column: pattern ^[A-Z]{3}$
+      expect(g.validateCell(col(0), 'ABC')).toBeNull();
+      expect(g.validateCell(col(0), 'abc')).toBe('Invalid format');
+      // qty column: custom validator "must be even"
+      expect(g.validateCell(col(1), 4)).toBeNull();
+      expect(g.validateCell(col(1), 3)).toBe('Must be even');
+    });
+
+    it('a column with no rules always returns null', () => {
+      const g = grid();
+      // qty has a validator, but a plain string that never reaches it (not a number) still passes
+      // the built-in chain; and `code` with a valid pattern passes.
+      expect(g.validateCell(col(0), 'XYZ')).toBeNull();
+    });
+
+    it('passes the row to a cross-field validator', () => {
+      const g = grid();
+      const spy = jasmine.createSpy('validator').and.returnValue(null);
+      spyOn(col(1), 'validator').and.returnValue(spy);
+      g.validateCell(col(1), 2, { code: 'ABC', qty: 2 });
+      expect(spy).toHaveBeenCalledWith(2, { code: 'ABC', qty: 2 });
+    });
+  });
 });
 
 @Component({

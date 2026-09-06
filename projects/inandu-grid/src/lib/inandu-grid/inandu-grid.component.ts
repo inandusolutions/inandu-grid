@@ -2655,6 +2655,22 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   }
 
   /**
+   * Runs a column's *synchronous* validation rules (`required`/`min`/`max`/`pattern`/`validator`,
+   * in that order, stopping at the first failure) against an arbitrary value — the same chain
+   * `saveRow()` uses, but callable for any cell, not just the row currently being edited. Returns
+   * the failure message (localised via the grid's own i18n) or `null` when the value is valid,
+   * including for a column that declares no rules at all. `asyncValidator` is never invoked here.
+   *
+   * Built for a whole-grid validation view (`@inandu-solutions/grid-pro`'s `#13`): iterate rows ×
+   * columns and collect every non-`null` result. `value` should be the cell's already-typed value
+   * (a real `number`/`Date`/`boolean`/string); `row` is passed to a custom `validator` for
+   * cross-field checks.
+   */
+  validateCell(column: InanduColumnComponent, value: unknown, row: Record<string, unknown> = {}): string | null {
+    return this.validateColumnValue(column, value, value, row);
+  }
+
+  /**
    * "Save" — validates and parses the draft (see `validateAndParseDraft()`); a failing field blocks
    * the save, populates `fieldErrors()` for the template to show inline, and leaves edit mode active
    * so the user can fix it and retry. Otherwise exits edit mode and emits `rowSave`. Guarded by
