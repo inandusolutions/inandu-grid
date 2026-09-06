@@ -35,6 +35,7 @@ export const en = {
   MsgAddRow: 'Add row',
   MsgLoading: 'Loading…',
   MsgDragRow: 'Drag to reorder row',
+  MsgAutosizeColumn: 'Double-click to fit column to content',
   MsgExpandDetail: 'Expand row details',
   MsgCollapseDetail: 'Collapse row details',
   MsgDeleteSelected: 'Delete selected ({{count}})',

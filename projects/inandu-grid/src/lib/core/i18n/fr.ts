@@ -35,6 +35,7 @@ export const fr = {
   MsgAddRow: 'Ajouter une ligne',
   MsgLoading: 'Chargement…',
   MsgDragRow: 'Glisser pour réordonner la ligne',
+  MsgAutosizeColumn: 'Double-cliquez pour ajuster la colonne au contenu',
   MsgExpandDetail: 'Développer les détails de la ligne',
   MsgCollapseDetail: 'Réduire les détails de la ligne',
   MsgDeleteSelected: 'Supprimer la sélection ({{count}})',

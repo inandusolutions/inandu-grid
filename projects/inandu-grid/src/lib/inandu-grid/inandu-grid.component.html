@@ -127,6 +127,7 @@
         @for (column of visibleColumns(); track column.field(); let colIndex = $index) {
           @let headerDraggable = column.groupable() || column.reorder();
           <th class="inandu-column" scope="col" role="columnheader"
+            [attr.data-field]="column.field()"
             [attr.tabindex]="colIndex === 0 && !selectable() ? 0 : -1"
             [class.inandu-groupable-header]="column.groupable()"
             [class.inandu-sticky-column]="columnPinnedSide(column)"
@@ -209,7 +210,9 @@
             }
             @if (column.resize()) {
               <span class="inandu-column-resize-handle" draggable="false"
+                [attr.title]="autosize() ? msgAutosizeColumn() : null"
                 (mousedown)="onResizeHandleMouseDown($event, column)"
+                (dblclick)="onResizeHandleDblClick($event, column)"
               ></span>
             }
           </th>

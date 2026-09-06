@@ -864,6 +864,73 @@ describe('InanduGridComponent column resize', () => {
 
 @Component({
   template: `
+    <inandu-grid [data]="rows" [autosize]="autosize">
+      <inandu-column title="X" field="short" width="300"></inandu-column>
+      <inandu-column title="A very wide header that easily beats its cells" field="wide" width="60"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class AutosizeHostComponent {
+  rows: InanduGridRow[] = [
+    { short: 'a', wide: 'x' },
+    { short: 'b', wide: 'y' },
+  ];
+  autosize = true;
+}
+
+describe('InanduGridComponent autosize (#33)', () => {
+  const widthOf = (fixture: ComponentFixture<AutosizeHostComponent>, i: number) =>
+    parseFloat((fixture.debugElement.queryAll(By.css('colgroup col'))[i].nativeElement as HTMLElement).style.width);
+  const dblClickHandle = (fixture: ComponentFixture<AutosizeHostComponent>, i: number) => {
+    const handle = fixture.debugElement.queryAll(By.css('th .inandu-column-resize-handle'))[i].nativeElement as HTMLElement;
+    handle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    fixture.detectChanges();
+  };
+
+  it('double-clicking a handle shrinks an over-wide column toward its content', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.detectChanges();
+    expect(widthOf(fixture, 0)).toBe(300);
+    dblClickHandle(fixture, 0);
+    expect(widthOf(fixture, 0)).toBeLessThan(300);
+    expect(widthOf(fixture, 0)).toBeGreaterThanOrEqual(30); // never below MIN_COLUMN_WIDTH
+  });
+
+  it('grows a too-narrow column so its widest value (here the header) fits', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.detectChanges();
+    expect(widthOf(fixture, 1)).toBe(60);
+    dblClickHandle(fixture, 1);
+    expect(widthOf(fixture, 1)).toBeGreaterThan(60);
+  });
+
+  it('never grows past MAX_COLUMN_WIDTH', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.componentInstance.rows = [{ short: 'a', wide: 'Z'.repeat(4000) }];
+    fixture.detectChanges();
+    dblClickHandle(fixture, 1);
+    expect(widthOf(fixture, 1)).toBeLessThanOrEqual(600);
+  });
+
+  it('[autosize]="false" makes the double-click a no-op', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.componentInstance.autosize = false;
+    fixture.detectChanges();
+    dblClickHandle(fixture, 0);
+    expect(widthOf(fixture, 0)).toBe(300);
+  });
+
+  it('a resize="false" column has no handle to double-click (nothing to assert beyond that)', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.detectChanges();
+    // both demo columns are resizable, so exactly two handles exist
+    expect(fixture.debugElement.queryAll(By.css('th .inandu-column-resize-handle')).length).toBe(2);
+  });
+});
+
+@Component({
+  template: `
     <inandu-grid [data]="rows">
       <inandu-column title="A" field="a"></inandu-column>
       <inandu-column title="B" field="b"></inandu-column>

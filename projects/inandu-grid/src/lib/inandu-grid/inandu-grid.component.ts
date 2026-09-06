@@ -13,6 +13,7 @@ import { InanduDetailTemplateDirective } from './inandu-detail-template.directiv
 import {
   AGGREGATE_SYMBOLS,
   DETAIL_TOGGLE_COLUMN_WIDTH,
+  MAX_COLUMN_WIDTH,
   MIN_COLUMN_WIDTH,
   ROW_DRAG_COLUMN_WIDTH,
   SELECT_COLUMN_WIDTH,
@@ -205,6 +206,15 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly pinnedBottomRows = input<T[]>([]);
 
   /**
+   * Double-clicking a column's resize handle snaps that column to the width of its widest rendered
+   * value (header included), the same "fit to content" gesture desktop grids have. On by default
+   * wherever a resize handle shows (`<inandu-column resize>`, which is the default); set
+   * `[autosize]="false"` to disable. Measures the currently-rendered rows only (one page's worth,
+   * or the virtual window), against a `MAX_COLUMN_WIDTH` ceiling.
+   */
+  readonly autosize = input(true, { transform: booleanAttribute });
+
+  /**
    * Opts the grid out of local sort/filter/pagination entirely: `data()` is trusted to already be
    * the current page's rows, already sorted/filtered by the consumer. Instead of computing results
    * itself, the grid emits `sortChange`/`filterChange`/`pageChange` whenever the user interacts with
@@ -383,6 +393,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly customTranslations = input<InanduGridCustomTranslations | undefined>(undefined);
 
   private readonly translate = inject(TranslateService);
+  private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly resolvedLang = computed(() => resolveInanduGridLang(this.lang(), this.translate));
 
   readonly msgNoData = this.translate.translate('MsgNoData', undefined, this.resolvedLang);
@@ -413,6 +424,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly msgAddRow = this.translate.translate('MsgAddRow', undefined, this.resolvedLang);
   readonly msgLoading = this.translate.translate('MsgLoading', undefined, this.resolvedLang);
   readonly msgDragRow = this.translate.translate('MsgDragRow', undefined, this.resolvedLang);
+  readonly msgAutosizeColumn = this.translate.translate('MsgAutosizeColumn', undefined, this.resolvedLang);
   readonly msgExpandDetail = this.translate.translate('MsgExpandDetail', undefined, this.resolvedLang);
   readonly msgCollapseDetail = this.translate.translate('MsgCollapseDetail', undefined, this.resolvedLang);
 
@@ -2087,6 +2099,56 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     window.removeEventListener('mousemove', this.onResizeMouseMove);
     window.removeEventListener('mouseup', this.onResizeMouseUp);
   };
+
+  /** Double-click on a resize handle → fit the column to its content (#33). */
+  onResizeHandleDblClick(event: MouseEvent, column: InanduColumnComponent): void {
+    if (!this.autosize()) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const width = this.measureColumnContentWidth(column);
+    if (width > 0) {
+      this.setColumnWidth(column.field(), Math.min(MAX_COLUMN_WIDTH, width));
+    }
+  }
+
+  /**
+   * Widest rendered value in a column (its header and every currently-rendered data cell),
+   * measured against that column's own computed font, plus the cell's horizontal padding. Reads
+   * only what's in the DOM right now — one page, or the virtual window — so it's O(visible rows).
+   * Returns `0` if the column has no rendered cell to measure.
+   */
+  private measureColumnContentWidth(column: InanduColumnComponent): number {
+    const host = this.elementRef.nativeElement;
+    const field = column.field();
+    const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(field) : field.replace(/"/g, '\\"');
+    const cells = Array.from(host.querySelectorAll<HTMLElement>(`td[data-field="${escaped}"]`));
+    const headerCell = host.querySelector<HTMLElement>(`th[data-field="${escaped}"]`);
+    const sample = cells[0] ?? headerCell ?? host;
+    const cs = getComputedStyle(sample);
+
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;pointer-events:none';
+    probe.style.font = cs.font || `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
+    probe.style.letterSpacing = cs.letterSpacing;
+    document.body.appendChild(probe);
+
+    const padding = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + 2; // + border slack
+    let widest = 0;
+
+    // header text needs extra room for the sort button and the resize handle it lives next to
+    probe.textContent = column.title() || field;
+    widest = Math.max(widest, probe.offsetWidth + 44);
+
+    for (const cell of cells) {
+      probe.textContent = (cell.textContent ?? '').replace(/\s+/g, ' ').trim();
+      widest = Math.max(widest, probe.offsetWidth + padding);
+    }
+
+    probe.remove();
+    return cells.length || headerCell ? Math.ceil(widest) : 0;
+  }
 
   /** Enables the export/print toolbar above the table. Off (no toolbar rendered) by default. */
   readonly exportable = input(false, { transform: booleanAttribute });

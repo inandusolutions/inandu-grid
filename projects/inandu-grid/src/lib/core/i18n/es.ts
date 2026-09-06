@@ -35,6 +35,7 @@ export const es = {
   MsgAddRow: 'Agregar fila',
   MsgLoading: 'Cargando…',
   MsgDragRow: 'Arrastrar para reordenar fila',
+  MsgAutosizeColumn: 'Doble clic para ajustar la columna al contenido',
   MsgExpandDetail: 'Expandir detalle de fila',
   MsgCollapseDetail: 'Contraer detalle de fila',
   MsgDeleteSelected: 'Eliminar seleccionados ({{count}})',
