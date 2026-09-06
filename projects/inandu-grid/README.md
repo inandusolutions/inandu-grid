@@ -79,7 +79,7 @@ a kitchen sink: no pivoting, no integrated charts, no built-in server-side row m
 | **Tree data** | `treeChildrenKey="children"` — each row's nested `children` array is its subtree; rows get an expand/collapse toggle + depth indent. Filters keep a node when it or a descendant matches (and open the path); the sort orders each sibling level. `treeDefaultExpanded="none"\|"all"\|<depth>`. Non-virtualized, non-grouped, non-`serverSide` only |
 | **Sticky columns** | `<inandu-column sticky="true">` (or `sticky="right"`) — frozen while scrolling |
 | **Row selection** | `selectable="true"` — checkbox column + `(selectionChange)` output |
-| **Clipboard & cell ranges** | `clipboard` → `(cellsPaste)`; `cellRangeSelection` → `(cellRangeChange)` |
+| **Clipboard & cell ranges** | `clipboard` → `(cellsPaste)`; `cellRangeSelection` → `(cellRangeChange)`; add `multiRange` for Ctrl/Cmd-drag to select several rectangles at once — `(cellRangesChange)` / `grid.cellRanges()` give the whole list |
 | **Inline editing / creation / deletion** | `<inandu-column editable="true">`, grid-level `creatable` / `deletable`; emits `rowSave` / `rowCreate` / `rowDelete` / `rowsDelete` — the grid never mutates your data |
 | **Validation** | `required` / `min` / `max` / `pattern` / `[validator]` / `[asyncValidator]` per column, checked at save time. `grid.validateCell(column, value, row?)` runs the same synchronous chain against any value — for a whole-grid check |
 | **Custom cell & header templates** | `<ng-template>` with `InanduCellTemplateContext` / `InanduHeaderTemplateContext` |

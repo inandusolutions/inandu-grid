@@ -1151,8 +1151,20 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    */
   readonly cellRangeSelection = input(false, { transform: booleanAttribute });
 
-  /** Emits the selected range's rows/fields on every change, or `undefined` once cleared — see `cellRangeSelection`/`clearCellRangeSelection()`. */
+  /**
+   * Lets a Ctrl/Cmd-drag (or Ctrl/Cmd-click) *add* another rectangle to the selection instead of
+   * replacing it (#16) — the same convention spreadsheets use. A plain click still resets to one
+   * rectangle. Only meaningful with `cellRangeSelection` on. `(cellRangeChange)` keeps emitting the
+   * *active* (last) rectangle; `(cellRangesChange)` emits the whole list. `Ctrl+C` copies only the
+   * active rectangle.
+   */
+  readonly multiRange = input(false, { transform: booleanAttribute });
+
+  /** Emits the selected range's rows/fields on every change, or `undefined` once cleared — see `cellRangeSelection`/`clearCellRangeSelection()`. With `multiRange` on this is the *active* (last) rectangle. */
   readonly cellRangeChange = output<InanduGridCellRangeSelection<T> | undefined>();
+
+  /** Emits every selected rectangle (active one last), or `[]` once cleared — see `multiRange`. */
+  readonly cellRangesChange = output<InanduGridCellRangeSelection<T>[]>();
 
   /** The cell a range drag/shift-click started from — fixed for the duration of one selection gesture. */
   private readonly rangeAnchor = signal<{ row: number; col: number } | undefined>(undefined);
@@ -1176,19 +1188,37 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     };
   });
 
-  /** Whether `(rowIndex, colIndex)` (both into `pagedData()`/`visibleColumns()`) falls inside the currently selected range — drives `.inandu-cell-range-selected` in the template. */
+  /** Rectangles frozen by an earlier Ctrl-drag while `multiRange()` is on — the active one lives in `selectedRange()`. */
+  private readonly committedRanges = signal<{ minRow: number; maxRow: number; minCol: number; maxCol: number }[]>([]);
+
+  /** Every selected rectangle, active one last — `committedRanges()` plus `selectedRange()`. */
+  private readonly allRanges = computed(() => {
+    const ranges = [...this.committedRanges()];
+    const active = this.selectedRange();
+    if (active) ranges.push(active);
+    return ranges;
+  });
+
+  /** Whether `(rowIndex, colIndex)` (both into `pagedData()`/`visibleColumns()`) falls inside *any* selected rectangle — drives `.inandu-cell-range-selected` in the template. */
   isCellInRange(rowIndex: number, colIndex: number): boolean {
-    const range = this.selectedRange();
-    return !!range && rowIndex >= range.minRow && rowIndex <= range.maxRow && colIndex >= range.minCol && colIndex <= range.maxCol;
+    return this.allRanges().some(
+      r => rowIndex >= r.minRow && rowIndex <= r.maxRow && colIndex >= r.minCol && colIndex <= r.maxCol,
+    );
   }
 
-  /** Starts a new range selection gesture — a plain click resets the anchor to this cell; shift-click extends the *existing* anchor instead, the same convention spreadsheet apps use. */
+  /** Starts a new range selection gesture — a plain click resets to this cell; shift-click extends the *existing* anchor; Ctrl/Cmd-click (with `multiRange`) freezes the current rectangle and starts another. */
   onCellRangeMouseDown(event: MouseEvent, rowIndex: number, colIndex: number): void {
     if (event.button !== 0) {
       return;
     }
     this.isSelectingRange.set(true);
-    if (!event.shiftKey || !this.rangeAnchor()) {
+    const additive = this.multiRange() && (event.ctrlKey || event.metaKey) && !event.shiftKey;
+    if (additive) {
+      const active = this.selectedRange();
+      if (active) this.committedRanges.update(ranges => [...ranges, active]);
+      this.rangeAnchor.set({ row: rowIndex, col: colIndex });
+    } else if (!event.shiftKey || !this.rangeAnchor()) {
+      this.committedRanges.set([]);
       this.rangeAnchor.set({ row: rowIndex, col: colIndex });
     }
     this.rangeFocus.set({ row: rowIndex, col: colIndex });
@@ -1214,7 +1244,16 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   clearCellRangeSelection(): void {
     this.rangeAnchor.set(undefined);
     this.rangeFocus.set(undefined);
+    this.committedRanges.set([]);
     this.cellRangeChange.emit(undefined);
+    this.cellRangesChange.emit([]);
+  }
+
+  private rangeToSelection(r: { minRow: number; maxRow: number; minCol: number; maxCol: number }): InanduGridCellRangeSelection<T> {
+    return {
+      rows: this.pagedData().slice(r.minRow, r.maxRow + 1),
+      fields: this.visibleColumns().slice(r.minCol, r.maxCol + 1).map(column => column.field()),
+    };
   }
 
   private emitCellRangeChange(): void {
@@ -1222,10 +1261,14 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     if (!range) {
       return;
     }
-    const rows = this.pagedData().slice(range.minRow, range.maxRow + 1);
-    const fields = this.visibleColumns().slice(range.minCol, range.maxCol + 1).map(column => column.field());
-    this.cellRangeChange.emit({ rows, fields });
+    this.cellRangeChange.emit(this.rangeToSelection(range));
+    this.cellRangesChange.emit(this.allRanges().map(r => this.rangeToSelection(r)));
   }
+
+  /** Every selected rectangle as `{ rows, fields }`, active one last — a signal mirror of `(cellRangesChange)`. */
+  readonly cellRanges = computed<InanduGridCellRangeSelection<T>[]>(() =>
+    this.allRanges().map(r => this.rangeToSelection(r)),
+  );
 
   /** The full selected range formatted as TSV (one line per row, tab-separated columns) — what `clipboardCopyText()` copies when a genuine (more-than-one-cell) range is active. */
   private selectedRangeText(range: { minRow: number; maxRow: number; minCol: number; maxCol: number }): string {

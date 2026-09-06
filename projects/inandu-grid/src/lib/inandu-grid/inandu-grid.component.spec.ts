@@ -4317,6 +4317,96 @@ describe('InanduGridComponent cell range selection', () => {
 
 @Component({
   template: `
+    <inandu-grid [data]="rows" lang="en" cellRangeSelection="true" multiRange="true"
+      (cellRangeChange)="onRangeChange($event)" (cellRangesChange)="onRangesChange($event)">
+      <inandu-column title="A" field="a"></inandu-column>
+      <inandu-column title="B" field="b"></inandu-column>
+      <inandu-column title="C" field="c"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class MultiRangeHostComponent {
+  rows: InanduGridRow[] = [
+    { a: 'a0', b: 'b0', c: 'c0' },
+    { a: 'a1', b: 'b1', c: 'c1' },
+    { a: 'a2', b: 'b2', c: 'c2' },
+  ];
+  lastRange?: InanduGridCellRangeSelection;
+  allRanges: InanduGridCellRangeSelection[] = [];
+  onRangeChange(r: InanduGridCellRangeSelection | undefined): void { this.lastRange = r; }
+  onRangesChange(rs: InanduGridCellRangeSelection[]): void { this.allRanges = rs; }
+}
+
+describe('InanduGridComponent multi-range selection (#16)', () => {
+  let fixture: ComponentFixture<MultiRangeHostComponent>;
+  let grid: InanduGridComponent;
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(MultiRangeHostComponent);
+    fixture.detectChanges();
+    grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+  });
+
+  it('a Ctrl-click freezes the current rectangle and starts another — both stay selected', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ ctrlKey: true }), 2, 2);
+    fixture.detectChanges();
+
+    expect(grid.isCellInRange(0, 0)).toBeTrue(); // first, committed
+    expect(grid.isCellInRange(2, 2)).toBeTrue(); // second, active
+    expect(grid.isCellInRange(1, 1)).toBeFalse(); // gap between them — not selected
+    expect(fixture.componentInstance.allRanges.length).toBe(2);
+    expect(fixture.componentInstance.lastRange).toEqual({ rows: [grid.pagedData()[2]], fields: ['c'] });
+  });
+
+  it('Cmd-drag adds a second rectangle', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onCellRangeMouseEnter(0, 1);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ metaKey: true }), 2, 1);
+    grid.onCellRangeMouseEnter(2, 2);
+    fixture.detectChanges();
+
+    // first rect: (0,0)-(0,1); second: (2,1)-(2,2)
+    expect(grid.isCellInRange(0, 0)).toBeTrue();
+    expect(grid.isCellInRange(0, 1)).toBeTrue();
+    expect(grid.isCellInRange(2, 1)).toBeTrue();
+    expect(grid.isCellInRange(2, 2)).toBeTrue();
+    expect(grid.isCellInRange(1, 1)).toBeFalse();
+    expect(grid.cellRanges().length).toBe(2);
+  });
+
+  it('a plain click after a multi-selection resets to one rectangle', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ ctrlKey: true }), 2, 2);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 1, 1);
+    fixture.detectChanges();
+
+    expect(grid.isCellInRange(0, 0)).toBeFalse();
+    expect(grid.isCellInRange(2, 2)).toBeFalse();
+    expect(grid.isCellInRange(1, 1)).toBeTrue();
+    expect(fixture.componentInstance.allRanges.length).toBe(1);
+  });
+
+  it('clearCellRangeSelection() drops every rectangle and emits []', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ ctrlKey: true }), 2, 2);
+    grid.clearCellRangeSelection();
+    fixture.detectChanges();
+
+    expect(grid.cellRanges()).toEqual([]);
+    expect(fixture.componentInstance.allRanges).toEqual([]);
+    expect(fixture.componentInstance.lastRange).toBeUndefined();
+  });
+});
+
+@Component({
+  template: `
     <inandu-grid [data]="rows" lang="en" virtualScroll="true" serverSide="true" infiniteScroll="true" [height]="200" [virtualRowHeight]="40" (loadMore)="onLoadMore($event)">
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
