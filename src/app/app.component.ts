@@ -57,6 +57,11 @@ export class AppComponent {
 
   public gridData: InanduGridRow[] = [];
 
+  /** #32 — rows pinned to the top/bottom of the scroll body. Computed once from `gridData` in
+   *  ngOnInit; not part of `data()`, so they ignore sort/filter/paging. */
+  public pinnedTopCustomers: InanduGridRow[] = [];
+  public pinnedBottomCustomers: InanduGridRow[] = [];
+
   /** Kept at defaults — `lang="es-AR"` on the grid itself now supplies "Página X de Y" automatically. */
   readonly customersPaging: InanduGridPagingOptions = {
     pageSize: 10,
@@ -292,5 +297,17 @@ export class AppComponent {
       ...buildAdditionalCustomers(90),
     ];
 
+    const totalVentas = this.gridData.reduce((sum, r) => sum + (Number(r['Ventas']) || 0), 0);
+    const topAccount = this.gridData.reduce((best, r) =>
+      (Number(r['Ventas']) || 0) > (Number(best['Ventas']) || 0) ? r : best, this.gridData[0]);
+    this.pinnedTopCustomers = [
+      { ...topAccount, Nombre: `★ ${topAccount['Nombre']}`, ContactTitle: 'Cuenta destacada' },
+    ];
+    this.pinnedBottomCustomers = [
+      {
+        Id: '', Nombre: `TOTAL · ${this.gridData.length} clientes`, Apellido: '',
+        ContactTitle: '', City: '', Activo: null, FechaAlta: null, Ventas: totalVentas,
+      },
+    ];
   }
 }

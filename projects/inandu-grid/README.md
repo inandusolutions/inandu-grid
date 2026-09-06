@@ -75,6 +75,7 @@ a kitchen sink: no pivoting, no integrated charts, no built-in server-side row m
 | **Aggregates / totals row** | `showTotals` + `<inandu-column aggregate="sum">` (`sum` / `avg` / `min` / `max` / `count`) |
 | **Column resize / reorder / show-hide** | On by default; opt out per column with `resize="false"` / `reorder="false"` / `hideable="false"`. Grid-level toggle popup via `columnToggle="true"` |
 | **Row reorder** | `rowReorder` — drag rows; emits `(rowOrderChange)` with the new order |
+| **Pinned rows** | `[pinnedTopRows]` / `[pinnedBottomRows]` — a `T[]` of display-only rows kept visible above/below the body; not part of `data()`, so sort/filter/paging ignore them (non-virtualized table only) |
 | **Sticky columns** | `<inandu-column sticky="true">` (or `sticky="right"`) — frozen while scrolling |
 | **Row selection** | `selectable="true"` — checkbox column + `(selectionChange)` output |
 | **Clipboard & cell ranges** | `clipboard` → `(cellsPaste)`; `cellRangeSelection` → `(cellRangeChange)` |

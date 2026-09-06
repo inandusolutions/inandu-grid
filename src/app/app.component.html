@@ -91,6 +91,21 @@
 
   <br /><br /><br />
 
+  <span>Empieza el componente grid con filas fijas (#32) — <code>[pinnedTopRows]</code> fija una fila "cuenta destacada" arriba y <code>[pinnedBottomRows]</code> un total abajo; ambas quedan visibles al hacer scroll y no las tocan orden/filtro/paginado (no son parte de <code>data()</code>)</span>
+
+  <inandu-grid id="pinned-rows-grid" width="900" height="300" lang="es-AR" filter="true"
+    [data]="gridData" [pinnedTopRows]="pinnedTopCustomers" [pinnedBottomRows]="pinnedBottomCustomers">
+    <inandu-column title="Id" field="Id" width="90"></inandu-column>
+    <inandu-column title="Cliente" field="Nombre" width="260"></inandu-column>
+    <inandu-column title="Contacto" field="ContactTitle" width="180"></inandu-column>
+    <inandu-column title="Ciudad" field="City" width="140"></inandu-column>
+    <inandu-column title="Ventas" field="Ventas" type="number" format="1.2-2" width="130"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con filas fijas</span>
+
+  <br /><br /><br />
+
   <span>Empieza el componente grid con datos dinámicos (GET a jsonplaceholder.typicode.com/users) — click en "Editar" a la derecha de una fila (Nombre es obligatorio; POST a la misma API al guardar), o en "Eliminar" (🗑️, pide confirmación) para un DELETE</span>
 
   <inandu-grid id="users-grid" width="950" height="250" lang="zh-CN" filter="true" filterPlaceholder="Buscar usuario..."
