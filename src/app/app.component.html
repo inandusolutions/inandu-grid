@@ -106,6 +106,19 @@
 
   <br /><br /><br />
 
+  <span>Empieza el componente grid con datos en árbol (#3) — <code>treeChildrenKey="children"</code>: cada fila tiene un array anidado <code>children</code>. Click en el ▸ para expandir; el filtro deja las ramas cuyo nodo o descendiente matchea (y abre el camino); ordenar por "Unidades" ordena cada nivel de hermanos.</span>
+
+  <inandu-grid id="tree-grid" width="700" height="360" lang="es-AR" filter="true"
+    [data]="treeData" treeChildrenKey="children" treeDefaultExpanded="1">
+    <inandu-column title="Categoría" field="name" width="320"></inandu-column>
+    <inandu-column title="Unidades" field="units" type="number" width="130" sortable="true"></inandu-column>
+    <inandu-column title="Activo" field="active" type="boolean" format="Sí|No" width="100"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con datos en árbol</span>
+
+  <br /><br /><br />
+
   <span>Empieza el componente grid con datos dinámicos (GET a jsonplaceholder.typicode.com/users) — click en "Editar" a la derecha de una fila (Nombre es obligatorio; POST a la misma API al guardar), o en "Eliminar" (🗑️, pide confirmación) para un DELETE</span>
 
   <inandu-grid id="users-grid" width="950" height="250" lang="zh-CN" filter="true" filterPlaceholder="Buscar usuario..."

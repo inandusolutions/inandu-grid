@@ -30,6 +30,8 @@ export {
 export type { NumberFormatter } from './format';
 
 export { compareCellValues } from './sort';
+export { flattenTree, collectTreeRows } from './tree';
+export type { TreeVisibleRow, FlattenTreeOptions } from './tree';
 export { hasMeaningfulFilterValue, matchesColumnFilter } from './filter';
 export { AGGREGATE_SYMBOLS, computeGroupAggregates } from './aggregate';
 export { placeColumnsByOrder } from './columns';

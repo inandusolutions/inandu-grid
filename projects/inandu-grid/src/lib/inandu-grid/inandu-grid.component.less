@@ -436,6 +436,34 @@
     z-index: 4;
 }
 
+// #3 — tree data. The first cell wraps its content in `.inandu-tree-cell`, whose
+// `padding-inline-start` carries the depth indent; a toggle button (or an equal-width spacer for a
+// leaf, so labels still line up) sits before the value. The toggle reuses the master-detail
+// chevron glyph/rotation (`.inandu-icon-detail-collapsed/expanded`).
+.inandu-tree-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.inandu-tree-toggle {
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.inandu-tree-toggle-spacer {
+    flex: none;
+    display: inline-block;
+    width: 1.1em;
+}
+
 // `position: sticky` has to be set via a selector at least as specific as `.xtable th`'s own
 // `position: relative` (needed for the resize handle/filter popup) — a bare `.inandu-sticky-column`
 // rule loses that cascade fight (equal-ish specificity, declared first) and silently falls back to

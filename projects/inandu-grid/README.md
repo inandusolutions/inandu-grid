@@ -76,6 +76,7 @@ a kitchen sink: no pivoting, no integrated charts, no built-in server-side row m
 | **Column resize / reorder / show-hide** | On by default; opt out per column with `resize="false"` / `reorder="false"` / `hideable="false"`. **Double-click a resize handle to fit the column to its content** (`[autosize]="false"` to disable). Grid-level toggle popup via `columnToggle="true"` |
 | **Row reorder** | `rowReorder` — drag rows; emits `(rowOrderChange)` with the new order |
 | **Pinned rows** | `[pinnedTopRows]` / `[pinnedBottomRows]` — a `T[]` of display-only rows kept visible above/below the body; not part of `data()`, so sort/filter/paging ignore them (non-virtualized table only) |
+| **Tree data** | `treeChildrenKey="children"` — each row's nested `children` array is its subtree; rows get an expand/collapse toggle + depth indent. Filters keep a node when it or a descendant matches (and open the path); the sort orders each sibling level. `treeDefaultExpanded="none"\|"all"\|<depth>`. Non-virtualized, non-grouped, non-`serverSide` only |
 | **Sticky columns** | `<inandu-column sticky="true">` (or `sticky="right"`) — frozen while scrolling |
 | **Row selection** | `selectable="true"` — checkbox column + `(selectionChange)` output |
 | **Clipboard & cell ranges** | `clipboard` → `(cellsPaste)`; `cellRangeSelection` → `(cellRangeChange)` |

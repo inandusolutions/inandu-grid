@@ -24,6 +24,8 @@ import {
   downloadBlob,
   escapeCsvValue,
   escapeMarkup,
+  collectTreeRows,
+  flattenTree,
   formatCellValue,
   hasMeaningfulFilterValue,
   matchesColumnFilter,
@@ -32,7 +34,7 @@ import {
   placeColumnsByOrder,
   truncatePdfText,
 } from '../core';
-import type { InanduGridColumnFilterValue, InanduGridRow, NumberFormatter } from '../core';
+import type { InanduGridColumnFilterValue, InanduGridRow, NumberFormatter, TreeVisibleRow } from '../core';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -204,6 +206,23 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** Rows pinned below the scrolling body — the mirror of {@link pinnedTopRows}. */
   readonly pinnedBottomRows = input<T[]>([]);
+
+  /**
+   * Turns on tree mode (#3): the name of the field on each row holding its child rows (a nested
+   * array of the same shape). `data()` is then the root rows; each renders an expand/collapse
+   * toggle and its children appear indented directly below it while expanded. Free-text and column
+   * filters keep a node when it (or any descendant) matches and auto-expand the path to it; the
+   * active sort orders each level of siblings. Only in the non-virtualized, non-grouped,
+   * non-`serverSide` render path (auto-disabled otherwise). Empty string ⇒ off. Tree rows are
+   * display + expand only — inline editing / drag / master-detail don't apply to them.
+   */
+  readonly treeChildrenKey = input<string>('');
+
+  /** Initial expand state for tree mode: `'none'` (default), `'all'`, or a max depth to open to
+   *  (a numeric string like `"2"` from a plain attribute is coerced to the number). */
+  readonly treeDefaultExpanded = input<'none' | 'all' | number, 'none' | 'all' | number | string>('none', {
+    transform: (v) => (typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : (v as 'none' | 'all' | number)),
+  });
 
   /**
    * Double-clicking a column's resize handle snaps that column to the width of its widest rendered
@@ -430,6 +449,10 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   constructor() {
     registerInanduGridTranslations(this.translate);
+
+    // Tree mode (#3): apply `treeDefaultExpanded` once per distinct `data()` array. In its own
+    // effect (not the `treeRows` computed) since it writes a signal.
+    effect(() => this.seedTreeExpansion());
 
     // Layers customTranslations() on top of the built-in dictionaries whenever it changes — merge
     // (not replace), so only the keys the consumer actually supplies override the built-in text.
@@ -1607,8 +1630,129 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * pager), else just the current page.
    */
   private readonly visibleRows = computed(() =>
-    (this.groupByColumn() || this.virtualScroll()) ? this.sortedData() : this.pagedData()
+    this.hasTreeData()
+      ? this.treeRows().map(t => t.row)
+      : (this.groupByColumn() || this.virtualScroll()) ? this.sortedData() : this.pagedData()
   );
+
+  // ── Tree data (#3) ────────────────────────────────────────────────────────
+  /** Tree mode is on, and none of the render paths it can't share with are. */
+  readonly hasTreeData = computed(() =>
+    !!this.treeChildrenKey() && !this.groupByColumn() && !this.virtualScroll() && !this.serverSide(),
+  );
+
+  /** Expanded tree nodes, by object reference (like `expandedRows`/`selectedRows`). */
+  private readonly expandedTreeRows = signal<Set<T>>(new Set());
+
+  private readonly childrenOf = (row: T): readonly T[] | undefined => {
+    const value = (row as Record<string, unknown>)[this.treeChildrenKey()];
+    return Array.isArray(value) ? (value as T[]) : undefined;
+  };
+
+  /** `true` once the initial `treeDefaultExpanded` seeding has run for the current `data()`. */
+  private treeSeededFor: T[] | undefined;
+
+  /** `data()` walked into the flat, expansion-aware list of rows the template renders in tree mode. */
+  readonly treeRows = computed<TreeVisibleRow<T>[]>(() => {
+    if (!this.hasTreeData()) return [];
+
+    // free-text + column filters + extraRowFilter as a single per-row predicate (mirrors filteredData)
+    const q = this.filter() ? this.filterQuery().trim().toLowerCase() : '';
+    const filterCols = this.filterableColumns();
+    const filters = this.columnFilters();
+    const extra = this.extraRowFilter();
+    const anyFilter = !!q || filterCols.length > 0 || !!extra;
+    const matches = anyFilter
+      ? (row: T): boolean => {
+          if (q && !this.visibleColumns().some(c => this.formatValue(c, row).toLowerCase().includes(q))) return false;
+          if (filterCols.some(c => !matchesColumnFilter(c, row, filters[c.field()] ?? {}, this.locale, this.numberFormatter))) return false;
+          if (extra && !extra(row)) return false;
+          return true;
+        }
+      : undefined;
+
+    const criteria = this.sortCriteria();
+    const compare = criteria.length
+      ? (a: T, b: T): number => {
+          for (const { field, direction } of criteria) {
+            const cmp = compareCellValues(a[field], b[field], this.locale) * (direction === 'asc' ? 1 : -1);
+            if (cmp !== 0) return cmp;
+          }
+          return 0;
+        }
+      : undefined;
+
+    return flattenTree(this.data(), {
+      getChildren: this.childrenOf,
+      isExpanded: row => this.expandedTreeRows().has(row),
+      match: matches,
+      compare,
+    });
+  });
+
+  /** Seeds `expandedTreeRows` from `treeDefaultExpanded` the first time a given `data()` is seen.
+   *  Called from an `effect` (see the constructor) — never from a computed. */
+  private seedTreeExpansion(): void {
+    if (!untracked(this.hasTreeData)) return;
+    const data = this.data();
+    if (this.treeSeededFor === data) return;
+    this.treeSeededFor = data;
+    const mode = untracked(this.treeDefaultExpanded);
+    if (mode === 'none') {
+      this.expandedTreeRows.set(new Set());
+      return;
+    }
+    const next = new Set<T>();
+    if (mode === 'all') {
+      for (const row of collectTreeRows(data, this.childrenOf)) {
+        if (this.childrenOf(row)?.length) next.add(row);
+      }
+    } else {
+      const walk = (level: readonly T[], depth: number): void => {
+        if (depth >= mode) return;
+        for (const row of level) {
+          const kids = this.childrenOf(row);
+          if (kids?.length) {
+            next.add(row);
+            walk(kids, depth + 1);
+          }
+        }
+      };
+      walk(data, 0);
+    }
+    this.expandedTreeRows.set(next);
+  }
+
+  isTreeRowExpanded(row: T): boolean {
+    return this.expandedTreeRows().has(row);
+  }
+
+  /** Toggles one tree node's expansion. */
+  toggleTreeRow(row: T): void {
+    this.expandedTreeRows.update(open => {
+      const next = new Set(open);
+      next.has(row) ? next.delete(row) : next.add(row);
+      return next;
+    });
+  }
+
+  /** `MsgExpandDetail`/`MsgCollapseDetail` reused for the tree toggle's `aria-label`. */
+  treeToggleLabel(row: T): string {
+    return this.isTreeRowExpanded(row) ? this.msgCollapseDetail() : this.msgExpandDetail();
+  }
+
+  /** Expand or collapse every expandable node at once. */
+  setAllTreeRowsExpanded(expanded: boolean): void {
+    if (!expanded) {
+      this.expandedTreeRows.set(new Set());
+      return;
+    }
+    const next = new Set<T>();
+    for (const row of collectTreeRows(untracked(this.data), this.childrenOf)) {
+      if (this.childrenOf(row)?.length) next.add(row);
+    }
+    this.expandedTreeRows.set(next);
+  }
 
   /** `visibleRows().length` — exposed publicly just so the template can disable the export buttons when there's nothing to export. */
   readonly visibleRowCount = computed(() => this.visibleRows().length);

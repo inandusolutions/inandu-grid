@@ -18,6 +18,8 @@ import {
   hasMeaningfulFilterValue,
   matchesColumnFilter,
   placeColumnsByOrder,
+  flattenTree,
+  collectTreeRows,
 } from './index';
 import type { ColumnConfig } from './types';
 
@@ -334,5 +336,63 @@ describe('pure: placeColumnsByOrder', () => {
       fakeColumn({ field: 'c', order: 98 }),
     ];
     expect(placeColumnsByOrder(cols).map(c => c.field())).toEqual(['b', 'c', 'a']);
+  });
+});
+
+describe('pure: flattenTree', () => {
+  interface Node { name: string; kids?: Node[] }
+  const tree: Node[] = [
+    { name: 'A', kids: [{ name: 'A1' }, { name: 'A2', kids: [{ name: 'A2a' }] }] },
+    { name: 'B' },
+  ];
+  const getChildren = (n: Node) => n.kids;
+
+  it('collapsed by default: only the roots, with depth 0 and an expandable flag', () => {
+    const rows = flattenTree(tree, { getChildren, isExpanded: () => false });
+    expect(rows.map(r => [r.row.name, r.depth, r.expandable, r.expanded])).toEqual([
+      ['A', 0, true, false],
+      ['B', 0, false, false],
+    ]);
+  });
+
+  it('expanding a node reveals its direct children below it, one depth deeper', () => {
+    const open = new Set(['A']);
+    const rows = flattenTree(tree, { getChildren, isExpanded: n => open.has(n.name) });
+    expect(rows.map(r => `${'  '.repeat(r.depth)}${r.row.name}`)).toEqual(['A', '  A1', '  A2', 'B']);
+  });
+
+  it('nested expansion cascades', () => {
+    const open = new Set(['A', 'A2']);
+    const rows = flattenTree(tree, { getChildren, isExpanded: n => open.has(n.name) });
+    expect(rows.map(r => r.row.name)).toEqual(['A', 'A1', 'A2', 'A2a', 'B']);
+  });
+
+  it('match: keeps a node when it or a descendant matches, and force-expands the ancestors', () => {
+    const rows = flattenTree(tree, {
+      getChildren,
+      isExpanded: () => false, // ignored while matching
+      match: n => n.name === 'A2a',
+    });
+    expect(rows.map(r => r.row.name)).toEqual(['A', 'A2', 'A2a']); // A1 and B pruned, A/A2 expanded
+    expect(rows.every(r => !r.expandable || r.expanded)).toBe(true);
+  });
+
+  it('match on a leaf root keeps just that root', () => {
+    const rows = flattenTree(tree, { getChildren, isExpanded: () => false, match: n => n.name === 'B' });
+    expect(rows.map(r => r.row.name)).toEqual(['B']);
+  });
+
+  it('compare sorts each level of siblings', () => {
+    const open = new Set(['A']);
+    const rows = flattenTree(tree, {
+      getChildren,
+      isExpanded: n => open.has(n.name),
+      compare: (a, b) => b.name.localeCompare(a.name), // descending
+    });
+    expect(rows.map(r => r.row.name)).toEqual(['B', 'A', 'A2', 'A1']);
+  });
+
+  it('collectTreeRows: every node depth-first', () => {
+    expect(collectTreeRows(tree, getChildren).map(n => n.name)).toEqual(['A', 'A1', 'A2', 'A2a', 'B']);
   });
 });

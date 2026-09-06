@@ -424,6 +424,96 @@ describe('InanduGridComponent pinned rows', () => {
   });
 });
 
+@Component({
+  template: `
+    <inandu-grid [data]="rows" treeChildrenKey="children" [treeDefaultExpanded]="defaultExpanded" filter="true">
+      <inandu-column field="name" title="Name"></inandu-column>
+      <inandu-column field="qty" title="Qty" type="number" sortable="true"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class TreeHostComponent {
+  rows: InanduGridRow[] = [
+    {
+      name: 'Fruit', qty: 3, children: [
+        { name: 'Apple', qty: 1 },
+        { name: 'Banana', qty: 2, children: [{ name: 'Cavendish', qty: 9 }] },
+      ],
+    },
+    { name: 'Veg', qty: 0 },
+  ];
+  defaultExpanded: 'none' | 'all' | number = 'none';
+}
+
+describe('InanduGridComponent tree data (#3)', () => {
+  const make = (expanded: 'none' | 'all' | number = 'none') => {
+    const f = TestBed.createComponent(TreeHostComponent);
+    f.componentInstance.defaultExpanded = expanded;
+    f.detectChanges();
+    return f;
+  };
+  const namesIn = (f: ComponentFixture<TreeHostComponent>) =>
+    f.debugElement.queryAll(By.css('tbody tr.inandu-tree-row td[data-field="name"]'))
+      .map((c) => c.nativeElement.textContent.trim());
+  const gridIn = (f: ComponentFixture<TreeHostComponent>) =>
+    f.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+  it('collapsed by default: only the root rows, with a toggle on the expandable one', () => {
+    const f = make();
+    expect(namesIn(f)).toEqual(['Fruit', 'Veg']);
+    const rows = f.debugElement.queryAll(By.css('tr.inandu-tree-row'));
+    expect(rows[0].query(By.css('.inandu-tree-toggle'))).not.toBeNull();
+    expect(rows[1].query(By.css('.inandu-tree-toggle'))).toBeNull();
+    expect(rows[1].query(By.css('.inandu-tree-toggle-spacer'))).not.toBeNull();
+  });
+
+  it('clicking a toggle expands that node; children render indented below it', () => {
+    const f = make();
+    f.debugElement.query(By.css('tr.inandu-tree-row .inandu-tree-toggle')).nativeElement.click();
+    f.detectChanges();
+    expect(namesIn(f)).toEqual(['Fruit', 'Apple', 'Banana', 'Veg']);
+    const bananaCell = f.debugElement.queryAll(By.css('.inandu-tree-cell'))[2].nativeElement as HTMLElement;
+    expect(bananaCell.style.paddingInlineStart).toBe('16px');
+  });
+
+  it('treeDefaultExpanded="all" opens the whole tree on load', () => {
+    expect(namesIn(make('all'))).toEqual(['Fruit', 'Apple', 'Banana', 'Cavendish', 'Veg']);
+  });
+
+  it('treeDefaultExpanded=1 opens only the first level', () => {
+    expect(namesIn(make(1))).toEqual(['Fruit', 'Apple', 'Banana', 'Veg']);
+  });
+
+  it('a filter keeps a node when a descendant matches, and force-expands the path', () => {
+    const f = make();
+    const input = f.debugElement.query(By.css('.inandu-filter-input')).nativeElement as HTMLInputElement;
+    input.value = 'cavendish';
+    input.dispatchEvent(new Event('input'));
+    f.detectChanges();
+    expect(namesIn(f)).toEqual(['Fruit', 'Banana', 'Cavendish']);
+  });
+
+  it('the active sort orders each level of siblings', () => {
+    const f = make('all');
+    gridIn(f).setSort([{ field: 'qty', direction: 'desc' }]);
+    f.detectChanges();
+    expect(namesIn(f)).toEqual(['Fruit', 'Banana', 'Cavendish', 'Apple', 'Veg']);
+  });
+
+  it('exposes hasTreeData() and toggleTreeRow()/isTreeRowExpanded() on the public API', () => {
+    const f = make();
+    const g = gridIn(f);
+    expect(g.hasTreeData()).toBe(true);
+    const fruit = f.componentInstance.rows[0];
+    expect(g.isTreeRowExpanded(fruit)).toBe(false);
+    g.toggleTreeRow(fruit);
+    f.detectChanges();
+    expect(g.isTreeRowExpanded(fruit)).toBe(true);
+    expect(namesIn(f)).toEqual(['Fruit', 'Apple', 'Banana', 'Veg']);
+  });
+});
+
 describe('InanduGridComponent lang', () => {
   it('renders the empty-state text, sort aria-label, and pager aria-labels/page text in the given language', () => {
     const fixture = TestBed.createComponent(SpanishLangHostComponent);

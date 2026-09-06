@@ -62,6 +62,34 @@ export class AppComponent {
   public pinnedTopCustomers: InanduGridRow[] = [];
   public pinnedBottomCustomers: InanduGridRow[] = [];
 
+  /** #3 — nested-children hierarchy for the tree-data demo. */
+  public readonly treeData: InanduGridRow[] = [
+    {
+      name: 'Electrónica', units: 0, active: true, children: [
+        {
+          name: 'Computación', units: 0, active: true, children: [
+            { name: 'Notebooks', units: 42, active: true },
+            { name: 'Monitores', units: 65, active: true },
+            { name: 'Teclados', units: 120, active: false },
+          ],
+        },
+        {
+          name: 'Audio', units: 0, active: true, children: [
+            { name: 'Auriculares', units: 60, active: true },
+            { name: 'Parlantes', units: 25, active: false },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'Hogar', units: 0, active: true, children: [
+        { name: 'Iluminación', units: 200, active: true },
+        { name: 'Mobiliario', units: 15, active: true, children: [{ name: 'Sillas', units: 8, active: true }] },
+      ],
+    },
+    { name: 'Sin categoría', units: 3, active: false },
+  ];
+
   /** Kept at defaults — `lang="es-AR"` on the grid itself now supplies "Página X de Y" automatically. */
   readonly customersPaging: InanduGridPagingOptions = {
     pageSize: 10,
