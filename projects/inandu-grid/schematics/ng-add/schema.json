@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "InanduGridNgAdd",
+  "title": "inandu-grid ng-add",
+  "type": "object",
+  "properties": {
+    "skipExample": {
+      "type": "boolean",
+      "description": "Do not generate the example grid component — just install and print next steps.",
+      "default": false
+    },
+    "name": {
+      "type": "string",
+      "description": "Name for the generated example component (ignored when skipExample is true).",
+      "default": "grid-demo"
+    }
+  },
+  "required": []
+}

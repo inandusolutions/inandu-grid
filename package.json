@@ -14,8 +14,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng build inandu-grid && ng serve",
-    "build": "ng build inandu-grid && ng build",
-    "build:lib": "ng build inandu-grid",
+    "build": "npm run build:lib && ng build",
+    "build:lib": "ng build inandu-grid && npm run build:schematics",
+    "build:schematics": "node projects/inandu-grid/schematics/build.mjs",
+    "test:schematics": "npm run build:schematics && tsc -p projects/inandu-grid/schematics/tsconfig.spec.json && node --test out-tsc/schematics-spec/**/*.spec.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test grid-app",
     "test:lib": "ng test inandu-grid",
