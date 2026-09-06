@@ -410,6 +410,32 @@
     border-top: 2px solid #999;
 }
 
+// #32 — consumer-pinned rows (pinnedTopRows / pinnedBottomRows), stuck to the top/bottom of the
+// grid's scroll container. Same opaque-background + z-index reasoning as `.inandu-totals-row` and
+// `.inandu-sticky-column` above: normal body rows scroll underneath these. A higher z-index than a
+// plain sticky column (1) so a pinned row stacks above a scrolled sticky column; a cell that is
+// *both* pinned-row and sticky-column needs to clear both, hence the last rule.
+.inandu-pinned-row td {
+    position: sticky;
+    z-index: 3;
+    background-color: #fff;
+    font-weight: 500;
+}
+
+.inandu-pinned-top td {
+    top: 0;
+    border-bottom: 1px solid #bbb;
+}
+
+.inandu-pinned-bottom td {
+    bottom: 0;
+    border-top: 1px solid #bbb;
+}
+
+.inandu-pinned-row td.inandu-sticky-column {
+    z-index: 4;
+}
+
 // `position: sticky` has to be set via a selector at least as specific as `.xtable th`'s own
 // `position: relative` (needed for the resize handle/filter popup) — a bare `.inandu-sticky-column`
 // rule loses that cascade fight (equal-ish specificity, declared first) and silently falls back to
@@ -592,6 +618,10 @@
 
     .inandu-row:hover .inandu-sticky-column {
         background-color: #2a2a2a;
+    }
+
+    .inandu-pinned-row td {
+        background-color: #1e1e1e;
     }
 
     .inandu-sort-button,

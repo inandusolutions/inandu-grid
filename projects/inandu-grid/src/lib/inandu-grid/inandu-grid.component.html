@@ -221,6 +221,40 @@
     </thead>
   </ng-template>
 
+  <!-- #32 — a consumer-pinned row (pinnedTopRows / pinnedBottomRows). Display-only: no editing,
+       drag, detail toggle or range selection — just the leading spacer cells for alignment and
+       one cell per visible column, honouring sticky (pinned) columns. -->
+  <ng-template #pinnedRow let-row>
+    <tr class="inandu-row inandu-pinned-row" role="row">
+      @if (hasMasterDetail()) {
+        <td class="inandu-detail-toggle-cell inandu-sticky-column" style="inset-inline-start: 0"></td>
+      }
+      @if (hasRowDragHandle()) {
+        <td class="inandu-row-drag-cell"></td>
+      }
+      @if (selectable()) {
+        <td class="inandu-select-cell inandu-sticky-column" [style.inset-inline-start.px]="(hasMasterDetail() ? detailToggleColumnWidthPx : 0) + (hasRowDragHandle() ? rowDragColumnWidthPx : 0)"></td>
+      }
+      @for (column of visibleColumns(); track column.field()) {
+        <td role="gridcell"
+          [attr.data-field]="column.field()"
+          [class.inandu-sticky-column]="columnPinnedSide(column)"
+          [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+          [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
+        >
+          @if (column.cellTemplate(); as cellTpl) {
+            <ng-container *ngTemplateOutlet="cellTpl; context: cellTemplateContext(column, row)"></ng-container>
+          } @else {
+            {{ formatValue(column, row) }}
+          }
+        </td>
+      }
+      @if (hasRowActions()) {
+        <td class="inandu-row-actions"></td>
+      }
+    </tr>
+  </ng-template>
+
   @if (virtualScroll()) {
     <cdk-virtual-scroll-viewport [itemSize]="effectiveVirtualRowHeight()" [style.height.px]="virtualViewportHeight()" class="inandu-virtual-viewport" (scrolledIndexChange)="onVirtualScrolledIndexChange($event)">
       <table class="xtable" role="grid">
@@ -335,6 +369,13 @@
   } @else {
     <table class="xtable" role="grid">
       <ng-container *ngTemplateOutlet="tableHead"></ng-container>
+    @if (pinnedTopRows().length) {
+      <tbody class="inandu-pinned-rows inandu-pinned-top">
+        @for (row of pinnedTopRows(); track row) {
+          <ng-container *ngTemplateOutlet="pinnedRow; context: { $implicit: row }"></ng-container>
+        }
+      </tbody>
+    }
     <tbody>
       @if (error()) {
         <tr class="inandu-row inandu-error-row">
@@ -617,6 +658,13 @@
         }
       }
     </tbody>
+    @if (pinnedBottomRows().length) {
+      <tbody class="inandu-pinned-rows inandu-pinned-bottom">
+        @for (row of pinnedBottomRows(); track row) {
+          <ng-container *ngTemplateOutlet="pinnedRow; context: { $implicit: row }"></ng-container>
+        }
+      </tbody>
+    }
     @if (showTotalsRow() || (!groupByColumn() && !virtualScroll() && paging())) {
       <tfoot>
         @if (showTotalsRow()) {

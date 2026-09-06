@@ -345,6 +345,85 @@ describe('InanduGridComponent extraRowFilter', () => {
   });
 });
 
+@Component({
+  template: `
+    <inandu-grid [data]="rows" [pinnedTopRows]="top" [pinnedBottomRows]="bottom" [virtualScroll]="virtual">
+      <inandu-column field="name" title="Name"></inandu-column>
+      <inandu-column field="qty" title="Qty" type="number"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class PinnedRowsHostComponent {
+  rows: InanduGridRow[] = [
+    { name: 'Apple', qty: 3 },
+    { name: 'Banana', qty: 8 },
+    { name: 'Cherry', qty: 15 },
+  ];
+  top: InanduGridRow[] = [];
+  bottom: InanduGridRow[] = [];
+  virtual = false;
+}
+
+describe('InanduGridComponent pinned rows', () => {
+  let fixture: ComponentFixture<PinnedRowsHostComponent>;
+  const textOf = (sel: string) =>
+    fixture.debugElement.queryAll(By.css(sel)).map((c) => c.nativeElement.textContent.trim());
+  const bodyNames = () => textOf('tbody:not(.inandu-pinned-rows) tr.inandu-row td[data-field="name"]');
+  const topNames = () => textOf('.inandu-pinned-top tr td[data-field="name"]');
+  const bottomNames = () => textOf('.inandu-pinned-bottom tr td[data-field="name"]');
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(PinnedRowsHostComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders nothing extra when both inputs are empty', () => {
+    expect(fixture.debugElement.queryAll(By.css('.inandu-pinned-rows')).length).toBe(0);
+    expect(bodyNames()).toEqual(['Apple', 'Banana', 'Cherry']);
+  });
+
+  it('renders pinned-top rows in their own tbody, above the body', () => {
+    fixture.componentInstance.top = [{ name: 'TOTAL', qty: 26 }];
+    fixture.detectChanges();
+    expect(topNames()).toEqual(['TOTAL']);
+    expect(textOf('.inandu-pinned-top tr td[data-field="qty"]')).toEqual(['26']);
+    // body is untouched — pinned rows are not part of data()
+    expect(bodyNames()).toEqual(['Apple', 'Banana', 'Cherry']);
+  });
+
+  it('renders pinned-bottom rows in their own tbody, below the body', () => {
+    fixture.componentInstance.bottom = [{ name: 'Σ', qty: 26 }];
+    fixture.detectChanges();
+    expect(bottomNames()).toEqual(['Σ']);
+    const bodies = fixture.debugElement.queryAll(By.css('table.xtable > tbody')).map((b) => b.nativeElement.className);
+    // the pinned-bottom tbody comes after the plain one
+    expect(bodies[bodies.length - 1]).toContain('inandu-pinned-bottom');
+  });
+
+  it('pinned rows never enter edit mode (no edit button, not affected by filters/paging)', () => {
+    fixture.componentInstance.top = [{ name: 'TOTAL', qty: 26 }];
+    fixture.detectChanges();
+    const topRow = fixture.debugElement.query(By.css('.inandu-pinned-top tr'));
+    expect(topRow.queryAll(By.css('button')).length).toBe(0);
+    expect(topRow.queryAll(By.css('input')).length).toBe(0);
+  });
+
+  it('is not rendered while virtualScroll is on', () => {
+    fixture.componentInstance.top = [{ name: 'TOTAL', qty: 26 }];
+    fixture.componentInstance.virtual = true;
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('.inandu-pinned-rows')).length).toBe(0);
+  });
+
+  it('runs pinned cells through formatValue (number column formatting applies)', () => {
+    fixture.componentInstance.bottom = [{ name: 'avg', qty: 8.6667 }];
+    fixture.detectChanges();
+    // same DecimalPipe default (1.0-3) the body rows get — proves formatValue is used
+    expect(textOf('.inandu-pinned-bottom tr td[data-field="qty"]')).toEqual(['8.667']);
+  });
+});
+
 describe('InanduGridComponent lang', () => {
   it('renders the empty-state text, sort aria-label, and pager aria-labels/page text in the given language', () => {
     const fixture = TestBed.createComponent(SpanishLangHostComponent);

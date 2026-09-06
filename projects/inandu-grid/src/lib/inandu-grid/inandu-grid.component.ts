@@ -192,6 +192,19 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly extraRowFilter = input<((row: T) => boolean) | undefined>(undefined);
 
   /**
+   * Rows pinned above the scrolling body, always visible, in the order given. Display-only — they
+   * render every column's `cellTemplate` (or formatted value) like a normal row, but never enter
+   * edit mode and carry no drag handle, detail toggle or selection checkbox. They are *not* part
+   * of `data()`, so filtering, sorting, paging and the totals row ignore them entirely; a summary
+   * row you compute yourself is the usual use. Rendered only in the non-virtualized table (same
+   * limitation as the `showTotals` footer). Empty ⇒ nothing rendered.
+   */
+  readonly pinnedTopRows = input<T[]>([]);
+
+  /** Rows pinned below the scrolling body — the mirror of {@link pinnedTopRows}. */
+  readonly pinnedBottomRows = input<T[]>([]);
+
+  /**
    * Opts the grid out of local sort/filter/pagination entirely: `data()` is trusted to already be
    * the current page's rows, already sorted/filtered by the consumer. Instead of computing results
    * itself, the grid emits `sortChange`/`filterChange`/`pageChange` whenever the user interacts with
