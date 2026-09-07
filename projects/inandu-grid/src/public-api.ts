@@ -11,6 +11,7 @@ export type {
   InanduGridCellPaste,
   InanduGridCellRangeSelection,
   InanduGridLoadMoreEvent,
+  InanduGridViewportRange,
   InanduGridSortCriterion,
   InanduGridPageState,
   InanduGridFilterState,

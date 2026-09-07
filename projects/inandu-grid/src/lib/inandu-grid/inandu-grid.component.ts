@@ -153,6 +153,17 @@ export interface InanduGridLoadMoreEvent {
   loadedCount: number;
 }
 
+/**
+ * Emitted by `InanduGridComponent.viewportRangeChange` — only while `virtualScroll()` **and**
+ * `serverSide()` are both on. The half-open row-index range the virtual viewport currently has
+ * on screen (`endIndex` exclusive), so a windowed/block server row model can fetch exactly the
+ * blocks that cover it. Fires on first render and whenever the visible window moves or resizes.
+ */
+export interface InanduGridViewportRange {
+  startIndex: number;
+  endIndex: number;
+}
+
 @Component({
     selector: 'inandu-grid',
     templateUrl: './inandu-grid.component.html',
@@ -524,6 +535,21 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       const columnFilters = this.columnFilters();
       if (this.serverSide()) {
         this.filterChange.emit({ query, columnFilters });
+      }
+    });
+
+    // Server-side + virtualized: keep the consumer told which row-index window is on screen, so a
+    // block/windowed row model fetches only what's visible (see `viewportRangeChange`). Re-runs on
+    // scroll (`viewportStartIndex`), on a viewport/row-height resize, and on a `totalItems()`
+    // change; `emitViewportRange` de-dupes an unchanged window. `untracked` — it writes a signal.
+    effect(() => {
+      this.viewportStartIndex();
+      this.virtualViewportHeight();
+      this.effectiveVirtualRowHeight();
+      this.totalItems();
+      this.data();
+      if (this.virtualScroll() && this.serverSide()) {
+        untracked(() => this.emitViewportRange());
       }
     });
 
@@ -1528,6 +1554,18 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   private readonly lastLoadMoreLength = signal(-1);
 
   /**
+   * The first row index the virtual viewport currently has on screen, updated from
+   * `(scrolledIndexChange)`. Only meaningful with `virtualScroll()`; feeds `viewportRangeChange`.
+   */
+  private readonly viewportStartIndex = signal(0);
+
+  /** See `InanduGridViewportRange`. Emitted only while `virtualScroll()` **and** `serverSide()` are both on. */
+  readonly viewportRangeChange = output<InanduGridViewportRange>();
+
+  /** The last range emitted, so an unchanged window (same first row, same size) doesn't re-emit. */
+  private readonly lastViewportRange = signal<InanduGridViewportRange | null>(null);
+
+  /**
    * Bound to `<cdk-virtual-scroll-viewport>`'s own `(scrolledIndexChange)` — `startIndex` is the
    * index of the first item currently rendered. The number of rows actually visible is estimated from
    * the viewport's own height and row height (both already tracked signals) rather than querying the
@@ -1535,6 +1573,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * subscription plumbing beyond the template event binding itself.
    */
   onVirtualScrolledIndexChange(startIndex: number): void {
+    this.viewportStartIndex.set(startIndex);
+
     if (!this.infiniteScroll() || !this.virtualScroll() || !this.serverSide()) {
       return;
     }
@@ -1544,6 +1584,30 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       this.lastLoadMoreLength.set(total);
       this.loadMore.emit({ loadedCount: total });
     }
+  }
+
+  /**
+   * Emits `viewportRangeChange` whenever the visible row window moves or resizes, while
+   * `virtualScroll()` and `serverSide()` are both on — including the very first render, so a
+   * consumer can drive its initial block fetch straight from this event. `endIndex` is exclusive
+   * and clamped to `totalItems()` (falling back to the loaded count). De-duplicated against the
+   * last emitted range so a re-render with an unchanged window stays quiet.
+   */
+  private emitViewportRange(): void {
+    if (!this.virtualScroll() || !this.serverSide()) {
+      return;
+    }
+    const start = Math.max(0, this.viewportStartIndex());
+    const visibleCount = Math.ceil(this.virtualViewportHeight() / (this.effectiveVirtualRowHeight() || 1));
+    const cap = this.totalItems() ?? this.data().length;
+    const endIndex = cap > 0 ? Math.min(cap, start + visibleCount) : start + visibleCount;
+    const prev = this.lastViewportRange();
+    if (prev && prev.startIndex === start && prev.endIndex === endIndex) {
+      return;
+    }
+    const range: InanduGridViewportRange = { startIndex: start, endIndex };
+    this.lastViewportRange.set(range);
+    this.viewportRangeChange.emit(range);
   }
 
   readonly pageLabelText = computed(() => {

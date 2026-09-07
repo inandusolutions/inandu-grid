@@ -2,7 +2,7 @@ import { Component, Type } from '@angular/core';
 import { ComponentFixture, fakeAsync, flush, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { InanduGridComponent, InanduGridPagingOptions, InanduGridRow, InanduGridRowSave, InanduGridNewRowValues, InanduGridSortCriterion, InanduGridPageState, InanduGridFilterState, InanduGridCellPaste, InanduGridCellRangeSelection, InanduGridLoadMoreEvent } from './inandu-grid.component';
+import { InanduGridComponent, InanduGridPagingOptions, InanduGridRow, InanduGridRowSave, InanduGridNewRowValues, InanduGridSortCriterion, InanduGridPageState, InanduGridFilterState, InanduGridCellPaste, InanduGridCellRangeSelection, InanduGridLoadMoreEvent, InanduGridViewportRange } from './inandu-grid.component';
 import { InanduColumnComponent, InanduColumnValidator, InanduColumnAsyncValidator } from '../inandu-column/inandu-column.component';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
@@ -4500,6 +4500,105 @@ describe('InanduGridComponent infinite scroll', () => {
     grid.onVirtualScrolledIndexChange(16);
 
     expect(fixture.componentInstance.loadMoreEvents).toEqual([]);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" virtualScroll="true" serverSide="true" [totalItems]="total" [height]="200" [virtualRowHeight]="40" (viewportRangeChange)="onRange($event)">
+      <inandu-column title="Name" field="name"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class ViewportRangeHostComponent {
+  rows: InanduGridRow[] = Array.from({ length: 10 }, (_, i) => ({ name: `Row ${i}` }));
+  total = 1000;
+  ranges: InanduGridViewportRange[] = [];
+
+  onRange(event: InanduGridViewportRange): void {
+    this.ranges.push(event);
+  }
+}
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" virtualScroll="true" [totalItems]="1000" [height]="200" [virtualRowHeight]="40" (viewportRangeChange)="onRange($event)">
+      <inandu-column title="Name" field="name"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class ViewportRangeNoServerHostComponent {
+  rows: InanduGridRow[] = Array.from({ length: 10 }, (_, i) => ({ name: `Row ${i}` }));
+  ranges: InanduGridViewportRange[] = [];
+
+  onRange(event: InanduGridViewportRange): void {
+    this.ranges.push(event);
+  }
+}
+
+describe('InanduGridComponent viewport range (#21)', () => {
+  it('emits the initial visible window on first render', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.detectChanges();
+
+    // 200px viewport / 40px rows = 5 visible, starting at 0.
+    expect(fixture.componentInstance.ranges).toEqual([{ startIndex: 0, endIndex: 5 }]);
+  });
+
+  it('emits a new window as the viewport scrolls', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ranges).toEqual([
+      { startIndex: 0, endIndex: 5 },
+      { startIndex: 10, endIndex: 15 },
+    ]);
+  });
+
+  it('does not re-emit an unchanged window', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ranges).toEqual([
+      { startIndex: 0, endIndex: 5 },
+      { startIndex: 10, endIndex: 15 },
+    ]);
+  });
+
+  it('clamps endIndex to totalItems()', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.componentInstance.total = 12;
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    const ranges = fixture.componentInstance.ranges;
+    expect(ranges[ranges.length - 1]).toEqual({ startIndex: 10, endIndex: 12 });
+  });
+
+  it('never emits without serverSide, even with virtualScroll on', () => {
+    const fixture = TestBed.createComponent(ViewportRangeNoServerHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ranges).toEqual([]);
   });
 });
 
