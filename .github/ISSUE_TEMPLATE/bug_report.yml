@@ -21,7 +21,6 @@ body:
       description: >
         A StackBlitz link, a small repo, or the smallest template + component
         snippet that shows the problem. Bugs without a reproduction may be closed.
-      render: html
     validations:
       required: true
   - type: input
