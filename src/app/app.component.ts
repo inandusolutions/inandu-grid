@@ -1,26 +1,39 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, of } from 'rxjs';
-import { InanduGridRow, InanduGridComponent, InanduColumnComponent, InanduGridPagingOptions, InanduGridRowSave, InanduGridNewRowValues } from '@inandu-solutions/grid-angular';
+import {
+  InanduGridRow,
+  InanduGridComponent,
+  InanduColumnComponent,
+  InanduGridPagingOptions,
+  InanduGridRowSave,
+  InanduGridNewRowValues,
+} from '@inandu-solutions/grid-angular';
 import { RouterOutlet } from '@angular/router';
 
 const USERS_API_URL = 'https://jsonplaceholder.typicode.com/users';
 
-/** Pads the hardcoded 10-row customer list up to 100+ rows so pagination has something to page through. */
-function buildAdditionalCustomers(count: number): InanduGridRow[] {
-  const cities = ['Madrid', 'Barcelona', 'Lisboa', 'Roma', 'Paris', 'Berlin', 'Amsterdam', 'Vienna', 'Zurich', 'Dublin'];
+/** Which demo panel the showcase tabs are showing. */
+export type DemoTab = 'overview' | 'editing' | 'tree' | 'scale' | 'themes';
+
+/** Pads the hand-written account list up to 100+ rows so pagination has something to page through. */
+function buildAdditionalAccounts(count: number): InanduGridRow[] {
+  const cities = ['Madrid', 'Barcelona', 'Lisbon', 'Rome', 'Paris', 'Berlin', 'Amsterdam', 'Vienna', 'Zurich', 'Dublin'];
   const roles = ['Owner', 'Sales Representative', 'Marketing Manager', 'Order Administrator', 'Accounting Manager'];
+  const names = ['Northwind', 'Blue Harbour', 'Cedar & Co', 'Fairline', 'Greenfield', 'Harborview', 'Ironwood', 'Juniper', 'Kestrel', 'Lakeside'];
+  const contacts = ['A. Novak', 'B. Rossi', 'C. Dubois', 'D. Meyer', 'E. Larsen', 'F. Costa', 'G. Petrov', 'H. Nilsen', 'I. Varga', 'J. Moreau'];
+  const suffixes = ['Trading', 'Foods', 'Supply', 'Group', 'Partners'];
   const rows: InanduGridRow[] = [];
   for (let i = 1; i <= count; i++) {
     rows.push({
-      Id: `CUST${String(i).padStart(3, '0')}`,
-      Nombre: `Cliente Demo ${i}`,
-      Apellido: `Apellido ${i}`,
-      ContactTitle: roles[i % roles.length],
+      Id: `ACC${String(i).padStart(3, '0')}`,
+      Company: `${names[i % names.length]} ${suffixes[i % suffixes.length]}`,
+      Contact: contacts[i % contacts.length],
+      Role: roles[i % roles.length],
       City: cities[i % cities.length],
-      Activo: i % 3 !== 0,
-      FechaAlta: new Date(2015 + (i % 10), i % 12, 1 + (i % 28)),
-      Ventas: Math.round((500 + i * 137.35) * 100) / 100,
+      Active: i % 3 !== 0,
+      Since: new Date(2015 + (i % 10), i % 12, 1 + (i % 28)),
+      Revenue: Math.round((500 + i * 137.35) * 100) / 100,
     });
   }
   return rows;
@@ -28,16 +41,16 @@ function buildAdditionalCustomers(count: number): InanduGridRow[] {
 
 /**
  * 5,000 rows purely to demonstrate `virtualScroll` — large enough that rendering every `<tr>` up
- * front (the default, non-virtualized behavior) would be noticeably slower than this, unlike
- * `buildAdditionalCustomers`'s much more modest row count for the paginated demo grid above.
+ * front (the default, non-virtualized behavior) would be noticeably slower.
  */
-function buildVirtualScrollData(count: number): InanduGridRow[] {
-  const categories = ['Electrónica', 'Hogar', 'Deportes', 'Juguetes', 'Librería'];
+function buildLargeDataset(count: number): InanduGridRow[] {
+  const categories = ['Electronics', 'Home', 'Sports', 'Toys', 'Books'];
+  const products = ['Widget', 'Gadget', 'Module', 'Adapter', 'Bracket', 'Sensor', 'Cable', 'Housing'];
   const rows: InanduGridRow[] = [];
   for (let i = 1; i <= count; i++) {
     rows.push({
       id: i,
-      product: `Producto ${i}`,
+      product: `${products[i % products.length]} ${String(i).padStart(4, '0')}`,
       category: categories[i % categories.length],
       price: Math.round((5 + i * 3.37) * 100) / 100,
       inStock: i % 4 !== 0,
@@ -47,294 +60,236 @@ function buildVirtualScrollData(count: number): InanduGridRow[] {
 }
 
 @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrl: './app.component.less',
-    imports: [InanduGridComponent, InanduColumnComponent, RouterOutlet]
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.less',
+  imports: [InanduGridComponent, InanduColumnComponent, RouterOutlet],
 })
 export class AppComponent {
-  title = 'grid-app';
+  readonly npmPackage = '@inandu-solutions/grid-angular';
+  readonly repoUrl = 'https://github.com/inandusolutions/inandu-grid';
+  readonly npmUrl = 'https://www.npmjs.com/package/@inandu-solutions/grid-angular';
+  readonly manualUrl = 'manual.html';
+  readonly stackblitzUrl = 'https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz';
+  readonly extensionsUrl = 'https://github.com/inandusolutions/inandu-grid-extensions';
 
-  public gridData: InanduGridRow[] = [];
+  /** Code samples live here rather than inline in the template so the markup stays readable and
+   *  the newlines survive Angular's whitespace handling. */
+  readonly serverSnippet = [
+    '// ASP.NET Core — one call does paging, sorting,',
+    '// filtering, grouping and aggregates in one query.',
+    '',
+    'app.MapGet("/api/accounts", (HttpRequest req, AppDb db) =>',
+    '    db.Accounts',
+    '      .AsNoTracking()',
+    '      .ToInanduGridAsync(req.QueryString.Value));',
+  ].join('\n');
 
-  /** #32 — rows pinned to the top/bottom of the scroll body. Computed once from `gridData` in
-   *  ngOnInit; not part of `data()`, so they ignore sort/filter/paging. */
-  public pinnedTopCustomers: InanduGridRow[] = [];
-  public pinnedBottomCustomers: InanduGridRow[] = [];
+  readonly usageSnippet = [
+    '<inandu-grid [data]="rows" filter="true"',
+    '             selectable="true" exportable="true"',
+    '             [paging]="{ pageSize: 25 }">',
+    '  <inandu-column title="Company" field="company"',
+    '                 sortable="true" filter="yes" />',
+    '  <inandu-column title="Revenue" field="revenue"',
+    '                 type="number" aggregate="sum" />',
+    '</inandu-grid>',
+  ].join('\n');
 
-  /** #3 — nested-children hierarchy for the tree-data demo. */
-  public readonly treeData: InanduGridRow[] = [
+  /** Which showcase panel is visible. Every grid stays in the DOM (panels toggle with `hidden`),
+   *  so switching tabs never re-runs a grid's first render. */
+  readonly activeTab = signal<DemoTab>('overview');
+
+  selectTab(tab: DemoTab): void {
+    this.activeTab.set(tab);
+  }
+
+  /** Copy-to-clipboard state for the install snippet in the hero. */
+  readonly copied = signal(false);
+
+  copyInstall(): void {
+    void navigator.clipboard?.writeText(`npm install ${this.npmPackage}`).then(() => {
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 1800);
+    });
+  }
+
+  // ---------------------------------------------------------------- overview
+
+  public accounts: InanduGridRow[] = [];
+
+  /** Rows pinned above/below the scroll body — not part of `data()`, so sort/filter/paging ignore them. */
+  public pinnedTopAccounts: InanduGridRow[] = [];
+  public pinnedBottomAccounts: InanduGridRow[] = [];
+
+  readonly accountsPaging: InanduGridPagingOptions = { pageSize: 10 };
+
+  /** Populated by the overview grid's `(selectionChange)`. */
+  readonly selectedAccounts = signal<InanduGridRow[]>([]);
+
+  onAccountsSelectionChange(rows: InanduGridRow[]): void {
+    this.selectedAccounts.set(rows);
+  }
+
+  // ----------------------------------------------------------------- editing
+
+  /**
+   * Local, hardcoded data (no HTTP) to try row creation, editing, deletion and reordering in
+   * isolation. Every column type is `editable="true"`; `Product` and `Price` are required and
+   * `Price` has `min="0"`, so an empty or negative value shows an inline validation error instead
+   * of saving. The grid never mutates `data()` — persisting is each handler's job below.
+   */
+  readonly inventory = signal<InanduGridRow[]>([
+    { id: 1, product: 'Mechanical keyboard', price: 45.5, inStock: true, restock: new Date(2026, 5, 1) },
+    { id: 2, product: 'Wireless mouse', price: 15.99, inStock: false, restock: new Date(2026, 6, 15) },
+    { id: 3, product: '27" monitor', price: 199, inStock: true, restock: new Date(2026, 4, 20) },
+    { id: 4, product: 'USB-C dock', price: 89.9, inStock: true, restock: new Date(2026, 7, 8) },
+  ]);
+
+  readonly lastAction = signal('');
+
+  onInventoryRowSave(save: InanduGridRowSave): void {
+    this.inventory.update(rows => rows.map(row => (row === save.row ? { ...row, ...save.values } : row)));
+    this.lastAction.set(`Row saved: ${JSON.stringify(save.values)}`);
+  }
+
+  onInventoryRowDelete(row: InanduGridRow): void {
+    this.inventory.update(rows => rows.filter(r => r !== row));
+    this.lastAction.set(`Row deleted: ${JSON.stringify(row)}`);
+  }
+
+  onInventoryRowCreate(values: InanduGridNewRowValues): void {
+    const nextId = Math.max(0, ...this.inventory().map(row => Number(row['id']) || 0)) + 1;
+    this.inventory.update(rows => [...rows, { id: nextId, ...values }]);
+    this.lastAction.set(`Row created: ${JSON.stringify({ id: nextId, ...values })}`);
+  }
+
+  /** `rowActionsTemplate` — a "Duplicate" button beside Edit/Delete, added from the app's own template. */
+  onInventoryRowDuplicate(row: InanduGridRow): void {
+    const nextId = Math.max(0, ...this.inventory().map(r => Number(r['id']) || 0)) + 1;
+    this.inventory.update(rows => [...rows, { ...row, id: nextId }]);
+    this.lastAction.set(`Row duplicated: ${JSON.stringify({ ...row, id: nextId })}`);
+  }
+
+  /** `rowReorder` — the grid emits the new order; applying it back to the source is up to the app. */
+  onInventoryRowOrderChange(rows: InanduGridRow[]): void {
+    this.inventory.set(rows);
+    this.lastAction.set('Rows reordered');
+  }
+
+  // -------------------------------------------------------------------- tree
+
+  /** `treeChildrenKey="children"` — each row's nested `children` array is its subtree. */
+  readonly catalog: InanduGridRow[] = [
     {
-      name: 'Electrónica', units: 0, active: true, children: [
+      name: 'Electronics', units: 0, active: true, children: [
         {
-          name: 'Computación', units: 0, active: true, children: [
-            { name: 'Notebooks', units: 42, active: true },
-            { name: 'Monitores', units: 65, active: true },
-            { name: 'Teclados', units: 120, active: false },
+          name: 'Computing', units: 0, active: true, children: [
+            { name: 'Laptops', units: 42, active: true },
+            { name: 'Monitors', units: 65, active: true },
+            { name: 'Keyboards', units: 120, active: false },
           ],
         },
         {
           name: 'Audio', units: 0, active: true, children: [
-            { name: 'Auriculares', units: 60, active: true },
-            { name: 'Parlantes', units: 25, active: false },
+            { name: 'Headphones', units: 60, active: true },
+            { name: 'Speakers', units: 25, active: false },
           ],
         },
       ],
     },
     {
-      name: 'Hogar', units: 0, active: true, children: [
-        { name: 'Iluminación', units: 200, active: true },
-        { name: 'Mobiliario', units: 15, active: true, children: [{ name: 'Sillas', units: 8, active: true }] },
+      name: 'Home', units: 0, active: true, children: [
+        { name: 'Lighting', units: 200, active: true },
+        { name: 'Furniture', units: 15, active: true, children: [{ name: 'Chairs', units: 8, active: true }] },
       ],
     },
-    { name: 'Sin categoría', units: 3, active: false },
+    { name: 'Uncategorised', units: 3, active: false },
   ];
 
-  /** Kept at defaults — `lang="es-AR"` on the grid itself now supplies "Página X de Y" automatically. */
-  readonly customersPaging: InanduGridPagingOptions = {
-    pageSize: 10,
-  };
+  // ------------------------------------------------------------------- scale
 
-  /** Custom button glyphs (appearance) combined with `lang="zh-CN"` (translated text) on the grid itself. */
+  /** No paging config — `virtualScroll` replaces pagination entirely. */
+  readonly largeDataset: InanduGridRow[] = buildLargeDataset(5000);
+
+  // ------------------------------------------------------------------ themes
+
+  readonly themePaging: InanduGridPagingOptions = { pageSize: 5 };
+
+  // ------------------------------------------------------- remote data (API)
+
   readonly usersPaging: InanduGridPagingOptions = {
-    pageSize: 3,
+    pageSize: 5,
     firstLabel: '⏮',
     previousLabel: '◀',
     nextLabel: '▶',
     lastLabel: '⏭',
   };
 
-  /** `virtualScroll="true"` demo grid's data — see `buildVirtualScrollData`'s doc comment. No paging config: `virtualScroll` replaces pagination entirely (see `inandu-grid.component.ts`'s doc comment on the input). */
-  readonly virtualScrollData: InanduGridRow[] = buildVirtualScrollData(5000);
-
-  /** Shared by the three `theme="..."` demo grids below — just enough paging to also show the themed pager. */
-  readonly themeDemoPaging: InanduGridPagingOptions = {
-    pageSize: 5,
-  };
-
-  /** Populated by `customers-grid`'s `(selectionChange)` — demonstrates the grid's row-selection output. */
-  readonly selectedCustomers = signal<InanduGridRow[]>([]);
-
-  onCustomersSelectionChange(rows: InanduGridRow[]): void {
-    this.selectedCustomers.set(rows);
-  }
-
-  private readonly http = inject(HttpClient);
-
   /**
-   * Second grid's data source: fetched once from a public API instead of hardcoded. A plain
-   * writable `signal` (not `toSignal()`) because `onApiRowSave()` below needs to update it after a
-   * row edit — `toSignal()`'s result is read-only. `active`/`joined` don't exist on the real API
-   * response — they're derived client-side from `id` purely to demonstrate boolean/date column
-   * formatting on this grid too.
+   * Fetched once from a public API rather than hardcoded. A plain writable `signal` (not
+   * `toSignal()`) because the row-save handler below updates it after an edit. `active` and
+   * `joined` don't exist on the real response — they're derived client-side purely to show
+   * boolean/date column formatting.
    */
-  readonly apiGridData = signal<InanduGridRow[]>([]);
+  readonly users = signal<InanduGridRow[]>([]);
 
-  /**
-   * Demonstrates `inandu-grid`'s row-editing output: `name` and `active` are `editable="true"` on
-   * `users-grid` below, so each row gets an "Edit" button that switches those two fields into
-   * controls at once. The grid itself never mutates `data()` (see `InanduGridRowSave`'s doc comment in
-   * the library), so persisting the edit — locally, remotely, or both — is entirely this handler's
-   * job. Here that means an optimistic local update (so the grid visibly reflects the edit right
-   * away) plus a `POST` to JSONPlaceholder, which fakes a success response without actually
-   * persisting anything server-side — exactly what it's designed for.
-   */
-  onApiRowSave(save: InanduGridRowSave): void {
-    this.apiGridData.update(rows => rows.map(row => row === save.row ? { ...row, ...save.values } : row));
+  /** Optimistic local update plus a POST; JSONPlaceholder fakes success without persisting. */
+  onUserRowSave(save: InanduGridRowSave): void {
+    this.users.update(rows => rows.map(row => (row === save.row ? { ...row, ...save.values } : row)));
     this.http.post(USERS_API_URL, { ...save.row, ...save.values }).subscribe({
       error: err => console.error('Failed to POST row save', err),
     });
   }
 
-  /**
-   * Demonstrates `inandu-grid`'s row-deletion output on the one grid that also sets
-   * `deleteConfirmMessage` — by the time this fires, the user already confirmed via the browser's
-   * native `window.confirm()` prompt the grid itself triggers. Same optimistic-local-update +
-   * fire-and-forget-request pattern as `onApiRowSave()`, just a `DELETE` instead of a `POST`.
-   */
-  onApiRowDelete(row: InanduGridRow): void {
-    this.apiGridData.update(rows => rows.filter(r => r !== row));
+  /** Fires after the user confirms the grid's own `deleteConfirmMessage` prompt. */
+  onUserRowDelete(row: InanduGridRow): void {
+    this.users.update(rows => rows.filter(r => r !== row));
     this.http.delete(`${USERS_API_URL}/${row['id']}`).subscribe({
       error: err => console.error('Failed to DELETE row', err),
     });
   }
 
-  /**
-   * A grid with only local, hardcoded data (no HTTP involved at all) purely to try row creation,
-   * editing, and deletion in isolation — every column type (`'string'`/`'number'`/`'boolean'`/
-   * `'date'`) is `editable="true"` here, `creatable="true"` adds an "➕ Add row" trigger above the
-   * data (with `Producto` `required="true"` and `Precio` `required="true" min="0"`, so submitting
-   * the new row blank or with a negative price shows an inline validation error instead of saving),
-   * `deletable="true"` has no `deleteConfirmMessage` (so "Delete" removes the row immediately, no
-   * prompt — the other, HTTP-backed grid below demonstrates the with-confirmation path instead), and
-   * `lastActionSummary` renders the last saved/deleted/created row directly in the template so all
-   * three features are visibly working without needing to open devtools.
-   */
-  readonly editDemoData = signal<InanduGridRow[]>([
-    { id: 1, product: 'Teclado mecánico', price: 45.5, inStock: true, restock: new Date(2026, 5, 1) },
-    { id: 2, product: 'Mouse inalámbrico', price: 15.99, inStock: false, restock: new Date(2026, 6, 15) },
-    { id: 3, product: 'Monitor 27"', price: 199, inStock: true, restock: new Date(2026, 4, 20) },
-  ]);
-
-  readonly lastActionSummary = signal('');
-
-  onEditDemoRowSave(save: InanduGridRowSave): void {
-    this.editDemoData.update(rows => rows.map(row => row === save.row ? { ...row, ...save.values } : row));
-    this.lastActionSummary.set(`Fila guardada: ${JSON.stringify(save.values)}`);
-  }
-
-  onEditDemoRowDelete(row: InanduGridRow): void {
-    this.editDemoData.update(rows => rows.filter(r => r !== row));
-    this.lastActionSummary.set(`Fila eliminada: ${JSON.stringify(row)}`);
-  }
-
-  onEditDemoRowCreate(values: InanduGridNewRowValues): void {
-    const nextId = Math.max(0, ...this.editDemoData().map(row => Number(row['id']) || 0)) + 1;
-    this.editDemoData.update(rows => [...rows, { id: nextId, ...values }]);
-    this.lastActionSummary.set(`Fila creada: ${JSON.stringify({ id: nextId, ...values })}`);
-  }
-
-  /** Demonstrates `rowActionsTemplate` — a "Duplicar" button next to Edit/Delete, added purely via the grid's own custom-row-actions `<ng-template>`, no library changes needed. */
-  onEditDemoRowDuplicate(row: InanduGridRow): void {
-    const nextId = Math.max(0, ...this.editDemoData().map(r => Number(r['id']) || 0)) + 1;
-    this.editDemoData.update(rows => [...rows, { ...row, id: nextId }]);
-    this.lastActionSummary.set(`Fila duplicada: ${JSON.stringify({ ...row, id: nextId })}`);
-  }
-
-  /** Demonstrates `rowReorder` — dragging a row's grip handle reorders it; the grid only emits the new order, so applying it back to `editDemoData` is this handler's job. */
-  onEditDemoRowOrderChange(rows: InanduGridRow[]): void {
-    this.editDemoData.set(rows);
-    this.lastActionSummary.set('Filas reordenadas');
-  }
+  private readonly http = inject(HttpClient);
 
   constructor() {
-    this.http.get<InanduGridRow[]>(USERS_API_URL).pipe(
-      map(users => users.map(user => {
-        const id = Number(user['id']) || 0;
-        return {
-          ...user,
-          active: id % 2 === 0,
-          //joined: new Date(2020, 0, id),
-          joined: new Date(),
-        };
-      })),
-      catchError(() => of<InanduGridRow[]>([]))
-    ).subscribe(rows => this.apiGridData.set(rows));
+    this.http
+      .get<InanduGridRow[]>(USERS_API_URL)
+      .pipe(
+        map(users =>
+          users.map(user => {
+            const id = Number(user['id']) || 0;
+            return { ...user, active: id % 2 === 0, joined: new Date(2020, 0, id) };
+          }),
+        ),
+        catchError(() => of<InanduGridRow[]>([])),
+      )
+      .subscribe(rows => this.users.set(rows));
 
-    this.gridData = [
-      {
-        Id: "ALFKI",
-        Nombre: "Alfreds Futterkiste",
-        Apellido: "Maria Anders",
-        ContactTitle: "Sales Representative",
-        City: "Berlin",
-        Activo: true,
-        FechaAlta: new Date(2021, 2, 12),
-        Ventas: 12500.5,
-      },
-      {
-        Id: "ANATR",
-        Nombre: "Ana Trujillo Emparedados y helados",
-        Apellido: "Ana Trujillo",
-        ContactTitle: "Owner",
-        City: "México D.F.",
-        Activo: false,
-        FechaAlta: new Date(2019, 7, 3),
-        Ventas: 980.25,
-      },
-      {
-        Id: "ANTON",
-        Nombre: "Antonio Moreno Taquería",
-        Apellido: "Antonio Moreno",
-        ContactTitle: "Owner",
-        City: "México D.F.",
-        Activo: true,
-        FechaAlta: new Date(2022, 10, 30),
-        Ventas: 4310,
-      },
-      {
-        Id: "AROUT",
-        Nombre: "Around the Horn",
-        Apellido: "Thomas Hardy",
-        ContactTitle: "Sales Representative",
-        City: "London",
-        Activo: true,
-        FechaAlta: new Date(2020, 4, 18),
-        Ventas: 27890.75,
-      },
-      {
-        Id: "BERGS",
-        Nombre: "Berglunds snabbköp",
-        Apellido: "Christina Berglund",
-        ContactTitle: "Order Administrator",
-        City: "Luleå",
-        Activo: false,
-        FechaAlta: new Date(2018, 11, 1),
-        Ventas: 1560.4,
-      },
-      {
-        Id: "BLAUS",
-        Nombre: "Blauer See Delikatessen",
-        Apellido: "Hanna Moos",
-        ContactTitle: "Sales Representative",
-        City: "Mannheim",
-        Activo: true,
-        FechaAlta: new Date(2023, 1, 9),
-        Ventas: 6200,
-      },
-      {
-        Id: "BLONP",
-        Nombre: "Blondesddsl père et fils",
-        Apellido: "Frédérique Citeaux",
-        ContactTitle: "Marketing Manager",
-        City: "Strasbourg",
-        Activo: false,
-        FechaAlta: new Date(2017, 5, 22),
-        Ventas: 15230.1,
-      },
-      {
-        Id: "BOLID",
-        Nombre: "Bólido Comidas preparadas",
-        Apellido: "Martín Sommer",
-        ContactTitle: "Owner",
-        City: "Madrid",
-        Activo: true,
-        FechaAlta: new Date(2021, 8, 14),
-        Ventas: 3420.9,
-      },
-      {
-        Id: "BONAP",
-        Nombre: "Bon app",
-        Apellido: "Laurence Lebihan",
-        ContactTitle: "Owner",
-        City: "Marseille",
-        Activo: true,
-        FechaAlta: new Date(2020, 0, 27),
-        Ventas: 890,
-      },
-      {
-        Id: "BOTTM",
-        Nombre: "Bottom-Dollar Markets",
-        Apellido: "Elizabeth Lincoln",
-        ContactTitle: "Accounting Manager",
-        City: "Tsawassen",
-        Activo: false,
-        FechaAlta: new Date(2019, 3, 5),
-        Ventas: 41200.35,
-      },
-      ...buildAdditionalCustomers(90),
+    this.accounts = [
+      { Id: 'ALFKI', Company: 'Alfreds Futterkiste', Contact: 'Maria Anders', Role: 'Sales Representative', City: 'Berlin', Active: true, Since: new Date(2021, 2, 12), Revenue: 12500.5 },
+      { Id: 'ANATR', Company: 'Ana Trujillo Emparedados', Contact: 'Ana Trujillo', Role: 'Owner', City: 'Mexico City', Active: false, Since: new Date(2019, 7, 3), Revenue: 980.25 },
+      { Id: 'ANTON', Company: 'Antonio Moreno Taquería', Contact: 'Antonio Moreno', Role: 'Owner', City: 'Mexico City', Active: true, Since: new Date(2022, 10, 30), Revenue: 4310 },
+      { Id: 'AROUT', Company: 'Around the Horn', Contact: 'Thomas Hardy', Role: 'Sales Representative', City: 'London', Active: true, Since: new Date(2020, 4, 18), Revenue: 27890.75 },
+      { Id: 'BERGS', Company: 'Berglunds snabbköp', Contact: 'Christina Berglund', Role: 'Order Administrator', City: 'Luleå', Active: false, Since: new Date(2018, 11, 1), Revenue: 1560.4 },
+      { Id: 'BLAUS', Company: 'Blauer See Delikatessen', Contact: 'Hanna Moos', Role: 'Sales Representative', City: 'Mannheim', Active: true, Since: new Date(2023, 1, 9), Revenue: 6200 },
+      { Id: 'BLONP', Company: 'Blondel père et fils', Contact: 'Frédérique Citeaux', Role: 'Marketing Manager', City: 'Strasbourg', Active: false, Since: new Date(2017, 5, 22), Revenue: 15230.1 },
+      { Id: 'BOLID', Company: 'Bólido Comidas preparadas', Contact: 'Martín Sommer', Role: 'Owner', City: 'Madrid', Active: true, Since: new Date(2021, 8, 14), Revenue: 3420.9 },
+      { Id: 'BONAP', Company: 'Bon app', Contact: 'Laurence Lebihan', Role: 'Owner', City: 'Marseille', Active: true, Since: new Date(2020, 0, 27), Revenue: 890 },
+      { Id: 'BOTTM', Company: 'Bottom-Dollar Markets', Contact: 'Elizabeth Lincoln', Role: 'Accounting Manager', City: 'Vancouver', Active: false, Since: new Date(2019, 3, 5), Revenue: 41200.35 },
+      ...buildAdditionalAccounts(90),
     ];
 
-    const totalVentas = this.gridData.reduce((sum, r) => sum + (Number(r['Ventas']) || 0), 0);
-    const topAccount = this.gridData.reduce((best, r) =>
-      (Number(r['Ventas']) || 0) > (Number(best['Ventas']) || 0) ? r : best, this.gridData[0]);
-    this.pinnedTopCustomers = [
-      { ...topAccount, Nombre: `★ ${topAccount['Nombre']}`, ContactTitle: 'Cuenta destacada' },
-    ];
-    this.pinnedBottomCustomers = [
+    const totalRevenue = this.accounts.reduce((sum, r) => sum + (Number(r['Revenue']) || 0), 0);
+    const topAccount = this.accounts.reduce(
+      (best, r) => ((Number(r['Revenue']) || 0) > (Number(best['Revenue']) || 0) ? r : best),
+      this.accounts[0],
+    );
+    this.pinnedTopAccounts = [{ ...topAccount, Company: `★ ${topAccount['Company']}`, Role: 'Top account' }];
+    this.pinnedBottomAccounts = [
       {
-        Id: '', Nombre: `TOTAL · ${this.gridData.length} clientes`, Apellido: '',
-        ContactTitle: '', City: '', Activo: null, FechaAlta: null, Ventas: totalVentas,
+        Id: '', Company: `TOTAL · ${this.accounts.length} accounts`, Contact: '',
+        Role: '', City: '', Active: null, Since: null, Revenue: totalRevenue,
       },
     ];
   }
