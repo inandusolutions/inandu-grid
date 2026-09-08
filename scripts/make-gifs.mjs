@@ -5,7 +5,7 @@
 //   node scripts/make-gifs.mjs   # convert only, from the last recording
 //
 // Playwright writes each scene's video to test-results/promo-scenes.ts-<scene>-promo/video.webm.
-// Converts with gifski (preferred), then ffmpeg on PATH, then Playwright's bundled ffmpeg.
+// Converts with gifski (preferred) or ffmpeg, whichever is on PATH.
 
 import { readdir, stat, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -26,19 +26,21 @@ if (!existsSync(resultsDir)) {
   process.exit(1);
 }
 
-const onPath = (cmd) => {
-  try { return spawnSync(cmd, ['--version'], { stdio: 'ignore' }).status === 0 ? cmd : null; }
-  catch { return null; }
+// ffmpeg wants "-version" (one dash), gifski "--version" — try each, take whatever exits 0.
+const onPath = (cmd, flags) => {
+  for (const f of flags) {
+    try { if (spawnSync(cmd, [f], { stdio: 'ignore' }).status === 0) return cmd; } catch { /* not installed */ }
+  }
+  return null;
 };
 
-const gifski = onPath('gifski');
-const ffmpeg = gifski ? null : onPath('ffmpeg');
+const gifski = onPath('gifski', ['--version']);
+const ffmpeg = gifski ? null : onPath('ffmpeg', ['-version', '--version']);
 if (!gifski && !ffmpeg) {
   console.error(
     'Need gifski or ffmpeg. Install one:\n' +
     '  gifski:  cargo install gifski  |  scoop install gifski  |  brew install gifski\n' +
-    '  ffmpeg:  https://ffmpeg.org/download.html\n' +
-    '(Playwright ships an ffmpeg but it was not found in the browsers cache.)',
+    '  ffmpeg:  apt-get install ffmpeg  |  scoop install ffmpeg  |  brew install ffmpeg',
   );
   process.exit(1);
 }
