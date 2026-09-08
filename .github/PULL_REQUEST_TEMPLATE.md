@@ -18,7 +18,7 @@ Closes #
 
 - [ ] `npm run lint` passes
 - [ ] `npm run build:lib` and `npm run build` pass
-- [ ] `npm run test:lib -- --watch=false --browsers=ChromeHeadless` passes
+- [ ] `npm run test:lib -- --watch=false --browsers=ChromeHeadlessCI` passes
 - [ ] Added/updated unit tests for the change
 - [ ] Updated `CHANGELOG.md` under `## [Unreleased]`
 - [ ] Updated `projects/inandu-grid/README.md` if the public API changed
