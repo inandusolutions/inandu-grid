@@ -13,6 +13,7 @@ import { InanduDetailTemplateDirective } from './inandu-detail-template.directiv
 import {
   AGGREGATE_SYMBOLS,
   DETAIL_TOGGLE_COLUMN_WIDTH,
+  MAX_COLUMN_WIDTH,
   MIN_COLUMN_WIDTH,
   ROW_DRAG_COLUMN_WIDTH,
   SELECT_COLUMN_WIDTH,
@@ -23,6 +24,8 @@ import {
   downloadBlob,
   escapeCsvValue,
   escapeMarkup,
+  collectTreeRows,
+  flattenTree,
   formatCellValue,
   hasMeaningfulFilterValue,
   matchesColumnFilter,
@@ -31,7 +34,7 @@ import {
   placeColumnsByOrder,
   truncatePdfText,
 } from '../core';
-import type { InanduGridColumnFilterValue, InanduGridRow, NumberFormatter } from '../core';
+import type { InanduGridColumnFilterValue, InanduGridRow, NumberFormatter, TreeVisibleRow } from '../core';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -150,6 +153,17 @@ export interface InanduGridLoadMoreEvent {
   loadedCount: number;
 }
 
+/**
+ * Emitted by `InanduGridComponent.viewportRangeChange` — only while `virtualScroll()` **and**
+ * `serverSide()` are both on. The half-open row-index range the virtual viewport currently has
+ * on screen (`endIndex` exclusive), so a windowed/block server row model can fetch exactly the
+ * blocks that cover it. Fires on first render and whenever the visible window moves or resizes.
+ */
+export interface InanduGridViewportRange {
+  startIndex: number;
+  endIndex: number;
+}
+
 @Component({
     selector: 'inandu-grid',
     templateUrl: './inandu-grid.component.html',
@@ -180,6 +194,55 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly height = input(0, { transform: numberAttribute });
   readonly id = input('');
   readonly data = input<T[]>([]);
+
+  /**
+   * An extra per-row predicate applied on top of the free-text search and the per-column filters —
+   * a row must return `true` from this *and* pass every built-in filter to show. Use it to plug in
+   * a filter the grid doesn't model itself (a nested AND/OR query builder, a "only my rows" toggle,
+   * a date-relative rule): bind a plain `(row) => boolean`. Recomputed like any signal input, so
+   * returning a fresh closure re-filters. Ignored while `serverSide()` is on (the server already
+   * filtered). Unset ⇒ no effect.
+   */
+  readonly extraRowFilter = input<((row: T) => boolean) | undefined>(undefined);
+
+  /**
+   * Rows pinned above the scrolling body, always visible, in the order given. Display-only — they
+   * render every column's `cellTemplate` (or formatted value) like a normal row, but never enter
+   * edit mode and carry no drag handle, detail toggle or selection checkbox. They are *not* part
+   * of `data()`, so filtering, sorting, paging and the totals row ignore them entirely; a summary
+   * row you compute yourself is the usual use. Rendered only in the non-virtualized table (same
+   * limitation as the `showTotals` footer). Empty ⇒ nothing rendered.
+   */
+  readonly pinnedTopRows = input<T[]>([]);
+
+  /** Rows pinned below the scrolling body — the mirror of {@link pinnedTopRows}. */
+  readonly pinnedBottomRows = input<T[]>([]);
+
+  /**
+   * Turns on tree mode (#3): the name of the field on each row holding its child rows (a nested
+   * array of the same shape). `data()` is then the root rows; each renders an expand/collapse
+   * toggle and its children appear indented directly below it while expanded. Free-text and column
+   * filters keep a node when it (or any descendant) matches and auto-expand the path to it; the
+   * active sort orders each level of siblings. Only in the non-virtualized, non-grouped,
+   * non-`serverSide` render path (auto-disabled otherwise). Empty string ⇒ off. Tree rows are
+   * display + expand only — inline editing / drag / master-detail don't apply to them.
+   */
+  readonly treeChildrenKey = input<string>('');
+
+  /** Initial expand state for tree mode: `'none'` (default), `'all'`, or a max depth to open to
+   *  (a numeric string like `"2"` from a plain attribute is coerced to the number). */
+  readonly treeDefaultExpanded = input<'none' | 'all' | number, 'none' | 'all' | number | string>('none', {
+    transform: (v) => (typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : (v as 'none' | 'all' | number)),
+  });
+
+  /**
+   * Double-clicking a column's resize handle snaps that column to the width of its widest rendered
+   * value (header included), the same "fit to content" gesture desktop grids have. On by default
+   * wherever a resize handle shows (`<inandu-column resize>`, which is the default); set
+   * `[autosize]="false"` to disable. Measures the currently-rendered rows only (one page's worth,
+   * or the virtual window), against a `MAX_COLUMN_WIDTH` ceiling.
+   */
+  readonly autosize = input(true, { transform: booleanAttribute });
 
   /**
    * Opts the grid out of local sort/filter/pagination entirely: `data()` is trusted to already be
@@ -360,6 +423,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly customTranslations = input<InanduGridCustomTranslations | undefined>(undefined);
 
   private readonly translate = inject(TranslateService);
+  private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly resolvedLang = computed(() => resolveInanduGridLang(this.lang(), this.translate));
 
   readonly msgNoData = this.translate.translate('MsgNoData', undefined, this.resolvedLang);
@@ -390,11 +454,16 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly msgAddRow = this.translate.translate('MsgAddRow', undefined, this.resolvedLang);
   readonly msgLoading = this.translate.translate('MsgLoading', undefined, this.resolvedLang);
   readonly msgDragRow = this.translate.translate('MsgDragRow', undefined, this.resolvedLang);
+  readonly msgAutosizeColumn = this.translate.translate('MsgAutosizeColumn', undefined, this.resolvedLang);
   readonly msgExpandDetail = this.translate.translate('MsgExpandDetail', undefined, this.resolvedLang);
   readonly msgCollapseDetail = this.translate.translate('MsgCollapseDetail', undefined, this.resolvedLang);
 
   constructor() {
     registerInanduGridTranslations(this.translate);
+
+    // Tree mode (#3): apply `treeDefaultExpanded` once per distinct `data()` array. In its own
+    // effect (not the `treeRows` computed) since it writes a signal.
+    effect(() => this.seedTreeExpansion());
 
     // Layers customTranslations() on top of the built-in dictionaries whenever it changes — merge
     // (not replace), so only the keys the consumer actually supplies override the built-in text.
@@ -466,6 +535,21 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       const columnFilters = this.columnFilters();
       if (this.serverSide()) {
         this.filterChange.emit({ query, columnFilters });
+      }
+    });
+
+    // Server-side + virtualized: keep the consumer told which row-index window is on screen, so a
+    // block/windowed row model fetches only what's visible (see `viewportRangeChange`). Re-runs on
+    // scroll (`viewportStartIndex`), on a viewport/row-height resize, and on a `totalItems()`
+    // change; `emitViewportRange` de-dupes an unchanged window. `untracked` — it writes a signal.
+    effect(() => {
+      this.viewportStartIndex();
+      this.virtualViewportHeight();
+      this.effectiveVirtualRowHeight();
+      this.totalItems();
+      this.data();
+      if (this.virtualScroll() && this.serverSide()) {
+        untracked(() => this.emitViewportRange());
       }
     });
 
@@ -1093,8 +1177,20 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    */
   readonly cellRangeSelection = input(false, { transform: booleanAttribute });
 
-  /** Emits the selected range's rows/fields on every change, or `undefined` once cleared — see `cellRangeSelection`/`clearCellRangeSelection()`. */
+  /**
+   * Lets a Ctrl/Cmd-drag (or Ctrl/Cmd-click) *add* another rectangle to the selection instead of
+   * replacing it (#16) — the same convention spreadsheets use. A plain click still resets to one
+   * rectangle. Only meaningful with `cellRangeSelection` on. `(cellRangeChange)` keeps emitting the
+   * *active* (last) rectangle; `(cellRangesChange)` emits the whole list. `Ctrl+C` copies only the
+   * active rectangle.
+   */
+  readonly multiRange = input(false, { transform: booleanAttribute });
+
+  /** Emits the selected range's rows/fields on every change, or `undefined` once cleared — see `cellRangeSelection`/`clearCellRangeSelection()`. With `multiRange` on this is the *active* (last) rectangle. */
   readonly cellRangeChange = output<InanduGridCellRangeSelection<T> | undefined>();
+
+  /** Emits every selected rectangle (active one last), or `[]` once cleared — see `multiRange`. */
+  readonly cellRangesChange = output<InanduGridCellRangeSelection<T>[]>();
 
   /** The cell a range drag/shift-click started from — fixed for the duration of one selection gesture. */
   private readonly rangeAnchor = signal<{ row: number; col: number } | undefined>(undefined);
@@ -1118,19 +1214,37 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     };
   });
 
-  /** Whether `(rowIndex, colIndex)` (both into `pagedData()`/`visibleColumns()`) falls inside the currently selected range — drives `.inandu-cell-range-selected` in the template. */
+  /** Rectangles frozen by an earlier Ctrl-drag while `multiRange()` is on — the active one lives in `selectedRange()`. */
+  private readonly committedRanges = signal<{ minRow: number; maxRow: number; minCol: number; maxCol: number }[]>([]);
+
+  /** Every selected rectangle, active one last — `committedRanges()` plus `selectedRange()`. */
+  private readonly allRanges = computed(() => {
+    const ranges = [...this.committedRanges()];
+    const active = this.selectedRange();
+    if (active) ranges.push(active);
+    return ranges;
+  });
+
+  /** Whether `(rowIndex, colIndex)` (both into `pagedData()`/`visibleColumns()`) falls inside *any* selected rectangle — drives `.inandu-cell-range-selected` in the template. */
   isCellInRange(rowIndex: number, colIndex: number): boolean {
-    const range = this.selectedRange();
-    return !!range && rowIndex >= range.minRow && rowIndex <= range.maxRow && colIndex >= range.minCol && colIndex <= range.maxCol;
+    return this.allRanges().some(
+      r => rowIndex >= r.minRow && rowIndex <= r.maxRow && colIndex >= r.minCol && colIndex <= r.maxCol,
+    );
   }
 
-  /** Starts a new range selection gesture — a plain click resets the anchor to this cell; shift-click extends the *existing* anchor instead, the same convention spreadsheet apps use. */
+  /** Starts a new range selection gesture — a plain click resets to this cell; shift-click extends the *existing* anchor; Ctrl/Cmd-click (with `multiRange`) freezes the current rectangle and starts another. */
   onCellRangeMouseDown(event: MouseEvent, rowIndex: number, colIndex: number): void {
     if (event.button !== 0) {
       return;
     }
     this.isSelectingRange.set(true);
-    if (!event.shiftKey || !this.rangeAnchor()) {
+    const additive = this.multiRange() && (event.ctrlKey || event.metaKey) && !event.shiftKey;
+    if (additive) {
+      const active = this.selectedRange();
+      if (active) this.committedRanges.update(ranges => [...ranges, active]);
+      this.rangeAnchor.set({ row: rowIndex, col: colIndex });
+    } else if (!event.shiftKey || !this.rangeAnchor()) {
+      this.committedRanges.set([]);
       this.rangeAnchor.set({ row: rowIndex, col: colIndex });
     }
     this.rangeFocus.set({ row: rowIndex, col: colIndex });
@@ -1156,7 +1270,16 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   clearCellRangeSelection(): void {
     this.rangeAnchor.set(undefined);
     this.rangeFocus.set(undefined);
+    this.committedRanges.set([]);
     this.cellRangeChange.emit(undefined);
+    this.cellRangesChange.emit([]);
+  }
+
+  private rangeToSelection(r: { minRow: number; maxRow: number; minCol: number; maxCol: number }): InanduGridCellRangeSelection<T> {
+    return {
+      rows: this.pagedData().slice(r.minRow, r.maxRow + 1),
+      fields: this.visibleColumns().slice(r.minCol, r.maxCol + 1).map(column => column.field()),
+    };
   }
 
   private emitCellRangeChange(): void {
@@ -1164,10 +1287,14 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     if (!range) {
       return;
     }
-    const rows = this.pagedData().slice(range.minRow, range.maxRow + 1);
-    const fields = this.visibleColumns().slice(range.minCol, range.maxCol + 1).map(column => column.field());
-    this.cellRangeChange.emit({ rows, fields });
+    this.cellRangeChange.emit(this.rangeToSelection(range));
+    this.cellRangesChange.emit(this.allRanges().map(r => this.rangeToSelection(r)));
   }
+
+  /** Every selected rectangle as `{ rows, fields }`, active one last — a signal mirror of `(cellRangesChange)`. */
+  readonly cellRanges = computed<InanduGridCellRangeSelection<T>[]>(() =>
+    this.allRanges().map(r => this.rangeToSelection(r)),
+  );
 
   /** The full selected range formatted as TSV (one line per row, tab-separated columns) — what `clipboardCopyText()` copies when a genuine (more-than-one-cell) range is active. */
   private selectedRangeText(range: { minRow: number; maxRow: number; minCol: number; maxCol: number }): string {
@@ -1225,6 +1352,11 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       rows = rows.filter(row =>
         columns.every(column => matchesColumnFilter(column, row, filters[column.field()] ?? {}, this.locale, this.numberFormatter))
       );
+    }
+
+    const extra = this.extraRowFilter();
+    if (extra) {
+      rows = rows.filter(extra);
     }
 
     return rows;
@@ -1422,6 +1554,18 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   private readonly lastLoadMoreLength = signal(-1);
 
   /**
+   * The first row index the virtual viewport currently has on screen, updated from
+   * `(scrolledIndexChange)`. Only meaningful with `virtualScroll()`; feeds `viewportRangeChange`.
+   */
+  private readonly viewportStartIndex = signal(0);
+
+  /** See `InanduGridViewportRange`. Emitted only while `virtualScroll()` **and** `serverSide()` are both on. */
+  readonly viewportRangeChange = output<InanduGridViewportRange>();
+
+  /** The last range emitted, so an unchanged window (same first row, same size) doesn't re-emit. */
+  private readonly lastViewportRange = signal<InanduGridViewportRange | null>(null);
+
+  /**
    * Bound to `<cdk-virtual-scroll-viewport>`'s own `(scrolledIndexChange)` — `startIndex` is the
    * index of the first item currently rendered. The number of rows actually visible is estimated from
    * the viewport's own height and row height (both already tracked signals) rather than querying the
@@ -1429,6 +1573,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * subscription plumbing beyond the template event binding itself.
    */
   onVirtualScrolledIndexChange(startIndex: number): void {
+    this.viewportStartIndex.set(startIndex);
+
     if (!this.infiniteScroll() || !this.virtualScroll() || !this.serverSide()) {
       return;
     }
@@ -1438,6 +1584,30 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       this.lastLoadMoreLength.set(total);
       this.loadMore.emit({ loadedCount: total });
     }
+  }
+
+  /**
+   * Emits `viewportRangeChange` whenever the visible row window moves or resizes, while
+   * `virtualScroll()` and `serverSide()` are both on — including the very first render, so a
+   * consumer can drive its initial block fetch straight from this event. `endIndex` is exclusive
+   * and clamped to `totalItems()` (falling back to the loaded count). De-duplicated against the
+   * last emitted range so a re-render with an unchanged window stays quiet.
+   */
+  private emitViewportRange(): void {
+    if (!this.virtualScroll() || !this.serverSide()) {
+      return;
+    }
+    const start = Math.max(0, this.viewportStartIndex());
+    const visibleCount = Math.ceil(this.virtualViewportHeight() / (this.effectiveVirtualRowHeight() || 1));
+    const cap = this.totalItems() ?? this.data().length;
+    const endIndex = cap > 0 ? Math.min(cap, start + visibleCount) : start + visibleCount;
+    const prev = this.lastViewportRange();
+    if (prev && prev.startIndex === start && prev.endIndex === endIndex) {
+      return;
+    }
+    const range: InanduGridViewportRange = { startIndex: start, endIndex };
+    this.lastViewportRange.set(range);
+    this.viewportRangeChange.emit(range);
   }
 
   readonly pageLabelText = computed(() => {
@@ -1567,8 +1737,133 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * pager), else just the current page.
    */
   private readonly visibleRows = computed(() =>
-    (this.groupByColumn() || this.virtualScroll()) ? this.sortedData() : this.pagedData()
+    this.hasTreeData()
+      ? this.treeRows().map(t => t.row)
+      : (this.groupByColumn() || this.virtualScroll()) ? this.sortedData() : this.pagedData()
   );
+
+  // ── Tree data (#3) ────────────────────────────────────────────────────────
+  /** Tree mode is on, and none of the render paths it can't share with are. */
+  readonly hasTreeData = computed(() =>
+    !!this.treeChildrenKey() && !this.groupByColumn() && !this.virtualScroll() && !this.serverSide(),
+  );
+
+  /** Expanded tree nodes, by object reference (like `expandedRows`/`selectedRows`). */
+  private readonly expandedTreeRows = signal<Set<T>>(new Set());
+
+  private readonly childrenOf = (row: T): readonly T[] | undefined => {
+    const value = (row as Record<string, unknown>)[this.treeChildrenKey()];
+    return Array.isArray(value) ? (value as T[]) : undefined;
+  };
+
+  /** `true` once the initial `treeDefaultExpanded` seeding has run for the current `data()`. */
+  private treeSeededFor: T[] | undefined;
+
+  /** `data()` walked into the flat, expansion-aware list of rows the template renders in tree mode. */
+  readonly treeRows = computed<TreeVisibleRow<T>[]>(() => {
+    if (!this.hasTreeData()) return [];
+
+    // free-text + column filters + extraRowFilter as a single per-row predicate (mirrors filteredData)
+    const q = this.filter() ? this.filterQuery().trim().toLowerCase() : '';
+    const filterCols = this.filterableColumns();
+    const filters = this.columnFilters();
+    const extra = this.extraRowFilter();
+    const anyFilter = !!q || filterCols.length > 0 || !!extra;
+    const matches = anyFilter
+      ? (row: T): boolean => {
+          if (q && !this.visibleColumns().some(c => this.formatValue(c, row).toLowerCase().includes(q))) return false;
+          if (filterCols.some(c => !matchesColumnFilter(c, row, filters[c.field()] ?? {}, this.locale, this.numberFormatter))) return false;
+          if (extra && !extra(row)) return false;
+          return true;
+        }
+      : undefined;
+
+    const criteria = this.sortCriteria();
+    const compare = criteria.length
+      ? (a: T, b: T): number => {
+          for (const { field, direction } of criteria) {
+            const cmp = compareCellValues(a[field], b[field], this.locale) * (direction === 'asc' ? 1 : -1);
+            if (cmp !== 0) return cmp;
+          }
+          return 0;
+        }
+      : undefined;
+
+    return flattenTree(this.data(), {
+      getChildren: this.childrenOf,
+      isExpanded: row => this.expandedTreeRows().has(row),
+      match: matches,
+      compare,
+    });
+  });
+
+  /** Seeds `expandedTreeRows` from `treeDefaultExpanded` the first time a given `data()` is seen.
+   *  Called from an `effect` (see the constructor) — never from a computed. */
+  private seedTreeExpansion(): void {
+    if (!untracked(this.hasTreeData)) return;
+    const data = this.data();
+    if (this.treeSeededFor === data) return;
+    this.treeSeededFor = data;
+    const mode = untracked(this.treeDefaultExpanded);
+    if (mode === 'none') {
+      this.expandedTreeRows.set(new Set());
+      return;
+    }
+    const next = new Set<T>();
+    if (mode === 'all') {
+      for (const row of collectTreeRows(data, this.childrenOf)) {
+        if (this.childrenOf(row)?.length) next.add(row);
+      }
+    } else {
+      const walk = (level: readonly T[], depth: number): void => {
+        if (depth >= mode) return;
+        for (const row of level) {
+          const kids = this.childrenOf(row);
+          if (kids?.length) {
+            next.add(row);
+            walk(kids, depth + 1);
+          }
+        }
+      };
+      walk(data, 0);
+    }
+    this.expandedTreeRows.set(next);
+  }
+
+  isTreeRowExpanded(row: T): boolean {
+    return this.expandedTreeRows().has(row);
+  }
+
+  /** Toggles one tree node's expansion. */
+  toggleTreeRow(row: T): void {
+    this.expandedTreeRows.update(open => {
+      const next = new Set(open);
+      if (next.has(row)) {
+        next.delete(row);
+      } else {
+        next.add(row);
+      }
+      return next;
+    });
+  }
+
+  /** `MsgExpandDetail`/`MsgCollapseDetail` reused for the tree toggle's `aria-label`. */
+  treeToggleLabel(row: T): string {
+    return this.isTreeRowExpanded(row) ? this.msgCollapseDetail() : this.msgExpandDetail();
+  }
+
+  /** Expand or collapse every expandable node at once. */
+  setAllTreeRowsExpanded(expanded: boolean): void {
+    if (!expanded) {
+      this.expandedTreeRows.set(new Set());
+      return;
+    }
+    const next = new Set<T>();
+    for (const row of collectTreeRows(untracked(this.data), this.childrenOf)) {
+      if (this.childrenOf(row)?.length) next.add(row);
+    }
+    this.expandedTreeRows.set(next);
+  }
 
   /** `visibleRows().length` — exposed publicly just so the template can disable the export buttons when there's nothing to export. */
   readonly visibleRowCount = computed(() => this.visibleRows().length);
@@ -2060,6 +2355,56 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     window.removeEventListener('mouseup', this.onResizeMouseUp);
   };
 
+  /** Double-click on a resize handle → fit the column to its content (#33). */
+  onResizeHandleDblClick(event: MouseEvent, column: InanduColumnComponent): void {
+    if (!this.autosize()) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const width = this.measureColumnContentWidth(column);
+    if (width > 0) {
+      this.setColumnWidth(column.field(), Math.min(MAX_COLUMN_WIDTH, width));
+    }
+  }
+
+  /**
+   * Widest rendered value in a column (its header and every currently-rendered data cell),
+   * measured against that column's own computed font, plus the cell's horizontal padding. Reads
+   * only what's in the DOM right now — one page, or the virtual window — so it's O(visible rows).
+   * Returns `0` if the column has no rendered cell to measure.
+   */
+  private measureColumnContentWidth(column: InanduColumnComponent): number {
+    const host = this.elementRef.nativeElement;
+    const field = column.field();
+    const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(field) : field.replace(/"/g, '\\"');
+    const cells = Array.from(host.querySelectorAll<HTMLElement>(`td[data-field="${escaped}"]`));
+    const headerCell = host.querySelector<HTMLElement>(`th[data-field="${escaped}"]`);
+    const sample = cells[0] ?? headerCell ?? host;
+    const cs = getComputedStyle(sample);
+
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;pointer-events:none';
+    probe.style.font = cs.font || `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
+    probe.style.letterSpacing = cs.letterSpacing;
+    document.body.appendChild(probe);
+
+    const padding = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + 2; // + border slack
+    let widest = 0;
+
+    // header text needs extra room for the sort button and the resize handle it lives next to
+    probe.textContent = column.title() || field;
+    widest = Math.max(widest, probe.offsetWidth + 44);
+
+    for (const cell of cells) {
+      probe.textContent = (cell.textContent ?? '').replace(/\s+/g, ' ').trim();
+      widest = Math.max(widest, probe.offsetWidth + padding);
+    }
+
+    probe.remove();
+    return cells.length || headerCell ? Math.ceil(widest) : 0;
+  }
+
   /** Enables the export/print toolbar above the table. Off (no toolbar rendered) by default. */
   readonly exportable = input(false, { transform: booleanAttribute });
 
@@ -2418,6 +2763,22 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       return validator(parsed, parsedRow);
     }
     return null;
+  }
+
+  /**
+   * Runs a column's *synchronous* validation rules (`required`/`min`/`max`/`pattern`/`validator`,
+   * in that order, stopping at the first failure) against an arbitrary value — the same chain
+   * `saveRow()` uses, but callable for any cell, not just the row currently being edited. Returns
+   * the failure message (localised via the grid's own i18n) or `null` when the value is valid,
+   * including for a column that declares no rules at all. `asyncValidator` is never invoked here.
+   *
+   * Built for a whole-grid validation view (`@inandu-solutions/grid-pro`'s `#13`): iterate rows ×
+   * columns and collect every non-`null` result. `value` should be the cell's already-typed value
+   * (a real `number`/`Date`/`boolean`/string); `row` is passed to a custom `validator` for
+   * cross-field checks.
+   */
+  validateCell(column: InanduColumnComponent, value: unknown, row: Record<string, unknown> = {}): string | null {
+    return this.validateColumnValue(column, value, value, row);
   }
 
   /**

@@ -1,6 +1,11 @@
 /** Floor enforced while dragging a resize handle, so a column can never be shrunk to zero/negative width. */
 export const MIN_COLUMN_WIDTH = 30;
 
+/** Ceiling `autosize` (double-click a resize handle to fit content) will grow a column to, so one
+ *  very long value can't blow the column out to the width of the page. The drag handle itself is
+ *  not capped by this. */
+export const MAX_COLUMN_WIDTH = 600;
+
 /** Must match `.inandu-select-column`'s CSS width — used by `stickyOffset()` to account for the (always-sticky) checkbox column. */
 export const SELECT_COLUMN_WIDTH = 36;
 

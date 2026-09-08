@@ -14,6 +14,7 @@ export type {
 
 export {
   MIN_COLUMN_WIDTH,
+  MAX_COLUMN_WIDTH,
   SELECT_COLUMN_WIDTH,
   ROW_DRAG_COLUMN_WIDTH,
   DETAIL_TOGGLE_COLUMN_WIDTH,
@@ -29,6 +30,8 @@ export {
 export type { NumberFormatter } from './format';
 
 export { compareCellValues } from './sort';
+export { flattenTree, collectTreeRows } from './tree';
+export type { TreeVisibleRow, FlattenTreeOptions } from './tree';
 export { hasMeaningfulFilterValue, matchesColumnFilter } from './filter';
 export { AGGREGATE_SYMBOLS, computeGroupAggregates } from './aggregate';
 export { placeColumnsByOrder } from './columns';

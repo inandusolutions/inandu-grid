@@ -35,6 +35,7 @@ export const zh = {
   MsgAddRow: '添加行',
   MsgLoading: '加载中…',
   MsgDragRow: '拖动以重新排序行',
+  MsgAutosizeColumn: '双击以使列适应内容',
   MsgExpandDetail: '展开行详情',
   MsgCollapseDetail: '收起行详情',
   MsgDeleteSelected: '删除所选 ({{count}})',

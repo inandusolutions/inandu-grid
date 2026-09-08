@@ -35,6 +35,7 @@ export const it = {
   MsgAddRow: 'Aggiungi riga',
   MsgLoading: 'Caricamento…',
   MsgDragRow: 'Trascina per riordinare la riga',
+  MsgAutosizeColumn: 'Doppio clic per adattare la colonna al contenuto',
   MsgExpandDetail: 'Espandi dettagli riga',
   MsgCollapseDetail: 'Comprimi dettagli riga',
   MsgDeleteSelected: 'Elimina selezionati ({{count}})',

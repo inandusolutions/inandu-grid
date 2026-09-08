@@ -127,6 +127,7 @@
         @for (column of visibleColumns(); track column.field(); let colIndex = $index) {
           @let headerDraggable = column.groupable() || column.reorder();
           <th class="inandu-column" scope="col" role="columnheader"
+            [attr.data-field]="column.field()"
             [attr.tabindex]="colIndex === 0 && !selectable() ? 0 : -1"
             [class.inandu-groupable-header]="column.groupable()"
             [class.inandu-sticky-column]="columnPinnedSide(column)"
@@ -209,7 +210,9 @@
             }
             @if (column.resize()) {
               <span class="inandu-column-resize-handle" draggable="false"
+                [attr.title]="autosize() ? msgAutosizeColumn() : null"
                 (mousedown)="onResizeHandleMouseDown($event, column)"
+                (dblclick)="onResizeHandleDblClick($event, column)"
               ></span>
             }
           </th>
@@ -219,6 +222,88 @@
         }
       </tr>
     </thead>
+  </ng-template>
+
+  <!-- #32 — a consumer-pinned row (pinnedTopRows / pinnedBottomRows). Display-only: no editing,
+       drag, detail toggle or range selection — just the leading spacer cells for alignment and
+       one cell per visible column, honouring sticky (pinned) columns. -->
+  <ng-template #pinnedRow let-row>
+    <tr class="inandu-row inandu-pinned-row" role="row">
+      @if (hasMasterDetail()) {
+        <td class="inandu-detail-toggle-cell inandu-sticky-column" style="inset-inline-start: 0"></td>
+      }
+      @if (hasRowDragHandle()) {
+        <td class="inandu-row-drag-cell"></td>
+      }
+      @if (selectable()) {
+        <td class="inandu-select-cell inandu-sticky-column" [style.inset-inline-start.px]="(hasMasterDetail() ? detailToggleColumnWidthPx : 0) + (hasRowDragHandle() ? rowDragColumnWidthPx : 0)"></td>
+      }
+      @for (column of visibleColumns(); track column.field()) {
+        <td role="gridcell"
+          [attr.data-field]="column.field()"
+          [class.inandu-sticky-column]="columnPinnedSide(column)"
+          [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+          [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
+        >
+          @if (column.cellTemplate(); as cellTpl) {
+            <ng-container *ngTemplateOutlet="cellTpl; context: cellTemplateContext(column, row)"></ng-container>
+          } @else {
+            {{ formatValue(column, row) }}
+          }
+        </td>
+      }
+      @if (hasRowActions()) {
+        <td class="inandu-row-actions"></td>
+      }
+    </tr>
+  </ng-template>
+
+  <!-- #3 — a tree-data row (treeChildrenKey). Display + expand only: the first visible column's
+       cell carries the depth indent and an expand/collapse toggle when the node has children;
+       every other cell renders like a normal data cell (cellTemplate / formatted value). -->
+  <ng-template #treeRow let-node let-index="index">
+    <tr class="inandu-row inandu-tree-row" role="row" [attr.aria-level]="node.depth + 1" [attr.aria-expanded]="node.expandable ? node.expanded : null">
+      @if (selectable()) {
+        <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" style="inset-inline-start: 0">
+          <input type="checkbox" class="inandu-select-checkbox" [attr.aria-label]="selectRowLabel(index)"
+            [checked]="isRowSelected(node.row)" (change)="toggleRowSelection(node.row)" />
+        </td>
+      }
+      @for (column of visibleColumns(); track column.field(); let colIndex = $index) {
+        <td role="gridcell" tabindex="-1"
+          [attr.data-field]="column.field()"
+          [class.inandu-sticky-column]="columnPinnedSide(column)"
+          [style.inset-inline-start.px]="columnPinnedSide(column) && columnPinnedSide(column) !== 'right' ? stickyOffset(column) : null"
+          [style.inset-inline-end.px]="columnPinnedSide(column) === 'right' ? stickyOffsetRight(column) : null"
+        >
+          @if (colIndex === 0) {
+            <span class="inandu-tree-cell" [style.padding-inline-start.px]="node.depth * 16">
+              @if (node.expandable) {
+                <button type="button" class="inandu-icon inandu-tree-toggle"
+                  [class.inandu-icon-detail-expanded]="node.expanded"
+                  [class.inandu-icon-detail-collapsed]="!node.expanded"
+                  [attr.aria-label]="treeToggleLabel(node.row)" [title]="treeToggleLabel(node.row)"
+                  (click)="toggleTreeRow(node.row)"></button>
+              } @else {
+                <span class="inandu-tree-toggle-spacer" aria-hidden="true"></span>
+              }
+              @if (column.cellTemplate(); as cellTpl) {
+                <ng-container *ngTemplateOutlet="cellTpl; context: cellTemplateContext(column, node.row)"></ng-container>
+              } @else {
+                {{ formatValue(column, node.row) }}
+              }
+            </span>
+          } @else if (column.cellTemplate(); as cellTpl) {
+            <ng-container *ngTemplateOutlet="cellTpl; context: cellTemplateContext(column, node.row)"></ng-container>
+          } @else {
+            {{ formatValue(column, node.row) }}
+          }
+        </td>
+      }
+      @if (hasRowActions()) {
+        <td class="inandu-row-actions"></td>
+      }
+    </tr>
   </ng-template>
 
   @if (virtualScroll()) {
@@ -335,6 +420,13 @@
   } @else {
     <table class="xtable" role="grid">
       <ng-container *ngTemplateOutlet="tableHead"></ng-container>
+    @if (pinnedTopRows().length) {
+      <tbody class="inandu-pinned-rows inandu-pinned-top">
+        @for (row of pinnedTopRows(); track row) {
+          <ng-container *ngTemplateOutlet="pinnedRow; context: { $implicit: row }"></ng-container>
+        }
+      </tbody>
+    }
     <tbody>
       @if (error()) {
         <tr class="inandu-row inandu-error-row">
@@ -344,6 +436,14 @@
         <tr class="inandu-row inandu-loading-row">
           <td [attr.colspan]="totalColumnCount() || 1">{{ msgLoading() }}</td>
         </tr>
+      } @else if (hasTreeData()) {
+        @for (node of treeRows(); track node.row; let i = $index) {
+          <ng-container *ngTemplateOutlet="treeRow; context: { $implicit: node, index: i }"></ng-container>
+        } @empty {
+          <tr class="inandu-row">
+            <td [attr.colspan]="totalColumnCount() || 1">{{ msgNoData() }}</td>
+          </tr>
+        }
       } @else if (groupByColumn(); as groupCol) {
         @for (group of groupedRows(); track group.key) {
           <tr class="inandu-group-row">
@@ -617,6 +717,13 @@
         }
       }
     </tbody>
+    @if (pinnedBottomRows().length) {
+      <tbody class="inandu-pinned-rows inandu-pinned-bottom">
+        @for (row of pinnedBottomRows(); track row) {
+          <ng-container *ngTemplateOutlet="pinnedRow; context: { $implicit: row }"></ng-container>
+        }
+      </tbody>
+    }
     @if (showTotalsRow() || (!groupByColumn() && !virtualScroll() && paging())) {
       <tfoot>
         @if (showTotalsRow()) {

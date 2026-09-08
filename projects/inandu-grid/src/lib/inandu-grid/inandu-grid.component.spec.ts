@@ -2,7 +2,7 @@ import { Component, Type } from '@angular/core';
 import { ComponentFixture, fakeAsync, flush, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { InanduGridComponent, InanduGridPagingOptions, InanduGridRow, InanduGridRowSave, InanduGridNewRowValues, InanduGridSortCriterion, InanduGridPageState, InanduGridFilterState, InanduGridCellPaste, InanduGridCellRangeSelection, InanduGridLoadMoreEvent } from './inandu-grid.component';
+import { InanduGridComponent, InanduGridPagingOptions, InanduGridRow, InanduGridRowSave, InanduGridNewRowValues, InanduGridSortCriterion, InanduGridPageState, InanduGridFilterState, InanduGridCellPaste, InanduGridCellRangeSelection, InanduGridLoadMoreEvent, InanduGridViewportRange } from './inandu-grid.component';
 import { InanduColumnComponent, InanduColumnValidator, InanduColumnAsyncValidator } from '../inandu-column/inandu-column.component';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
@@ -255,6 +255,262 @@ describe('InanduGridComponent filter', () => {
 
     expect(rowValues()).toEqual(['Banana', 'Lemon']);
     expect(pageLabelText()).toBe('Page 1 of 1');
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" [extraRowFilter]="predicate" [serverSide]="serverSide" filter="true">
+      <inandu-column field="name" title="Name" filter="true"></inandu-column>
+      <inandu-column field="qty" title="Qty" type="number" filter="true"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class ExtraRowFilterHostComponent {
+  rows: InanduGridRow[] = [
+    { name: 'Apple', qty: 3 },
+    { name: 'Banana', qty: 8 },
+    { name: 'Cherry', qty: 15 },
+    { name: 'Date', qty: 20 },
+  ];
+  predicate: ((row: InanduGridRow) => boolean) | undefined = undefined;
+  serverSide = false;
+}
+
+describe('InanduGridComponent extraRowFilter', () => {
+  let fixture: ComponentFixture<ExtraRowFilterHostComponent>;
+  const names = () =>
+    fixture.debugElement.queryAll(By.css('tbody tr td:first-child')).map((c) => c.nativeElement.textContent.trim());
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(ExtraRowFilterHostComponent);
+    fixture.detectChanges();
+  });
+
+  it('no predicate → every row shows', () => {
+    expect(names()).toEqual(['Apple', 'Banana', 'Cherry', 'Date']);
+  });
+
+  it('applies the predicate on top of the built-in filters', () => {
+    fixture.componentInstance.predicate = (row) => (row['qty'] as number) >= 8;
+    fixture.detectChanges();
+    expect(names()).toEqual(['Banana', 'Cherry', 'Date']);
+
+    // free-text search still narrows within the predicate's result
+    const input = fixture.debugElement.query(By.css('.inandu-filter-input')).nativeElement as HTMLInputElement;
+    input.value = 'cherry';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(names()).toEqual(['Cherry']);
+  });
+
+  it('composes with a per-column filter as AND', () => {
+    // predicate: qty >= 8  ∧  column filter: qty <= 15
+    fixture.componentInstance.predicate = (row) => (row['qty'] as number) >= 8;
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.css('inandu-grid')).componentInstance as InanduGridComponent;
+    grid.updateColumnFilter('qty', { max: '15' });
+    fixture.detectChanges();
+    expect(names()).toEqual(['Banana', 'Cherry']);
+  });
+
+  it('a fresh closure re-filters', () => {
+    fixture.componentInstance.predicate = (row) => row['name'] === 'Apple';
+    fixture.detectChanges();
+    expect(names()).toEqual(['Apple']);
+
+    fixture.componentInstance.predicate = (row) => row['name'] === 'Banana';
+    fixture.detectChanges();
+    expect(names()).toEqual(['Banana']);
+  });
+
+  it('clearing the predicate (back to undefined) restores every row', () => {
+    const grid = fixture.debugElement.query(By.css('inandu-grid')).componentInstance as InanduGridComponent;
+
+    fixture.componentInstance.predicate = () => false;
+    fixture.detectChanges();
+    expect(grid.visibleRowCount()).toBe(0);
+
+    fixture.componentInstance.predicate = undefined;
+    fixture.detectChanges();
+    expect(names()).toEqual(['Apple', 'Banana', 'Cherry', 'Date']);
+  });
+
+  it('is ignored under serverSide (the server already filtered)', () => {
+    fixture.componentInstance.serverSide = true;
+    fixture.componentInstance.predicate = (row) => (row['qty'] as number) >= 100; // would hide all
+    fixture.detectChanges();
+    expect(names()).toEqual(['Apple', 'Banana', 'Cherry', 'Date']);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" [pinnedTopRows]="top" [pinnedBottomRows]="bottom" [virtualScroll]="virtual">
+      <inandu-column field="name" title="Name"></inandu-column>
+      <inandu-column field="qty" title="Qty" type="number"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class PinnedRowsHostComponent {
+  rows: InanduGridRow[] = [
+    { name: 'Apple', qty: 3 },
+    { name: 'Banana', qty: 8 },
+    { name: 'Cherry', qty: 15 },
+  ];
+  top: InanduGridRow[] = [];
+  bottom: InanduGridRow[] = [];
+  virtual = false;
+}
+
+describe('InanduGridComponent pinned rows', () => {
+  let fixture: ComponentFixture<PinnedRowsHostComponent>;
+  const textOf = (sel: string) =>
+    fixture.debugElement.queryAll(By.css(sel)).map((c) => c.nativeElement.textContent.trim());
+  const bodyNames = () => textOf('tbody:not(.inandu-pinned-rows) tr.inandu-row td[data-field="name"]');
+  const topNames = () => textOf('.inandu-pinned-top tr td[data-field="name"]');
+  const bottomNames = () => textOf('.inandu-pinned-bottom tr td[data-field="name"]');
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(PinnedRowsHostComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders nothing extra when both inputs are empty', () => {
+    expect(fixture.debugElement.queryAll(By.css('.inandu-pinned-rows')).length).toBe(0);
+    expect(bodyNames()).toEqual(['Apple', 'Banana', 'Cherry']);
+  });
+
+  it('renders pinned-top rows in their own tbody, above the body', () => {
+    fixture.componentInstance.top = [{ name: 'TOTAL', qty: 26 }];
+    fixture.detectChanges();
+    expect(topNames()).toEqual(['TOTAL']);
+    expect(textOf('.inandu-pinned-top tr td[data-field="qty"]')).toEqual(['26']);
+    // body is untouched — pinned rows are not part of data()
+    expect(bodyNames()).toEqual(['Apple', 'Banana', 'Cherry']);
+  });
+
+  it('renders pinned-bottom rows in their own tbody, below the body', () => {
+    fixture.componentInstance.bottom = [{ name: 'Σ', qty: 26 }];
+    fixture.detectChanges();
+    expect(bottomNames()).toEqual(['Σ']);
+    const bodies = fixture.debugElement.queryAll(By.css('table.xtable > tbody')).map((b) => b.nativeElement.className);
+    // the pinned-bottom tbody comes after the plain one
+    expect(bodies[bodies.length - 1]).toContain('inandu-pinned-bottom');
+  });
+
+  it('pinned rows never enter edit mode (no edit button, not affected by filters/paging)', () => {
+    fixture.componentInstance.top = [{ name: 'TOTAL', qty: 26 }];
+    fixture.detectChanges();
+    const topRow = fixture.debugElement.query(By.css('.inandu-pinned-top tr'));
+    expect(topRow.queryAll(By.css('button')).length).toBe(0);
+    expect(topRow.queryAll(By.css('input')).length).toBe(0);
+  });
+
+  it('is not rendered while virtualScroll is on', () => {
+    fixture.componentInstance.top = [{ name: 'TOTAL', qty: 26 }];
+    fixture.componentInstance.virtual = true;
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('.inandu-pinned-rows')).length).toBe(0);
+  });
+
+  it('runs pinned cells through formatValue (number column formatting applies)', () => {
+    fixture.componentInstance.bottom = [{ name: 'avg', qty: 8.6667 }];
+    fixture.detectChanges();
+    // same DecimalPipe default (1.0-3) the body rows get — proves formatValue is used
+    expect(textOf('.inandu-pinned-bottom tr td[data-field="qty"]')).toEqual(['8.667']);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" treeChildrenKey="children" [treeDefaultExpanded]="defaultExpanded" filter="true">
+      <inandu-column field="name" title="Name"></inandu-column>
+      <inandu-column field="qty" title="Qty" type="number" sortable="true"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class TreeHostComponent {
+  rows: InanduGridRow[] = [
+    {
+      name: 'Fruit', qty: 3, children: [
+        { name: 'Apple', qty: 1 },
+        { name: 'Banana', qty: 2, children: [{ name: 'Cavendish', qty: 9 }] },
+      ],
+    },
+    { name: 'Veg', qty: 0 },
+  ];
+  defaultExpanded: 'none' | 'all' | number = 'none';
+}
+
+describe('InanduGridComponent tree data (#3)', () => {
+  const make = (expanded: 'none' | 'all' | number = 'none') => {
+    const f = TestBed.createComponent(TreeHostComponent);
+    f.componentInstance.defaultExpanded = expanded;
+    f.detectChanges();
+    return f;
+  };
+  const namesIn = (f: ComponentFixture<TreeHostComponent>) =>
+    f.debugElement.queryAll(By.css('tbody tr.inandu-tree-row td[data-field="name"]'))
+      .map((c) => c.nativeElement.textContent.trim());
+  const gridIn = (f: ComponentFixture<TreeHostComponent>) =>
+    f.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+  it('collapsed by default: only the root rows, with a toggle on the expandable one', () => {
+    const f = make();
+    expect(namesIn(f)).toEqual(['Fruit', 'Veg']);
+    const rows = f.debugElement.queryAll(By.css('tr.inandu-tree-row'));
+    expect(rows[0].query(By.css('.inandu-tree-toggle'))).not.toBeNull();
+    expect(rows[1].query(By.css('.inandu-tree-toggle'))).toBeNull();
+    expect(rows[1].query(By.css('.inandu-tree-toggle-spacer'))).not.toBeNull();
+  });
+
+  it('clicking a toggle expands that node; children render indented below it', () => {
+    const f = make();
+    f.debugElement.query(By.css('tr.inandu-tree-row .inandu-tree-toggle')).nativeElement.click();
+    f.detectChanges();
+    expect(namesIn(f)).toEqual(['Fruit', 'Apple', 'Banana', 'Veg']);
+    const bananaCell = f.debugElement.queryAll(By.css('.inandu-tree-cell'))[2].nativeElement as HTMLElement;
+    expect(bananaCell.style.paddingInlineStart).toBe('16px');
+  });
+
+  it('treeDefaultExpanded="all" opens the whole tree on load', () => {
+    expect(namesIn(make('all'))).toEqual(['Fruit', 'Apple', 'Banana', 'Cavendish', 'Veg']);
+  });
+
+  it('treeDefaultExpanded=1 opens only the first level', () => {
+    expect(namesIn(make(1))).toEqual(['Fruit', 'Apple', 'Banana', 'Veg']);
+  });
+
+  it('a filter keeps a node when a descendant matches, and force-expands the path', () => {
+    const f = make();
+    const input = f.debugElement.query(By.css('.inandu-filter-input')).nativeElement as HTMLInputElement;
+    input.value = 'cavendish';
+    input.dispatchEvent(new Event('input'));
+    f.detectChanges();
+    expect(namesIn(f)).toEqual(['Fruit', 'Banana', 'Cavendish']);
+  });
+
+  it('the active sort orders each level of siblings', () => {
+    const f = make('all');
+    gridIn(f).setSort([{ field: 'qty', direction: 'desc' }]);
+    f.detectChanges();
+    expect(namesIn(f)).toEqual(['Fruit', 'Banana', 'Cavendish', 'Apple', 'Veg']);
+  });
+
+  it('exposes hasTreeData() and toggleTreeRow()/isTreeRowExpanded() on the public API', () => {
+    const f = make();
+    const g = gridIn(f);
+    expect(g.hasTreeData()).toBe(true);
+    const fruit = f.componentInstance.rows[0];
+    expect(g.isTreeRowExpanded(fruit)).toBe(false);
+    g.toggleTreeRow(fruit);
+    f.detectChanges();
+    expect(g.isTreeRowExpanded(fruit)).toBe(true);
+    expect(namesIn(f)).toEqual(['Fruit', 'Apple', 'Banana', 'Veg']);
   });
 });
 
@@ -693,6 +949,73 @@ describe('InanduGridComponent column resize', () => {
     grid.setColumnWidth('nope', 999);
     fixture.detectChanges();
     expect(colWidths(fixture)).toEqual(['100px', '60px']);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" [autosize]="autosize">
+      <inandu-column title="X" field="short" width="300"></inandu-column>
+      <inandu-column title="A very wide header that easily beats its cells" field="wide" width="60"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class AutosizeHostComponent {
+  rows: InanduGridRow[] = [
+    { short: 'a', wide: 'x' },
+    { short: 'b', wide: 'y' },
+  ];
+  autosize = true;
+}
+
+describe('InanduGridComponent autosize (#33)', () => {
+  const widthOf = (fixture: ComponentFixture<AutosizeHostComponent>, i: number) =>
+    parseFloat((fixture.debugElement.queryAll(By.css('colgroup col'))[i].nativeElement as HTMLElement).style.width);
+  const dblClickHandle = (fixture: ComponentFixture<AutosizeHostComponent>, i: number) => {
+    const handle = fixture.debugElement.queryAll(By.css('th .inandu-column-resize-handle'))[i].nativeElement as HTMLElement;
+    handle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    fixture.detectChanges();
+  };
+
+  it('double-clicking a handle shrinks an over-wide column toward its content', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.detectChanges();
+    expect(widthOf(fixture, 0)).toBe(300);
+    dblClickHandle(fixture, 0);
+    expect(widthOf(fixture, 0)).toBeLessThan(300);
+    expect(widthOf(fixture, 0)).toBeGreaterThanOrEqual(30); // never below MIN_COLUMN_WIDTH
+  });
+
+  it('grows a too-narrow column so its widest value (here the header) fits', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.detectChanges();
+    expect(widthOf(fixture, 1)).toBe(60);
+    dblClickHandle(fixture, 1);
+    expect(widthOf(fixture, 1)).toBeGreaterThan(60);
+  });
+
+  it('never grows past MAX_COLUMN_WIDTH', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.componentInstance.rows = [{ short: 'a', wide: 'Z'.repeat(4000) }];
+    fixture.detectChanges();
+    dblClickHandle(fixture, 1);
+    expect(widthOf(fixture, 1)).toBeLessThanOrEqual(600);
+  });
+
+  it('[autosize]="false" makes the double-click a no-op', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.componentInstance.autosize = false;
+    fixture.detectChanges();
+    dblClickHandle(fixture, 0);
+    expect(widthOf(fixture, 0)).toBe(300);
+  });
+
+  it('a resize="false" column has no handle to double-click (nothing to assert beyond that)', () => {
+    const fixture = TestBed.createComponent(AutosizeHostComponent);
+    fixture.detectChanges();
+    // both demo columns are resizable, so exactly two handles exist
+    expect(fixture.debugElement.queryAll(By.css('th .inandu-column-resize-handle')).length).toBe(2);
   });
 });
 
@@ -1730,6 +2053,36 @@ describe('InanduGridComponent column validation', () => {
 
     expect(fixture.componentInstance.created).toEqual([]);
     expect(addRowCells()[1].query(By.css('.inandu-field-error')).nativeElement.textContent.trim()).toBe('Must be even');
+  });
+
+  describe('validateCell() — the public per-cell check for a whole-grid view (#13)', () => {
+    const grid = () => fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    const col = (i: number) => grid().displayColumns()[i];
+
+    it('runs required / pattern / min-max / validator against an arbitrary value', () => {
+      const g = grid();
+      // code column: pattern ^[A-Z]{3}$
+      expect(g.validateCell(col(0), 'ABC')).toBeNull();
+      expect(g.validateCell(col(0), 'abc')).toBe('Invalid format');
+      // qty column: custom validator "must be even"
+      expect(g.validateCell(col(1), 4)).toBeNull();
+      expect(g.validateCell(col(1), 3)).toBe('Must be even');
+    });
+
+    it('a column with no rules always returns null', () => {
+      const g = grid();
+      // qty has a validator, but a plain string that never reaches it (not a number) still passes
+      // the built-in chain; and `code` with a valid pattern passes.
+      expect(g.validateCell(col(0), 'XYZ')).toBeNull();
+    });
+
+    it('passes the row to a cross-field validator', () => {
+      const g = grid();
+      const spy = jasmine.createSpy('validator').and.returnValue(null);
+      spyOn(col(1), 'validator').and.returnValue(spy);
+      g.validateCell(col(1), 2, { code: 'ABC', qty: 2 });
+      expect(spy).toHaveBeenCalledWith(2, { code: 'ABC', qty: 2 });
+    });
   });
 });
 
@@ -3964,6 +4317,96 @@ describe('InanduGridComponent cell range selection', () => {
 
 @Component({
   template: `
+    <inandu-grid [data]="rows" lang="en" cellRangeSelection="true" multiRange="true"
+      (cellRangeChange)="onRangeChange($event)" (cellRangesChange)="onRangesChange($event)">
+      <inandu-column title="A" field="a"></inandu-column>
+      <inandu-column title="B" field="b"></inandu-column>
+      <inandu-column title="C" field="c"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class MultiRangeHostComponent {
+  rows: InanduGridRow[] = [
+    { a: 'a0', b: 'b0', c: 'c0' },
+    { a: 'a1', b: 'b1', c: 'c1' },
+    { a: 'a2', b: 'b2', c: 'c2' },
+  ];
+  lastRange?: InanduGridCellRangeSelection;
+  allRanges: InanduGridCellRangeSelection[] = [];
+  onRangeChange(r: InanduGridCellRangeSelection | undefined): void { this.lastRange = r; }
+  onRangesChange(rs: InanduGridCellRangeSelection[]): void { this.allRanges = rs; }
+}
+
+describe('InanduGridComponent multi-range selection (#16)', () => {
+  let fixture: ComponentFixture<MultiRangeHostComponent>;
+  let grid: InanduGridComponent;
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(MultiRangeHostComponent);
+    fixture.detectChanges();
+    grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+  });
+
+  it('a Ctrl-click freezes the current rectangle and starts another — both stay selected', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ ctrlKey: true }), 2, 2);
+    fixture.detectChanges();
+
+    expect(grid.isCellInRange(0, 0)).toBeTrue(); // first, committed
+    expect(grid.isCellInRange(2, 2)).toBeTrue(); // second, active
+    expect(grid.isCellInRange(1, 1)).toBeFalse(); // gap between them — not selected
+    expect(fixture.componentInstance.allRanges.length).toBe(2);
+    expect(fixture.componentInstance.lastRange).toEqual({ rows: [grid.pagedData()[2]], fields: ['c'] });
+  });
+
+  it('Cmd-drag adds a second rectangle', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onCellRangeMouseEnter(0, 1);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ metaKey: true }), 2, 1);
+    grid.onCellRangeMouseEnter(2, 2);
+    fixture.detectChanges();
+
+    // first rect: (0,0)-(0,1); second: (2,1)-(2,2)
+    expect(grid.isCellInRange(0, 0)).toBeTrue();
+    expect(grid.isCellInRange(0, 1)).toBeTrue();
+    expect(grid.isCellInRange(2, 1)).toBeTrue();
+    expect(grid.isCellInRange(2, 2)).toBeTrue();
+    expect(grid.isCellInRange(1, 1)).toBeFalse();
+    expect(grid.cellRanges().length).toBe(2);
+  });
+
+  it('a plain click after a multi-selection resets to one rectangle', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ ctrlKey: true }), 2, 2);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 1, 1);
+    fixture.detectChanges();
+
+    expect(grid.isCellInRange(0, 0)).toBeFalse();
+    expect(grid.isCellInRange(2, 2)).toBeFalse();
+    expect(grid.isCellInRange(1, 1)).toBeTrue();
+    expect(fixture.componentInstance.allRanges.length).toBe(1);
+  });
+
+  it('clearCellRangeSelection() drops every rectangle and emits []', () => {
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onDocumentMouseUp();
+    grid.onCellRangeMouseDown(fakeMouseEvent({ ctrlKey: true }), 2, 2);
+    grid.clearCellRangeSelection();
+    fixture.detectChanges();
+
+    expect(grid.cellRanges()).toEqual([]);
+    expect(fixture.componentInstance.allRanges).toEqual([]);
+    expect(fixture.componentInstance.lastRange).toBeUndefined();
+  });
+});
+
+@Component({
+  template: `
     <inandu-grid [data]="rows" lang="en" virtualScroll="true" serverSide="true" infiniteScroll="true" [height]="200" [virtualRowHeight]="40" (loadMore)="onLoadMore($event)">
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
@@ -4057,6 +4500,105 @@ describe('InanduGridComponent infinite scroll', () => {
     grid.onVirtualScrolledIndexChange(16);
 
     expect(fixture.componentInstance.loadMoreEvents).toEqual([]);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" virtualScroll="true" serverSide="true" [totalItems]="total" [height]="200" [virtualRowHeight]="40" (viewportRangeChange)="onRange($event)">
+      <inandu-column title="Name" field="name"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class ViewportRangeHostComponent {
+  rows: InanduGridRow[] = Array.from({ length: 10 }, (_, i) => ({ name: `Row ${i}` }));
+  total = 1000;
+  ranges: InanduGridViewportRange[] = [];
+
+  onRange(event: InanduGridViewportRange): void {
+    this.ranges.push(event);
+  }
+}
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" virtualScroll="true" [totalItems]="1000" [height]="200" [virtualRowHeight]="40" (viewportRangeChange)="onRange($event)">
+      <inandu-column title="Name" field="name"></inandu-column>
+    </inandu-grid>
+  `,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class ViewportRangeNoServerHostComponent {
+  rows: InanduGridRow[] = Array.from({ length: 10 }, (_, i) => ({ name: `Row ${i}` }));
+  ranges: InanduGridViewportRange[] = [];
+
+  onRange(event: InanduGridViewportRange): void {
+    this.ranges.push(event);
+  }
+}
+
+describe('InanduGridComponent viewport range (#21)', () => {
+  it('emits the initial visible window on first render', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.detectChanges();
+
+    // 200px viewport / 40px rows = 5 visible, starting at 0.
+    expect(fixture.componentInstance.ranges).toEqual([{ startIndex: 0, endIndex: 5 }]);
+  });
+
+  it('emits a new window as the viewport scrolls', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ranges).toEqual([
+      { startIndex: 0, endIndex: 5 },
+      { startIndex: 10, endIndex: 15 },
+    ]);
+  });
+
+  it('does not re-emit an unchanged window', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ranges).toEqual([
+      { startIndex: 0, endIndex: 5 },
+      { startIndex: 10, endIndex: 15 },
+    ]);
+  });
+
+  it('clamps endIndex to totalItems()', () => {
+    const fixture = TestBed.createComponent(ViewportRangeHostComponent);
+    fixture.componentInstance.total = 12;
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    const ranges = fixture.componentInstance.ranges;
+    expect(ranges[ranges.length - 1]).toEqual({ startIndex: 10, endIndex: 12 });
+  });
+
+  it('never emits without serverSide, even with virtualScroll on', () => {
+    const fixture = TestBed.createComponent(ViewportRangeNoServerHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.onVirtualScrolledIndexChange(10);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ranges).toEqual([]);
   });
 });
 

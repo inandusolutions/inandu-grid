@@ -57,6 +57,39 @@ export class AppComponent {
 
   public gridData: InanduGridRow[] = [];
 
+  /** #32 — rows pinned to the top/bottom of the scroll body. Computed once from `gridData` in
+   *  ngOnInit; not part of `data()`, so they ignore sort/filter/paging. */
+  public pinnedTopCustomers: InanduGridRow[] = [];
+  public pinnedBottomCustomers: InanduGridRow[] = [];
+
+  /** #3 — nested-children hierarchy for the tree-data demo. */
+  public readonly treeData: InanduGridRow[] = [
+    {
+      name: 'Electrónica', units: 0, active: true, children: [
+        {
+          name: 'Computación', units: 0, active: true, children: [
+            { name: 'Notebooks', units: 42, active: true },
+            { name: 'Monitores', units: 65, active: true },
+            { name: 'Teclados', units: 120, active: false },
+          ],
+        },
+        {
+          name: 'Audio', units: 0, active: true, children: [
+            { name: 'Auriculares', units: 60, active: true },
+            { name: 'Parlantes', units: 25, active: false },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'Hogar', units: 0, active: true, children: [
+        { name: 'Iluminación', units: 200, active: true },
+        { name: 'Mobiliario', units: 15, active: true, children: [{ name: 'Sillas', units: 8, active: true }] },
+      ],
+    },
+    { name: 'Sin categoría', units: 3, active: false },
+  ];
+
   /** Kept at defaults — `lang="es-AR"` on the grid itself now supplies "Página X de Y" automatically. */
   readonly customersPaging: InanduGridPagingOptions = {
     pageSize: 10,
@@ -292,5 +325,17 @@ export class AppComponent {
       ...buildAdditionalCustomers(90),
     ];
 
+    const totalVentas = this.gridData.reduce((sum, r) => sum + (Number(r['Ventas']) || 0), 0);
+    const topAccount = this.gridData.reduce((best, r) =>
+      (Number(r['Ventas']) || 0) > (Number(best['Ventas']) || 0) ? r : best, this.gridData[0]);
+    this.pinnedTopCustomers = [
+      { ...topAccount, Nombre: `★ ${topAccount['Nombre']}`, ContactTitle: 'Cuenta destacada' },
+    ];
+    this.pinnedBottomCustomers = [
+      {
+        Id: '', Nombre: `TOTAL · ${this.gridData.length} clientes`, Apellido: '',
+        ContactTitle: '', City: '', Activo: null, FechaAlta: null, Ventas: totalVentas,
+      },
+    ];
   }
 }

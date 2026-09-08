@@ -53,7 +53,7 @@
 
 <main class="demo">
 
-  <span>Empieza el componente grid con 4 columnas</span>
+  <span>Empieza el componente grid con 4 columnas — probá <strong>doble clic en el borde derecho de una cabecera</strong> (el "handle" de resize) para ajustar esa columna al contenido (#33, <code>autosize</code>)</span>
 
   <p>{{ selectedCustomers().length }} cliente(s) seleccionado(s)</p>
   <inandu-grid id="customers-grid" width="900" height="650" lang="es-AR" filter="true" selectable="true" exportable="true"
@@ -88,6 +88,34 @@
   </inandu-grid>
 
   <span>Termina el componente grid solo para alta, edición y borrado</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid con filas fijas (#32) — <code>[pinnedTopRows]</code> fija una fila "cuenta destacada" arriba y <code>[pinnedBottomRows]</code> un total abajo; ambas quedan visibles al hacer scroll y no las tocan orden/filtro/paginado (no son parte de <code>data()</code>)</span>
+
+  <inandu-grid id="pinned-rows-grid" width="900" height="300" lang="es-AR" filter="true"
+    [data]="gridData" [pinnedTopRows]="pinnedTopCustomers" [pinnedBottomRows]="pinnedBottomCustomers">
+    <inandu-column title="Id" field="Id" width="90"></inandu-column>
+    <inandu-column title="Cliente" field="Nombre" width="260"></inandu-column>
+    <inandu-column title="Contacto" field="ContactTitle" width="180"></inandu-column>
+    <inandu-column title="Ciudad" field="City" width="140"></inandu-column>
+    <inandu-column title="Ventas" field="Ventas" type="number" format="1.2-2" width="130"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con filas fijas</span>
+
+  <br /><br /><br />
+
+  <span>Empieza el componente grid con datos en árbol (#3) — <code>treeChildrenKey="children"</code>: cada fila tiene un array anidado <code>children</code>. Click en el ▸ para expandir; el filtro deja las ramas cuyo nodo o descendiente matchea (y abre el camino); ordenar por "Unidades" ordena cada nivel de hermanos.</span>
+
+  <inandu-grid id="tree-grid" width="700" height="360" lang="es-AR" filter="true"
+    [data]="treeData" treeChildrenKey="children" treeDefaultExpanded="1">
+    <inandu-column title="Categoría" field="name" width="320"></inandu-column>
+    <inandu-column title="Unidades" field="units" type="number" width="130" sortable="true"></inandu-column>
+    <inandu-column title="Activo" field="active" type="boolean" format="Sí|No" width="100"></inandu-column>
+  </inandu-grid>
+
+  <span>Termina el componente grid con datos en árbol</span>
 
   <br /><br /><br />
 
