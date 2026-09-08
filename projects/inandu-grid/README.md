@@ -61,6 +61,10 @@ supported — via `serverSide` + outputs, wired to any backend or to the .NET/EF
 [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions). Fuller comparison table in the
 [repo README](https://github.com/inandusolutions/inandu-grid#why-inandu-grid).
 
+[![row grouping in the inandu-grid demo](https://github.com/inandusolutions/inandu-grid/raw/main/docs/gifs/grouping.gif)](https://inandusolutions.github.io/inandu-grid/)
+
+<sub>Grouping by a column — [try every feature in the demo](https://inandusolutions.github.io/inandu-grid/).</sub>
+
 ## Features
 
 | Area | How you turn it on |

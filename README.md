@@ -59,6 +59,19 @@ AG Grid Enterprise is the right tool. If you want a solid, free, lightweight gri
 
 <sub>Orientation, not a scorecard — check each project's own docs for the current details.</sub>
 
+## See it
+
+Row grouping, inline editing and virtual scroll — the parts other grids gate behind an
+enterprise licence — running in the [demo](https://inandusolutions.github.io/inandu-grid/).
+
+| Group by a column | Edit a cell in place |
+| --- | --- |
+| [![grouping](docs/gifs/grouping.gif)](https://inandusolutions.github.io/inandu-grid/) | [![inline editing](docs/gifs/inline-edit.gif)](https://inandusolutions.github.io/inandu-grid/) |
+
+[![virtual scroll over 5,000 rows](docs/gifs/virtual-scroll.gif)](https://inandusolutions.github.io/inandu-grid/)
+
+<sub>More: [tree data](docs/gifs/tree-data.gif) · [multi-column sort](docs/gifs/multi-sort.gif) · [row selection](docs/gifs/row-selection.gif) — all in the [demo](https://inandusolutions.github.io/inandu-grid/).</sub>
+
 ## What's in this repo
 
 This is an Angular CLI **multi-project workspace**:
