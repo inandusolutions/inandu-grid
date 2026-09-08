@@ -8,9 +8,8 @@
 // Converts with gifski (preferred), then ffmpeg on PATH, then Playwright's bundled ffmpeg.
 
 import { readdir, stat, mkdir } from 'node:fs/promises';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
@@ -32,25 +31,8 @@ const onPath = (cmd) => {
   catch { return null; }
 };
 
-/** Playwright always installs an ffmpeg next to the browsers; find it. */
-const bundledFfmpeg = () => {
-  const base = process.env.PLAYWRIGHT_BROWSERS_PATH
-    || (process.platform === 'win32' ? join(homedir(), 'AppData', 'Local', 'ms-playwright')
-      : process.platform === 'darwin' ? join(homedir(), 'Library', 'Caches', 'ms-playwright')
-      : join(homedir(), '.cache', 'ms-playwright'));
-  try {
-    const dir = readdirSync(base).find((d) => d.startsWith('ffmpeg-'));
-    if (!dir) return null;
-    for (const name of ['ffmpeg-linux', 'ffmpeg-win64.exe', 'ffmpeg-mac', 'ffmpeg-mac-arm64', 'ffmpeg.exe', 'ffmpeg']) {
-      const p = join(base, dir, name);
-      if (existsSync(p)) return p;
-    }
-  } catch { /* no cache */ }
-  return null;
-};
-
 const gifski = onPath('gifski');
-const ffmpeg = gifski ? null : (onPath('ffmpeg') || bundledFfmpeg());
+const ffmpeg = gifski ? null : onPath('ffmpeg');
 if (!gifski && !ffmpeg) {
   console.error(
     'Need gifski or ffmpeg. Install one:\n' +

@@ -114,12 +114,12 @@ test('tree-data', async ({ page }) => {
   const grid = page.locator('inandu-grid#tree-grid');
   await grid.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
-  const toggles = grid.locator(
-    'tbody tr.inandu-row .inandu-tree-toggle, tbody tr.inandu-row button[aria-expanded], tbody tr.inandu-row td:first-child [role="button"]',
-  );
+  // Icon-only <button class="inandu-tree-toggle">; force past the icon-font actionability wait
+  // so a slow webfont on CI doesn't stall the recording.
+  const toggles = grid.locator('tbody tr.inandu-tree-row button.inandu-tree-toggle');
   const n = Math.min(await toggles.count(), 3);
   for (let i = 0; i < n; i++) {
-    await toggles.nth(i).click();
+    await toggles.nth(i).click({ force: true, timeout: 4000 }).catch(() => {});
     await page.waitForTimeout(850);
   }
   await page.waitForTimeout(800);

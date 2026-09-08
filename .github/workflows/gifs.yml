@@ -26,6 +26,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Record scenes (promo project)
         run: npm run gifs:record
         # A wrong selector fails only its own scene — convert whatever recorded.
@@ -40,6 +43,7 @@ jobs:
           name: demo-gifs
           path: docs/gifs/*.gif
           if-no-files-found: error
+          overwrite: true
 
       - name: Upload raw recordings
         if: always()
@@ -48,3 +52,4 @@ jobs:
           name: raw-recordings
           path: test-results/**/video.webm
           if-no-files-found: ignore
+          overwrite: true
