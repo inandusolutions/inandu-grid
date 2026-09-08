@@ -56,8 +56,9 @@ else — grouping, virtual scroll, inline editing, export, i18n, theming — is 
 
 Row grouping, Excel export, cell-range selection and aggregation are **all free here** —
 no enterprise tier. Small dependency footprint, Angular-native (signals, standalone). Not
-a kitchen sink: no pivoting, no integrated charts, no built-in server-side row model
-(`serverSide` + outputs let you wire your own). Fuller comparison table in the
+a kitchen sink: no pivoting, no integrated charts. Server-side paging/sorting/filtering **is**
+supported — via `serverSide` + outputs, wired to any backend or to the .NET/EF Core companion
+[`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions). Fuller comparison table in the
 [repo README](https://github.com/inandusolutions/inandu-grid#why-inandu-grid).
 
 ## Features
@@ -68,7 +69,7 @@ a kitchen sink: no pivoting, no integrated charts, no built-in server-side row m
 | **Free-text search** | `<inandu-grid filter="true">` — one box, matches every column's formatted value |
 | **Per-column filters** | `<inandu-column filter="yes">` — type-aware popup (text / number range / date range / boolean select), combined with AND |
 | **Pagination** | `[paging]="{ pageSize: 25 }"` — an `InanduGridPagingOptions` object; off entirely when unbound |
-| **Server-side data** | `serverSide` + `[totalItems]` + `[loading]` / `[error]` — the grid stops sorting/filtering/paging locally and emits `(sortChange)` / `(pageChange)` / `(filterChange)` for you to fetch each page |
+| **Server-side data** | `serverSide` + `[totalItems]` + `[loading]` / `[error]` — the grid stops sorting/filtering/paging locally and emits `(sortChange)` / `(pageChange)` / `(filterChange)` for you to fetch each page. .NET backend? [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) turns those requests into one paged SQL query. |
 | **Row virtualization** | `virtualScroll` — for large ungrouped datasets, via `@angular/cdk` virtual scroll |
 | **Infinite scroll** | `infiniteScroll` (+ `infiniteScrollThreshold`) — emits `(loadMore)` as the user nears the end |
 | **Grouping** | `<inandu-column groupable="true">` — drag a header onto the drop zone |
