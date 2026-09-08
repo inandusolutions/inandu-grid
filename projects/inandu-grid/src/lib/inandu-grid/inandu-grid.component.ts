@@ -1838,7 +1838,11 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   toggleTreeRow(row: T): void {
     this.expandedTreeRows.update(open => {
       const next = new Set(open);
-      next.has(row) ? next.delete(row) : next.add(row);
+      if (next.has(row)) {
+        next.delete(row);
+      } else {
+        next.add(row);
+      }
       return next;
     });
   }
