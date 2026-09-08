@@ -10,14 +10,14 @@ import { test } from '@playwright/test';
  * find its target still records the grid rather than failing the run.
  */
 
-const READY = '#customers-grid tbody tr.inandu-row';
+const READY = 'inandu-grid#customers-grid tbody tr.inandu-row';
 
 test('search', async ({ page }) => {
   await page.goto('/');
   await page.locator(READY).first().waitFor();
   await page.waitForTimeout(600);
 
-  const box = page.locator('#customers-grid').getByPlaceholder('Buscar');
+  const box = page.locator('inandu-grid#customers-grid').getByPlaceholder('Buscar');
   await box.click();
   for (const ch of 'london') {
     await box.press(ch);
@@ -36,7 +36,7 @@ test('multi-sort', async ({ page }) => {
   await page.locator(READY).first().waitFor();
   await page.waitForTimeout(600);
 
-  const grid = page.locator('#customers-grid');
+  const grid = page.locator('inandu-grid#customers-grid');
   await grid.getByRole('button', { name: 'Ordenar por Ciudad' }).click();
   await page.waitForTimeout(850);
   await grid.getByRole('button', { name: 'Ordenar por Ciudad' }).click();
@@ -50,7 +50,7 @@ test('grouping', async ({ page }) => {
   await page.locator(READY).first().waitFor();
   await page.waitForTimeout(600);
 
-  const grid = page.locator('#customers-grid');
+  const grid = page.locator('inandu-grid#customers-grid');
   const header = grid.locator('thead th', { hasText: 'Puesto' });
   const zone = grid.getByText(/Arrastr\w+ el encabezado/i);
   const h = await header.boundingBox();
@@ -76,7 +76,7 @@ test('row-selection', async ({ page }) => {
   await page.locator(READY).first().waitFor();
   await page.waitForTimeout(600);
 
-  const grid = page.locator('#customers-grid');
+  const grid = page.locator('inandu-grid#customers-grid');
   const rows = grid.locator('tbody tr.inandu-row');
   for (const i of [0, 2, 4]) {
     await rows.nth(i).locator('input[type="checkbox"]').check();
@@ -92,7 +92,7 @@ test('inline-edit', async ({ page }) => {
   await page.locator(READY).first().waitFor();
   await page.waitForTimeout(600);
 
-  const grid = page.locator('#edit-demo-grid');
+  const grid = page.locator('inandu-grid#edit-demo-grid');
   await grid.scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
   const row = grid.locator('tbody tr.inandu-row').first();
@@ -111,7 +111,7 @@ test('tree-data', async ({ page }) => {
   await page.locator(READY).first().waitFor();
   await page.waitForTimeout(600);
 
-  const grid = page.locator('#tree-grid');
+  const grid = page.locator('inandu-grid#tree-grid');
   await grid.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
   const toggles = grid.locator(
@@ -130,7 +130,7 @@ test('virtual-scroll', async ({ page }) => {
   await page.locator(READY).first().waitFor();
   await page.waitForTimeout(600);
 
-  const grid = page.locator('#virtual-scroll-grid');
+  const grid = page.locator('inandu-grid#virtual-scroll-grid');
   await grid.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
   const b = await grid.boundingBox();
