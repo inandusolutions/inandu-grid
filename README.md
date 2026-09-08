@@ -27,6 +27,10 @@ to the big commercial Angular grids.
 - **📘 User manual:** <https://inandusolutions.github.io/inandu-grid/manual.html> — every feature with examples + a full API reference (English). Source: [`docs/manual.html`](docs/manual.html).
 - **API summary:** [`projects/inandu-grid/README.md`](projects/inandu-grid/README.md)
 - **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)*
+- **Server-side data (.NET):** [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) —
+  the official .NET / EF Core companion. Put `<inandu-grid serverSide>` against your API and a single
+  `ToInanduGrid()` call turns each sort / filter / page request into one paged SQL query
+  (paging, sorting, filtering, grouping, aggregates, keyset cursors). MIT, on NuGet.
 
 ## Why inandu-grid?
 
@@ -36,8 +40,11 @@ licence**. inandu-grid is **MIT in full**: every feature on this page is free. I
 a **small dependency footprint** and a modern **Angular-native** design — standalone
 components, signal inputs/outputs, no `NgModule`s.
 
-It is deliberately *not* a kitchen sink: no pivoting, no integrated charts, no built-in
-server-side row model (you wire your own via `serverSide` + outputs). If you need those,
+It is deliberately *not* a kitchen sink: no pivoting and no integrated charts. Server-side
+paging, sorting and filtering **are** supported — put the grid in `serverSide` mode and wire it
+to any backend, or drop in the official .NET companion
+[`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions), which
+implements the server half for ASP.NET Core / EF Core. If you need pivoting or integrated charts,
 AG Grid Enterprise is the right tool. If you want a solid, free, lightweight grid, this is it.
 
 | | inandu-grid | AG Grid | PrimeNG Table |
@@ -48,7 +55,7 @@ AG Grid Enterprise is the right tool. If you want a solid, free, lightweight gri
 | Row grouping & aggregates | ✅ free | Enterprise | ✅ |
 | Excel / CSV / PDF export | ✅ free (`.xls` + CSV + PDF) | CSV free; Excel is Enterprise | CSV free |
 | Pivoting, integrated charts | ❌ | Enterprise | ❌ |
-| Server-side row model | bring-your-own (`serverSide`) | Enterprise | bring-your-own |
+| Server-side paging / sorting / filtering | ✅ `serverSide` mode + [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) (.NET / EF Core companion) | Enterprise | bring-your-own |
 
 <sub>Orientation, not a scorecard — check each project's own docs for the current details.</sub>
 
