@@ -21,8 +21,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test grid-app",
     "test:lib": "ng test inandu-grid",
-    "e2e": "playwright test",
-    "lint": "ng lint"
+    "e2e": "playwright test --project=chromium",
+    "lint": "ng lint",
+    "gifs:record": "playwright test --project=promo",
+    "gifs": "npm run gifs:record && node scripts/make-gifs.mjs"
   },
   "private": true,
   "dependencies": {
