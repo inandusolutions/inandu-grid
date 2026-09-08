@@ -60,7 +60,7 @@ jobs:
         # playwright.config.ts's webServer builds the library and serves the demo on :4202.
         run: npm run e2e
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
