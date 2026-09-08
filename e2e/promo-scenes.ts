@@ -136,11 +136,11 @@ test('virtual-scroll', async ({ page }) => {
   const b = await grid.boundingBox();
   if (!b) throw new Error('virtual-scroll: grid not found');
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-  for (let i = 0; i < 28; i++) {
-    await page.mouse.wheel(0, 420);
-    await page.waitForTimeout(85);
+  for (let i = 0; i < 12; i++) {
+    await page.mouse.wheel(0, 500);
+    await page.waitForTimeout(110);
   }
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(600);
   await grid.getByRole('button', { name: 'Ordenar por Precio' }).click();
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1000);
 });
