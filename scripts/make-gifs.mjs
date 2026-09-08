@@ -17,8 +17,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const resultsDir = join(root, 'test-results');
 const outDir = join(root, 'docs', 'gifs');
 
-const FPS = 16;
-const WIDTH = 1000;           // scenes record at 1280; downscale for size
+const FPS = 13;
+const WIDTH = 900;           // scenes record at 1280; downscale for size
 const SOFT_LIMIT_KB = 3072;   // GitHub/npm render GIFs inline up to a few MB
 
 if (!existsSync(resultsDir)) {
