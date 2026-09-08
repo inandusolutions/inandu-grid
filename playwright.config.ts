@@ -28,6 +28,17 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Screen recordings for docs/gifs. Not part of `npm run e2e` (--project=chromium); .ts (not
+    // .spec.ts) also keeps promo-scenes out of the default match. See scripts/make-gifs.mjs.
+    {
+      name: 'promo',
+      testMatch: '**/promo-scenes.ts',
+      retries: 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        video: { mode: 'on', size: { width: 1280, height: 720 } },
+      },
+    },
   ],
   webServer: {
     // Builds the library first — the demo resolves the `@inandu-solutions/grid-angular` import from
