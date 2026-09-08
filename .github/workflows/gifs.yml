@@ -1,0 +1,50 @@
+name: Demo GIFs
+
+# Records the demo scenes and converts them to docs/gifs/*.gif on Linux, where the
+# Playwright runner works (it currently fails to collect specs on some Windows setups).
+# Manual only. Download the "demo-gifs" artifact and commit the files under docs/gifs/.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gifs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Record scenes (promo project)
+        run: npm run gifs:record
+        # A wrong selector fails only its own scene — convert whatever recorded.
+        continue-on-error: true
+
+      - name: Convert recordings to GIF
+        run: node scripts/make-gifs.mjs
+
+      - name: Upload GIFs
+        uses: actions/upload-artifact@v7
+        with:
+          name: demo-gifs
+          path: docs/gifs/*.gif
+          if-no-files-found: error
+
+      - name: Upload raw recordings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: raw-recordings
+          path: test-results/**/video.webm
+          if-no-files-found: ignore
