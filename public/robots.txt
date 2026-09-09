@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://inandusolutions.github.io/inandu-grid/sitemap.xml
