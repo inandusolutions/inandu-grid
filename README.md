@@ -20,8 +20,11 @@ to the big commercial Angular grids.
 
 - **Package:** [`@inandu-solutions/grid-angular`](https://www.npmjs.com/package/@inandu-solutions/grid-angular) (MIT).
   The bare `@inandu-solutions/grid` name is intentionally reserved for a future framework-neutral
-  umbrella; a React port would ship as `@inandu-solutions/grid-react`, sharing this repo's
-  framework-agnostic core (`projects/inandu-grid/src/lib/core/`).
+  umbrella.
+- **React version:** [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) —
+  early work in progress, will ship as `@inandu-solutions/grid-react` (MIT). Its core (sorting,
+  filtering, aggregation, export, i18n) is ported by hand from this repo's
+  [`projects/inandu-grid/src/lib/core/`](projects/inandu-grid/src/lib/core/).
 - **▶️ Live demo:** <https://inandusolutions.github.io/inandu-grid/> — the demo app, try every feature in the browser.
 - **⚡ StackBlitz:** [a minimal editable example](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz) — the grid in a bare Angular app; edit `src/app/app.component.ts` and it updates live ([source](examples/stackblitz)).
 - **📘 User manual:** <https://inandusolutions.github.io/inandu-grid/manual.html> — every feature with examples + a full API reference (English). Source: [`docs/manual.html`](docs/manual.html).
