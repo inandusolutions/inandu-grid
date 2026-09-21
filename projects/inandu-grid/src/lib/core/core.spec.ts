@@ -4,6 +4,7 @@
  * TestBed / DOM) rather than only indirectly through the component.
  */
 import {
+  escapeAttributeSelectorValue,
   escapeCsvValue,
   escapeMarkup,
   parseDraftValue,
@@ -39,6 +40,35 @@ function fakeColumn(overrides: {
     aggregate: () => overrides.aggregate ?? '',
   };
 }
+
+describe('pure: escapeAttributeSelectorValue', () => {
+  it('leaves a plain value untouched', () => {
+    expect(escapeAttributeSelectorValue('hello')).toBe('hello');
+  });
+
+  it('escapes a bare quote', () => {
+    expect(escapeAttributeSelectorValue('say "hi"')).toBe('say \\"hi\\"');
+  });
+
+  it('round-trips through a real querySelector, even for a value containing a backslash-quote pair', () => {
+    // Security regression (js/incomplete-sanitization): escaping only quotes lets a backslash
+    // right before one smuggle a bare, string-terminating quote through — e.g. escaping only
+    // quotes turns `a\"b` into `a\\"b`, which a CSS parser reads as `a\` (an escaped backslash)
+    // followed by a string-ending `"`, leaving `b"]` dangling outside the selector's string.
+    const tricky = 'a\\"b';
+    const el = document.createElement('div');
+    el.setAttribute('data-field', tricky);
+    document.body.appendChild(el);
+    try {
+      const escaped = escapeAttributeSelectorValue(tricky);
+      const matches = document.querySelectorAll(`div[data-field="${escaped}"]`);
+      expect(matches.length).toBe(1);
+      expect(matches[0]).toBe(el);
+    } finally {
+      el.remove();
+    }
+  });
+});
 
 describe('pure: escapeCsvValue', () => {
   it('leaves a plain value untouched', () => {

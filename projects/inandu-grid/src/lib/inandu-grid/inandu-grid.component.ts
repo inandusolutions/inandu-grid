@@ -22,6 +22,7 @@ import {
   compareCellValues,
   computeGroupAggregates,
   downloadBlob,
+  escapeAttributeSelectorValue,
   escapeCsvValue,
   escapeMarkup,
   collectTreeRows,
@@ -2377,7 +2378,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   private measureColumnContentWidth(column: InanduColumnComponent): number {
     const host = this.elementRef.nativeElement;
     const field = column.field();
-    const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(field) : field.replace(/"/g, '\\"');
+    const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(field) : escapeAttributeSelectorValue(field);
     const cells = Array.from(host.querySelectorAll<HTMLElement>(`td[data-field="${escaped}"]`));
     const headerCell = host.querySelector<HTMLElement>(`th[data-field="${escaped}"]`);
     const sample = cells[0] ?? headerCell ?? host;
