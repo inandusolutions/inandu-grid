@@ -2,6 +2,9 @@
  * Framework-agnostic core of the grid — pure logic with zero `@angular/*` dependency, reusable
  * as-is by a non-Angular port. The Angular components import from here and re-export whatever is
  * part of the library's public API.
+ *
+ * Ported by hand into https://github.com/inandusolutions/inandu-grid-react (`src/core/`) — keep
+ * the two in sync when changing anything in this folder.
  */
 export type {
   InanduColumnType,

@@ -20,13 +20,19 @@ to the big commercial Angular grids.
 
 - **Package:** [`@inandu-solutions/grid-angular`](https://www.npmjs.com/package/@inandu-solutions/grid-angular) (MIT).
   The bare `@inandu-solutions/grid` name is intentionally reserved for a future framework-neutral
-  umbrella; a React port would ship as `@inandu-solutions/grid-react`, sharing this repo's
-  framework-agnostic core (`projects/inandu-grid/src/lib/core/`).
+  umbrella.
+- **React version:** [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) —
+  feature-complete with this package, will ship as `@inandu-solutions/grid-react` (MIT; npm
+  publishing is deferred until the API stabilizes). Its core (sorting, filtering, aggregation,
+  export, i18n) is ported by hand from this repo's
+  [`projects/inandu-grid/src/lib/core/`](projects/inandu-grid/src/lib/core/). Has its own
+  [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-react/tree/main/examples/stackblitz).
 - **▶️ Live demo:** <https://inandusolutions.github.io/inandu-grid/> — the demo app, try every feature in the browser.
 - **⚡ StackBlitz:** [a minimal editable example](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz) — the grid in a bare Angular app; edit `src/app/app.component.ts` and it updates live ([source](examples/stackblitz)).
 - **📘 User manual:** <https://inandusolutions.github.io/inandu-grid/manual.html> — every feature with examples + a full API reference (English). Source: [`docs/manual.html`](docs/manual.html).
 - **API summary:** [`projects/inandu-grid/README.md`](projects/inandu-grid/README.md)
-- **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)*
+- **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)* — a React
+  port, `@inandu-solutions/grid-pro-react`, is also in progress (private).
 - **Server-side data (.NET):** [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) —
   the official .NET / EF Core companion. Put `<inandu-grid serverSide>` against your API and a single
   `ToInanduGrid()` call turns each sort / filter / page request into one paged SQL query
