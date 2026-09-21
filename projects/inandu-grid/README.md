@@ -17,9 +17,10 @@ alternative to the big commercial Angular grids.
 [![inandu-grid — sorting, filtering, grouping, sticky columns, export toolbar](https://raw.githubusercontent.com/inandusolutions/inandu-grid/main/docs/screenshot.png)](https://inandusolutions.github.io/inandu-grid/)
 
 > This is the **core** (MIT) package. Commercial add-ons ship separately as
-> [`@inandu-solutions/grid-pro`](https://github.com/inandusolutions/grid-pro). The bare `@inandu-solutions/grid`
-> name is reserved for a future framework-neutral umbrella (a React port would be
-> `@inandu-solutions/grid-react`).
+> `@inandu-solutions/grid-pro` *(proprietary, private)*. The bare `@inandu-solutions/grid`
+> name is reserved for a future framework-neutral umbrella. There's also a React port:
+> [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react), ships as
+> `@inandu-solutions/grid-react`.
 
 ▶️ **Live demo:** <https://inandusolutions.github.io/inandu-grid/>
 &nbsp;·&nbsp; ⚡ **StackBlitz:** [editable example](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz)
