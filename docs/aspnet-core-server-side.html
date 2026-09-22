@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Angular + ASP.NET Core server-side grid tutorial</title>
+<meta name="description" content="A complete walkthrough wiring inandu-grid's serverSide mode to an ASP.NET Core / EF Core API with Inandu.Grid.Extensions — one paged SQL query per sort/filter/page change, no client-side data fetching library required.">
+<meta property="og:title" content="Angular + ASP.NET Core server-side grid tutorial">
+<meta property="og:description" content="Wire inandu-grid's serverSide mode to an ASP.NET Core / EF Core API in a few lines, with Inandu.Grid.Extensions turning each request into one paged SQL query.">
+<meta property="og:type" content="article">
+<style>
+  :root {
+    --paper: #fbfaf7; --surface: #f4f2ec; --surface-2: #efece3; --ink: #1b1f24; --muted: #5c6470;
+    --accent: #0e7c74; --accent-ink: #0a5952; --accent-soft: #e2efed; --rule: #e4e1d9;
+    --code-bg: #f0ede5; --warn: #a9541a; --warn-soft: #f6ece1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #15181b; --surface: #1d2126; --surface-2: #232830; --ink: #e7e4dd; --muted: #9aa1ab;
+      --accent: #4fb3aa; --accent-ink: #7fccc4; --accent-soft: #1f2e2c; --rule: #2c3237;
+      --code-bg: #23282d; --warn: #d69b63; --warn-soft: #2b2419;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .layout { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  .crumb { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .crumb a { color: var(--accent-ink); }
+  h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.15; letter-spacing: -0.015em; margin: 0 0 0.4rem; }
+  .lead { font-size: 1.1rem; color: var(--muted); margin: 0 0 2.5rem; max-width: 62ch; }
+  h2 { font-size: 1.4rem; margin: 3rem 0 1rem; padding-bottom: 0.35rem; border-bottom: 2px solid var(--accent); letter-spacing: -0.01em; }
+  h3 { font-size: 1.05rem; margin: 1.8rem 0 0.6rem; }
+  p { margin: 0 0 1rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin: 0.3rem 0; }
+  a { color: var(--accent-ink); text-underline-offset: 2px; }
+  code { font-family: "Consolas", "SFMono-Regular", Menlo, monospace; font-size: 0.86em; background: var(--accent-soft); color: var(--ink); padding: 0.1em 0.38em; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px; padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1.2rem; font-size: 0.84rem; line-height: 1.6; }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+  .tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--rule); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 480px; }
+  th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th { background: var(--surface); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  tbody tr:last-child td { border-bottom: none; }
+  .note, .warn { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; padding: 0.85rem 1.1rem; margin: 0 0 1.2rem; font-size: 0.94rem; }
+  .note > :last-child, .warn > :last-child { margin-bottom: 0; }
+  .warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note .label, .warn .label { font-family: "Consolas", monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); display: block; margin-bottom: 0.35rem; }
+  .warn .label { color: var(--warn); }
+  .cta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.5rem 0 2.5rem; }
+  .cta a { display: inline-block; padding: 0.55rem 1rem; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+  .cta a.secondary { background: var(--surface-2); color: var(--ink); }
+  footer { border-top: 1px solid var(--rule); margin-top: 4rem; padding-top: 1.2rem; font-size: 0.82rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="layout">
+  <p class="crumb"><a href="manual.html">← Back to the manual</a></p>
+
+  <h1>Angular + ASP.NET Core: a server-side grid in ~30 lines</h1>
+  <p class="lead">inandu-grid's <code>serverSide</code> mode and the
+    <a href="https://github.com/inandusolutions/inandu-grid-extensions">Inandu.Grid.Extensions</a>
+    NuGet package are designed as a matched pair: the grid emits plain events on every sort, page
+    or filter change; the API turns the resulting request into one paged EF Core query. No
+    client-side data-fetching library, no server-side query builder to write by hand.</p>
+
+  <div class="cta">
+    <a href="https://inandusolutions.github.io/inandu-grid/">Try the live demo</a>
+    <a class="secondary" href="manual.html#serverside">Server-side mode in the manual</a>
+    <a class="secondary" href="https://www.nuget.org/packages/Inandu.Grid.Extensions">Inandu.Grid.Extensions on NuGet</a>
+  </div>
+
+  <h2 id="api">1. The API (ASP.NET Core + EF Core)</h2>
+  <pre><code>dotnet add package Inandu.Grid.Extensions.EntityFrameworkCore</code></pre>
+  <pre><code>using Inandu.Grid.Extensions.EntityFrameworkCore;
+
+app.MapGet("/api/products", (HttpRequest request, AppDb db, CancellationToken ct) =>
+    db.Products.AsNoTracking().ToInanduGridAsync(request.QueryString.Value, options =>
+    {
+        options.DefaultPageSize  = 25;
+        options.MaxPageSize      = 200;
+        options.SearchableFields = new() { nameof(Product.Name), nameof(Product.Sku) };
+    }, ct: ct));</code></pre>
+  <p><code>ToInanduGridAsync</code> reads <code>page</code>/<code>pageSize</code>, <code>sort</code>,
+    <code>q</code> and any <code>{field}_{operator}</code> column filters straight off the query
+    string, runs <code>CountAsync</code> + <code>ToListAsync</code>, and returns
+    <code>{ data, total, page, pageSize, pageCount }</code> — exactly the shape the grid needs.
+    Only one page of rows is ever read from the database; sorting and filtering translate to SQL,
+    not an in-memory scan.</p>
+
+  <h2 id="grid">2. The grid (Angular)</h2>
+  <pre><code>&lt;inandu-grid
+  [data]="pageRows()"
+  serverSide="true"
+  [totalItems]="total()"
+  [loading]="loading()"
+  [error]="error()"
+  [paging]="{ pageSize: 25 }"
+  (sortChange)="onSort($event)"
+  (pageChange)="onPage($event)"
+  (filterChange)="onFilter($event)"
+  filter="true"&gt;
+  &lt;inandu-column field="name" title="Name" sortable="true" filter="yes" /&gt;
+  &lt;inandu-column field="sku" title="SKU" filter="yes" /&gt;
+  &lt;inandu-column field="price" title="Price" type="number" sortable="true" filter="yes" /&gt;
+&lt;/inandu-grid&gt;</code></pre>
+  <p>Once <code>serverSide</code> is on, the grid trusts <code>[data]</code> to already be the
+    current page and stops sorting/filtering/paging locally. It fires <code>(sortChange)</code> /
+    <code>(pageChange)</code> / <code>(filterChange)</code> on every relevant change —
+    <strong>including once on init</strong> — so a single handler chain drives the first fetch too.</p>
+
+  <h2 id="glue">3. The glue: translating grid events into the request</h2>
+  <p>The free grid's events are plain objects — <code>InanduGridSortCriterion[]</code>,
+    <code>{ page, pageSize }</code>, <code>{ query, columnFilters }</code> — not HTTP params. This
+    service keeps the current request state in signals and rebuilds the query string
+    <a href="https://github.com/inandusolutions/inandu-grid-extensions/blob/main/docs/request-contract.md">Inandu.Grid.Extensions expects</a>
+    (<code>page</code>, <code>pageSize</code>, <code>sort=-field</code>, <code>q=</code>,
+    <code>field_gte=</code> / <code>field_lte=</code> / <code>field_contains=</code>) on every
+    change:</p>
+  <pre><code>@Injectable({ providedIn: 'root' })
+export class ProductGridService {
+  private readonly http = inject(HttpClient);
+
+  readonly pageRows = signal&lt;Product[]&gt;([]);
+  readonly total = signal(0);
+  readonly loading = signal(false);
+  readonly error = signal('');
+
+  private page = 1;
+  private pageSize = 25;
+  private sort: InanduGridSortCriterion[] = [];
+  private query = '';
+  private columnFilters: Record&lt;string, InanduGridColumnFilterValue&gt; = {};
+
+  onSort(criteria: InanduGridSortCriterion[]) { this.sort = criteria; this.page = 1; this.fetch(); }
+  onPage(p: { page: number; pageSize: number }) { this.page = p.page; this.pageSize = p.pageSize; this.fetch(); }
+  onFilter(f: { query: string; columnFilters: Record&lt;string, InanduGridColumnFilterValue&gt; }) {
+    this.query = f.query; this.columnFilters = f.columnFilters; this.page = 1; this.fetch();
+  }
+
+  private fetch() {
+    this.loading.set(true);
+    this.error.set('');
+    const params = new URLSearchParams({ page: String(this.page), pageSize: String(this.pageSize) });
+    if (this.query) params.set('q', this.query);
+    this.sort.forEach(s => params.append('sort', s.direction === 'desc' ? `-${s.field}` : s.field));
+    for (const [field, value] of Object.entries(this.columnFilters)) {
+      if (value.text) params.set(`${field}_contains`, value.text);
+      if (value.min != null) params.set(`${field}_gte`, String(value.min));
+      if (value.max != null) params.set(`${field}_lte`, String(value.max));
+      if (value.from) params.set(`${field}_gte`, value.from);
+      if (value.to) params.set(`${field}_lte`, value.to);
+      if (value.bool) params.set(`${field}_eq`, value.bool);
+    }
+    this.http.get&lt;InanduGridResult&lt;Product&gt;&gt;(`/api/products?${params}`).subscribe({
+      next: res =&gt; { this.pageRows.set(res.data); this.total.set(res.total); this.loading.set(false); },
+      error: () =&gt; { this.error.set('Could not load products.'); this.loading.set(false); },
+    });
+  }
+}</code></pre>
+
+  <div class="note">
+    <span class="label">Why this glue exists</span>
+    This translation is exactly what <code>@inandu-solutions/grid-pro</code>'s
+    <code>createInanduGridDataSource</code>/<code>createInanduGridServerRowModel</code> do for you —
+    if you'd rather not maintain this service by hand across every grid in your app, that's what
+    they're for. The free grid ships the events; the wiring above is the whole cost of staying on
+    the MIT tier.
+  </div>
+
+  <h2 id="notes">4. Notes</h2>
+  <ul>
+    <li><strong>Free-text search</strong> matches every field in <code>SearchableFields</code> (or every <code>string</code> property if left unset) — set it explicitly for predictable results and to avoid scanning unindexed columns.</li>
+    <li><strong>Return DTOs, not entities</strong>, with the <code>ToInanduGridAsync(selector, …)</code> overload — the projection becomes part of the SQL, so only the columns you expose are read.</li>
+    <li><strong>Grouping and aggregates</strong> have server-side equivalents too — <code>ToInanduGridGroupedAsync</code> and the <code>aggregate=sum:price</code> param — see the extensions repo's <a href="https://github.com/inandusolutions/inandu-grid-extensions/blob/main/docs/grouping.md">grouping docs</a> if you need grouped server-side rows rather than the grid's client-side <code>groupable</code>.</li>
+    <li><strong>Editing/creation/deletion</strong> against the same API is a plain HTTP call from your own <code>rowSave</code>/<code>rowCreate</code>/<code>rowDelete</code> handlers — inandu-grid never talks to your backend directly for writes, only for the read side shown above.</li>
+  </ul>
+
+  <p>Full server-side reference: <a href="manual.html#serverside">manual §11</a>. Full request
+    contract: <a href="https://github.com/inandusolutions/inandu-grid-extensions/blob/main/docs/request-contract.md">request-contract.md</a>.
+    Questions: <a href="https://github.com/inandusolutions/inandu-grid/issues">open an issue</a>.</p>
+
+  <footer>
+    inandu-grid tutorials · MIT © Inandu SAS ·
+    <a href="https://github.com/inandusolutions/inandu-grid">source &amp; issues</a>
+  </footer>
+</div>
+</body>
+</html>

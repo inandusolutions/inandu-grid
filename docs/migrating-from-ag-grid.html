@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migrating from AG Grid to inandu-grid</title>
+<meta name="description" content="A factual, side-by-side guide for moving an Angular AG Grid table to inandu-grid: column defs, sorting, filtering, pagination, grouping, aggregates, editing, export, server-side rows — and what inandu-grid deliberately doesn't have.">
+<meta property="og:title" content="Migrating from AG Grid to inandu-grid">
+<meta property="og:description" content="Side-by-side API equivalents and an honest feature-gap list for moving an Angular grid from AG Grid to the MIT-licensed inandu-grid.">
+<meta property="og:type" content="article">
+<style>
+  :root {
+    --paper: #fbfaf7; --surface: #f4f2ec; --surface-2: #efece3; --ink: #1b1f24; --muted: #5c6470;
+    --accent: #0e7c74; --accent-ink: #0a5952; --accent-soft: #e2efed; --rule: #e4e1d9;
+    --code-bg: #f0ede5; --warn: #a9541a; --warn-soft: #f6ece1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #15181b; --surface: #1d2126; --surface-2: #232830; --ink: #e7e4dd; --muted: #9aa1ab;
+      --accent: #4fb3aa; --accent-ink: #7fccc4; --accent-soft: #1f2e2c; --rule: #2c3237;
+      --code-bg: #23282d; --warn: #d69b63; --warn-soft: #2b2419;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .layout { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  .crumb { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .crumb a { color: var(--accent-ink); }
+  h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.15; letter-spacing: -0.015em; margin: 0 0 0.4rem; }
+  .lead { font-size: 1.1rem; color: var(--muted); margin: 0 0 2.5rem; max-width: 62ch; }
+  h2 { font-size: 1.4rem; margin: 3rem 0 1rem; padding-bottom: 0.35rem; border-bottom: 2px solid var(--accent); letter-spacing: -0.01em; }
+  h3 { font-size: 1.05rem; margin: 1.8rem 0 0.6rem; }
+  p { margin: 0 0 1rem; }
+  ul { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin: 0.3rem 0; }
+  a { color: var(--accent-ink); text-underline-offset: 2px; }
+  code { font-family: "Consolas", "SFMono-Regular", Menlo, monospace; font-size: 0.86em; background: var(--accent-soft); color: var(--ink); padding: 0.1em 0.38em; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px; padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1.2rem; font-size: 0.84rem; line-height: 1.6; }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+  .tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--rule); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 480px; }
+  th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th { background: var(--surface); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  tbody tr:last-child td { border-bottom: none; }
+  .note, .warn { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; padding: 0.85rem 1.1rem; margin: 0 0 1.2rem; font-size: 0.94rem; }
+  .note > :last-child, .warn > :last-child { margin-bottom: 0; }
+  .warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note .label, .warn .label { font-family: "Consolas", monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); display: block; margin-bottom: 0.35rem; }
+  .warn .label { color: var(--warn); }
+  .cta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.5rem 0 2.5rem; }
+  .cta a { display: inline-block; padding: 0.55rem 1rem; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+  .cta a.secondary { background: var(--surface-2); color: var(--ink); }
+  footer { border-top: 1px solid var(--rule); margin-top: 4rem; padding-top: 1.2rem; font-size: 0.82rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="layout">
+  <p class="crumb"><a href="manual.html">← Back to the manual</a></p>
+
+  <h1>Migrating from AG Grid to inandu-grid</h1>
+  <p class="lead">A factual, side-by-side comparison for Angular apps moving off AG Grid's Community
+    or Enterprise tier onto the MIT-licensed <code>@inandu-solutions/grid-angular</code>. Feature
+    equivalents first, then what's genuinely different, so there are no surprises after you switch.</p>
+
+  <div class="cta">
+    <a href="https://inandusolutions.github.io/inandu-grid/">Try the live demo</a>
+    <a class="secondary" href="manual.html">Read the full manual</a>
+    <a class="secondary" href="https://www.npmjs.com/package/@inandu-solutions/grid-angular">View on npm</a>
+  </div>
+
+  <div class="note">
+    <span class="label">Why teams migrate</span>
+    Row grouping, aggregates, Excel-compatible export and cell-range selection sit behind AG Grid's
+    paid Enterprise licence. The same capabilities are free (MIT) in inandu-grid. If your app relies
+    on AG Grid Enterprise's pivot table or integrated charts, inandu-grid does not have those —
+    see <a href="#gaps">what's different</a> below before you commit to migrating.
+  </div>
+
+  <h2 id="setup">Setup &amp; data binding</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Concept</th><th>AG Grid</th><th>inandu-grid</th></tr></thead>
+      <tbody>
+        <tr><td>Install</td><td><code>ag-grid-angular</code> (+ <code>ag-grid-community</code>/<code>ag-grid-enterprise</code>)</td><td><code>ng add @inandu-solutions/grid-angular</code></td></tr>
+        <tr><td>Component</td><td><code>&lt;ag-grid-angular&gt;</code></td><td><code>&lt;inandu-grid&gt;</code> + <code>&lt;inandu-column&gt;</code></td></tr>
+        <tr><td>Row data</td><td><code>[rowData]</code></td><td><code>[data]</code></td></tr>
+        <tr><td>Column definitions</td><td><code>[columnDefs]</code> array with <code>field</code>/<code>headerName</code></td><td>one <code>&lt;inandu-column field title&gt;</code> per column, declared in the template</td></tr>
+        <tr><td>Cell value formatting</td><td><code>valueFormatter</code></td><td><code>type</code> + <code>format</code> on <code>&lt;inandu-column&gt;</code>, or a custom cell template</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>AG Grid's config-object style:</p>
+  <pre><code>columnDefs = [
+  { field: 'name', headerName: 'Name', sortable: true },
+  { field: 'age', headerName: 'Age', sortable: true, filter: 'agNumberColumnFilter' },
+];
+rowData = people;</code></pre>
+  <p>becomes inandu-grid's declarative template style:</p>
+  <pre><code>&lt;inandu-grid [data]="people" filter="true"&gt;
+  &lt;inandu-column field="name" title="Name" sortable="true" /&gt;
+  &lt;inandu-column field="age" title="Age" type="number" sortable="true" filter="yes" /&gt;
+&lt;/inandu-grid&gt;</code></pre>
+
+  <h2 id="features">Feature equivalents</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Feature</th><th>AG Grid</th><th>inandu-grid</th></tr></thead>
+      <tbody>
+        <tr><td>Sorting</td><td><code>sortable: true</code> per column def</td><td><code>sortable="true"</code> per <code>&lt;inandu-column&gt;</code>, shift-click for multi-sort</td></tr>
+        <tr><td>Per-column filter</td><td><code>filter: 'agTextColumnFilter'</code> etc.</td><td><code>filter="yes"</code> — type-aware popup, no per-type filter class to pick</td></tr>
+        <tr><td>Free-text / quick filter</td><td><code>[quickFilterText]</code></td><td><code>filter="true"</code> on <code>&lt;inandu-grid&gt;</code></td></tr>
+        <tr><td>Pagination</td><td><code>[pagination]="true"</code> + <code>[paginationPageSize]</code></td><td><code>[paging]="{ pageSize: 25 }"</code></td></tr>
+        <tr><td>Row grouping</td><td><code>rowGroup: true</code> <strong>(Enterprise)</strong></td><td><code>groupable="true"</code> — free</td></tr>
+        <tr><td>Aggregates</td><td><code>aggFunc: 'sum'</code> <strong>(Enterprise)</strong></td><td><code>showTotals</code> + <code>aggregate="sum"</code> — free</td></tr>
+        <tr><td>Cell range selection</td><td><code>enableRangeSelection</code> <strong>(Enterprise)</strong></td><td><code>cellRangeSelection</code> (+ <code>multiRange</code>) — free</td></tr>
+        <tr><td>Excel export</td><td><code>api.exportDataAsExcel()</code> <strong>(Enterprise)</strong></td><td>free, SpreadsheetML <code>.xls</code> — a styled binary <code>.xlsx</code> is a <code>@inandu-solutions/grid-pro</code> feature</td></tr>
+        <tr><td>CSV export</td><td><code>api.exportDataAsCsv()</code></td><td>free, built in</td></tr>
+        <tr><td>Row selection</td><td><code>rowSelection: 'multiple'</code></td><td><code>selectable="true"</code></td></tr>
+        <tr><td>Inline editing</td><td><code>editable: true</code> per column def</td><td><code>editable="true"</code> per <code>&lt;inandu-column&gt;</code>, plus <code>required</code>/<code>min</code>/<code>max</code>/<code>pattern</code>/<code>[validator]</code></td></tr>
+        <tr><td>Column pinning</td><td><code>pinned: 'left'</code></td><td><code>sticky="true"</code> (or <code>"right"</code>)</td></tr>
+        <tr><td>Row drag reorder</td><td><code>rowDragManaged</code></td><td><code>rowReorder</code></td></tr>
+        <tr><td>Virtual scroll</td><td>built in (row model default)</td><td><code>virtualScroll</code>, opt-in</td></tr>
+        <tr><td>Server-side rows</td><td>Server-Side Row Model <strong>(Enterprise)</strong></td><td><code>serverSide</code> + outputs — free; pairs with the <a href="https://github.com/inandusolutions/inandu-grid-extensions">.NET/EF Core companion</a> for ASP.NET Core APIs</td></tr>
+        <tr><td>Tree data</td><td>Tree Data <strong>(Enterprise)</strong></td><td><code>treeChildrenKey</code> — free</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="gaps">What's different</h2>
+  <p>inandu-grid is deliberately <strong>not</strong> a kitchen sink. Being honest about the gaps
+    up front is cheaper than finding them mid-migration:</p>
+  <ul>
+    <li><strong>No pivot table.</strong> AG Grid Enterprise's pivot mode has no inandu-grid equivalent.</li>
+    <li><strong>No integrated charts.</strong> Wire your own chart library (Chart.js, ECharts, …) off the same row data instead.</li>
+    <li><strong>Angular only.</strong> AG Grid ships framework wrappers for React/Vue/vanilla too; inandu-grid's sibling project is <a href="https://github.com/inandusolutions/inandu-grid-react">inandu-grid-react</a> for React, with its own separate API.</li>
+    <li><strong>Native <code>.xlsx</code></strong> (styled, binary) is a paid <code>@inandu-solutions/grid-pro</code> feature, same as AG Grid Enterprise's Excel export — the free tier in both projects covers CSV, and inandu-grid's free tier additionally covers a plain <code>.xls</code>.</li>
+  </ul>
+
+  <h2 id="checklist">Migration checklist</h2>
+  <ul>
+    <li>Replace <code>ag-grid-angular</code>/<code>ag-grid-community</code>/<code>ag-grid-enterprise</code> with <code>ng add @inandu-solutions/grid-angular</code>.</li>
+    <li>Turn each <code>columnDefs</code> entry into an <code>&lt;inandu-column&gt;</code> element using the table above.</li>
+    <li>Move Enterprise-gated features (grouping, aggregates, range selection, Excel export, server-side rows, tree data) over — they're free here, so no licence to remove or replace.</li>
+    <li>If you use AG Grid's pivot mode or integrated charts, plan a separate solution — they have no equivalent (see <a href="#gaps">above</a>).</li>
+    <li>Run your existing component tests against the new template — inandu-grid never mutates your data array itself, same contract as AG Grid's row-data model.</li>
+  </ul>
+
+  <p>Full API reference, every input/output, and runnable examples: see the
+    <a href="manual.html">user manual</a>. Questions or migration issues:
+    <a href="https://github.com/inandusolutions/inandu-grid/issues">open an issue</a>.</p>
+
+  <footer>
+    inandu-grid migration guides · MIT © Inandu SAS ·
+    <a href="https://github.com/inandusolutions/inandu-grid">source &amp; issues</a>
+  </footer>
+</div>
+</body>
+</html>

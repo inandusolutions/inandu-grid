@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migrating from PrimeNG Table to inandu-grid</title>
+<meta name="description" content="A factual, side-by-side guide for moving an Angular PrimeNG p-table to inandu-grid: sorting, filtering, pagination, grouping, aggregates, editing, export, server-side rows — and what inandu-grid deliberately doesn't have.">
+<meta property="og:title" content="Migrating from PrimeNG Table to inandu-grid">
+<meta property="og:description" content="Side-by-side API equivalents and an honest feature-gap list for moving an Angular table from PrimeNG's p-table to the MIT-licensed inandu-grid.">
+<meta property="og:type" content="article">
+<style>
+  :root {
+    --paper: #fbfaf7; --surface: #f4f2ec; --surface-2: #efece3; --ink: #1b1f24; --muted: #5c6470;
+    --accent: #0e7c74; --accent-ink: #0a5952; --accent-soft: #e2efed; --rule: #e4e1d9;
+    --code-bg: #f0ede5; --warn: #a9541a; --warn-soft: #f6ece1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #15181b; --surface: #1d2126; --surface-2: #232830; --ink: #e7e4dd; --muted: #9aa1ab;
+      --accent: #4fb3aa; --accent-ink: #7fccc4; --accent-soft: #1f2e2c; --rule: #2c3237;
+      --code-bg: #23282d; --warn: #d69b63; --warn-soft: #2b2419;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .layout { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  .crumb { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .crumb a { color: var(--accent-ink); }
+  h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.15; letter-spacing: -0.015em; margin: 0 0 0.4rem; }
+  .lead { font-size: 1.1rem; color: var(--muted); margin: 0 0 2.5rem; max-width: 62ch; }
+  h2 { font-size: 1.4rem; margin: 3rem 0 1rem; padding-bottom: 0.35rem; border-bottom: 2px solid var(--accent); letter-spacing: -0.01em; }
+  h3 { font-size: 1.05rem; margin: 1.8rem 0 0.6rem; }
+  p { margin: 0 0 1rem; }
+  ul { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin: 0.3rem 0; }
+  a { color: var(--accent-ink); text-underline-offset: 2px; }
+  code { font-family: "Consolas", "SFMono-Regular", Menlo, monospace; font-size: 0.86em; background: var(--accent-soft); color: var(--ink); padding: 0.1em 0.38em; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px; padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1.2rem; font-size: 0.84rem; line-height: 1.6; }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+  .tablewrap { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--rule); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 480px; }
+  th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th { background: var(--surface); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  tbody tr:last-child td { border-bottom: none; }
+  .note, .warn { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; padding: 0.85rem 1.1rem; margin: 0 0 1.2rem; font-size: 0.94rem; }
+  .note > :last-child, .warn > :last-child { margin-bottom: 0; }
+  .warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note .label, .warn .label { font-family: "Consolas", monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); display: block; margin-bottom: 0.35rem; }
+  .warn .label { color: var(--warn); }
+  .cta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.5rem 0 2.5rem; }
+  .cta a { display: inline-block; padding: 0.55rem 1rem; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+  .cta a.secondary { background: var(--surface-2); color: var(--ink); }
+  footer { border-top: 1px solid var(--rule); margin-top: 4rem; padding-top: 1.2rem; font-size: 0.82rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="layout">
+  <p class="crumb"><a href="manual.html">← Back to the manual</a></p>
+
+  <h1>Migrating from PrimeNG Table to inandu-grid</h1>
+  <p class="lead">A factual, side-by-side comparison for Angular apps moving off PrimeNG's
+    <code>p-table</code> onto <code>@inandu-solutions/grid-angular</code>. Both are MIT-licensed —
+    this isn't about unlocking paywalled features, it's about grouping, aggregates and export
+    being built in rather than assembled from several PrimeNG pieces.</p>
+
+  <div class="cta">
+    <a href="https://inandusolutions.github.io/inandu-grid/">Try the live demo</a>
+    <a class="secondary" href="manual.html">Read the full manual</a>
+    <a class="secondary" href="https://www.npmjs.com/package/@inandu-solutions/grid-angular">View on npm</a>
+  </div>
+
+  <div class="note">
+    <span class="label">Why teams migrate</span>
+    <code>p-table</code> is flexible but leaves you assembling row grouping, aggregate footers,
+    Excel-compatible export and cell-range selection from separate PrimeNG building blocks (or
+    writing them yourself). inandu-grid ships those as built-in, opt-in attributes on
+    <code>&lt;inandu-grid&gt;</code>. If your app depends on <code>p-table</code>'s column-group
+    header spans, virtual scroll ships as core here rather than a separate module you assemble.
+  </div>
+
+  <h2 id="setup">Setup &amp; data binding</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Concept</th><th>PrimeNG</th><th>inandu-grid</th></tr></thead>
+      <tbody>
+        <tr><td>Install</td><td><code>primeng</code></td><td><code>ng add @inandu-solutions/grid-angular</code></td></tr>
+        <tr><td>Component</td><td><code>&lt;p-table&gt;</code> + <code>&lt;ng-template pTemplate&gt;</code></td><td><code>&lt;inandu-grid&gt;</code> + <code>&lt;inandu-column&gt;</code></td></tr>
+        <tr><td>Row data</td><td><code>[value]</code></td><td><code>[data]</code></td></tr>
+        <tr><td>Column definitions</td><td><code>[columns]</code> array + a <code>pTemplate="header"</code>/<code>"body"</code> pair of templates</td><td>one <code>&lt;inandu-column field title&gt;</code> per column, declared directly</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>PrimeNG's template-driven style, with header/body templates kept in sync by hand:</p>
+  <pre><code>&lt;p-table [value]="people" [paginator]="true" [rows]="25"&gt;
+  &lt;ng-template pTemplate="header"&gt;
+    &lt;tr&gt;&lt;th pSortableColumn="name"&gt;Name&lt;/th&gt;&lt;th pSortableColumn="age"&gt;Age&lt;/th&gt;&lt;/tr&gt;
+  &lt;/ng-template&gt;
+  &lt;ng-template pTemplate="body" let-row&gt;
+    &lt;tr&gt;&lt;td&gt;{{ row.name }}&lt;/td&gt;&lt;td&gt;{{ row.age }}&lt;/td&gt;&lt;/tr&gt;
+  &lt;/ng-template&gt;
+&lt;/p-table&gt;</code></pre>
+  <p>becomes one declarative element per column, no header/body template pair to keep in sync:</p>
+  <pre><code>&lt;inandu-grid [data]="people" [paging]="{ pageSize: 25 }"&gt;
+  &lt;inandu-column field="name" title="Name" sortable="true" /&gt;
+  &lt;inandu-column field="age" title="Age" type="number" sortable="true" /&gt;
+&lt;/inandu-grid&gt;</code></pre>
+
+  <h2 id="features">Feature equivalents</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Feature</th><th>PrimeNG <code>p-table</code></th><th>inandu-grid</th></tr></thead>
+      <tbody>
+        <tr><td>Sorting</td><td><code>pSortableColumn</code></td><td><code>sortable="true"</code> per column, shift-click for multi-sort</td></tr>
+        <tr><td>Per-column filter</td><td><code>pColumnFilter</code> / column filter templates</td><td><code>filter="yes"</code> — type-aware popup built in</td></tr>
+        <tr><td>Global filter</td><td><code>[globalFilterFields]</code> + an external search input</td><td><code>filter="true"</code> on <code>&lt;inandu-grid&gt;</code> — search box included</td></tr>
+        <tr><td>Pagination</td><td><code>[paginator]="true"</code> + <code>[rows]</code></td><td><code>[paging]="{ pageSize: 25 }"</code></td></tr>
+        <tr><td>Row grouping</td><td><code>rowGroupMode="subheader"</code> + <code>groupRowsBy</code></td><td><code>groupable="true"</code> per column</td></tr>
+        <tr><td>Aggregates / totals</td><td>a separate <code>&lt;ng-template pTemplate="footer"&gt;</code> you write by hand</td><td><code>showTotals</code> + <code>aggregate="sum"</code> — computed and rendered for you</td></tr>
+        <tr><td>Cell range selection</td><td>not built in</td><td><code>cellRangeSelection</code> (+ <code>multiRange</code>)</td></tr>
+        <tr><td>Excel / CSV export</td><td><code>exportCSV()</code> (CSV only, built in)</td><td>CSV, plus SpreadsheetML <code>.xls</code>, plus PDF — all free</td></tr>
+        <tr><td>Row selection</td><td><code>[(selection)]</code> + <code>selectionMode</code></td><td><code>selectable="true"</code></td></tr>
+        <tr><td>Inline editing</td><td><code>pEditableColumn</code> + <code>p-cellEditor</code> templates</td><td><code>editable="true"</code> per column, plus <code>required</code>/<code>min</code>/<code>max</code>/<code>pattern</code>/<code>[validator]</code> — no editor template boilerplate</td></tr>
+        <tr><td>Column resize / reorder</td><td><code>[resizableColumns]</code> / <code>[reorderableColumns]</code></td><td>on by default, opt out with <code>resize="false"</code> / <code>reorder="false"</code></td></tr>
+        <tr><td>Frozen columns</td><td><code>pFrozenColumn</code></td><td><code>sticky="true"</code> (or <code>"right"</code>)</td></tr>
+        <tr><td>Virtual scroll</td><td><code>[virtualScroll]="true"</code> + <code>[virtualScrollItemSize]</code></td><td><code>virtualScroll</code>, opt-in</td></tr>
+        <tr><td>Lazy / server-side rows</td><td><code>[lazy]="true"</code> + <code>(onLazyLoad)</code></td><td><code>serverSide</code> + outputs; pairs with the <a href="https://github.com/inandusolutions/inandu-grid-extensions">.NET/EF Core companion</a> for ASP.NET Core APIs</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="gaps">What's different</h2>
+  <ul>
+    <li><strong>No pivot table or integrated charts.</strong> Neither project ships these built in, but PrimeNG's broader component library has separate chart components (<code>p-chart</code>) you'd otherwise pair with <code>p-table</code>; inandu-grid expects you to bring your own chart library the same way.</li>
+    <li><strong>No column-group header spans.</strong> If you use <code>colspan</code> multi-level headers in <code>p-table</code>, inandu-grid doesn't have a grouped-header equivalent yet.</li>
+    <li><strong>Angular only.</strong> PrimeNG has sibling libraries for other frameworks (PrimeReact, PrimeVue) with separate APIs; inandu-grid's sibling is <a href="https://github.com/inandusolutions/inandu-grid-react">inandu-grid-react</a> for React, also a separate API.</li>
+    <li><strong>Fewer built-in UI themes.</strong> PrimeNG ships a wide theme catalog; inandu-grid ships CSS custom properties for you to theme yourself — see the manual's <a href="manual.html#theming">theming section</a>.</li>
+  </ul>
+
+  <h2 id="checklist">Migration checklist</h2>
+  <ul>
+    <li>Replace <code>&lt;p-table&gt;</code>'s header/body template pair with one <code>&lt;inandu-column&gt;</code> per column, using the table above.</li>
+    <li>Move a hand-written footer aggregate template to <code>showTotals</code> + <code>aggregate="sum"</code> (or <code>avg</code>/<code>min</code>/<code>max</code>/<code>count</code>).</li>
+    <li>Replace <code>pEditableColumn</code>/<code>p-cellEditor</code> boilerplate with <code>editable="true"</code> and column-level validation attributes.</li>
+    <li>If you rely on grouped column headers or PrimeNG's chart components alongside the table, plan a separate solution — see <a href="#gaps">above</a>.</li>
+  </ul>
+
+  <p>Full API reference, every input/output, and runnable examples: see the
+    <a href="manual.html">user manual</a>. Questions or migration issues:
+    <a href="https://github.com/inandusolutions/inandu-grid/issues">open an issue</a>.</p>
+
+  <footer>
+    inandu-grid migration guides · MIT © Inandu SAS ·
+    <a href="https://github.com/inandusolutions/inandu-grid">source &amp; issues</a>
+  </footer>
+</div>
+</body>
+</html>
