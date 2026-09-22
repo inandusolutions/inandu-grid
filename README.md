@@ -1,12 +1,13 @@
 # inandu-grid
 
-A standalone Angular data grid — sorting, filtering, grouping, pagination,
-virtual scroll, inline editing, CSV/Excel/PDF export, i18n and theming — with a
-deliberately small dependency footprint. A lightweight, MIT-licensed alternative
-to the big commercial Angular grids.
+**A lightweight, MIT-licensed Angular data grid with the essentials other grids gate behind a
+paid enterprise licence — row grouping, aggregates, inline editing and Excel-compatible (`.xls`)
+export.** Sorting, filtering, pagination, virtual scroll, i18n and theming come with it too, in a
+deliberately small dependency footprint.
 
 [![npm](https://img.shields.io/npm/v/@inandu-solutions/grid-angular.svg)](https://www.npmjs.com/package/@inandu-solutions/grid-angular)
 [![downloads](https://img.shields.io/npm/dm/@inandu-solutions/grid-angular.svg)](https://www.npmjs.com/package/@inandu-solutions/grid-angular)
+[![CI](https://github.com/inandusolutions/inandu-grid/actions/workflows/ci.yml/badge.svg)](https://github.com/inandusolutions/inandu-grid/actions/workflows/ci.yml)
 [![minzipped size](https://img.shields.io/bundlephobia/minzip/@inandu-solutions/grid-angular)](https://bundlephobia.com/package/@inandu-solutions/grid-angular)
 [![license](https://img.shields.io/npm/l/@inandu-solutions/grid-angular.svg)](LICENSE)
 ![Angular](https://img.shields.io/badge/Angular-21-dd0031)
@@ -18,25 +19,44 @@ to the big commercial Angular grids.
 
 <sub>Live free-text search on the demo grid. [Try every feature →](https://inandusolutions.github.io/inandu-grid/)</sub>
 
-- **Package:** [`@inandu-solutions/grid-angular`](https://www.npmjs.com/package/@inandu-solutions/grid-angular) (MIT).
-  The bare `@inandu-solutions/grid` name is intentionally reserved for a future framework-neutral
-  umbrella.
-- **React version:** [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) —
-  feature-complete with this package, will ship as `@inandu-solutions/grid-react` (MIT; npm
-  publishing is deferred until the API stabilizes). Its core (sorting, filtering, aggregation,
-  export, i18n) is ported by hand from this repo's
-  [`projects/inandu-grid/src/lib/core/`](projects/inandu-grid/src/lib/core/). Has its own
-  [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-react/tree/main/examples/stackblitz).
-- **▶️ Live demo:** <https://inandusolutions.github.io/inandu-grid/> — the demo app, try every feature in the browser.
-- **⚡ StackBlitz:** [a minimal editable example](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz) — the grid in a bare Angular app; edit `src/app/app.component.ts` and it updates live ([source](examples/stackblitz)).
-- **📘 User manual:** <https://inandusolutions.github.io/inandu-grid/manual.html> — every feature with examples + a full API reference (English). Source: [`docs/manual.html`](docs/manual.html).
-- **API summary:** [`projects/inandu-grid/README.md`](projects/inandu-grid/README.md)
-- **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)* — a React
-  port, `@inandu-solutions/grid-pro-react`, is also in progress (private).
-- **Server-side data (.NET):** [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) —
-  the official .NET / EF Core companion. Put `<inandu-grid serverSide>` against your API and a single
-  `ToInanduGrid()` call turns each sort / filter / page request into one paged SQL query
-  (paging, sorting, filtering, grouping, aggregates, keyset cursors). MIT, on NuGet.
+## Try it in 30 seconds
+
+```bash
+ng add @inandu-solutions/grid-angular
+```
+
+```ts
+import { InanduGridComponent, InanduColumnComponent } from '@inandu-solutions/grid-angular';
+
+@Component({
+  standalone: true,
+  imports: [InanduGridComponent, InanduColumnComponent],
+  template: `
+    <inandu-grid [data]="rows" filter="true">
+      <inandu-column field="name" title="Name" sortable="true" />
+      <inandu-column field="age" title="Age" type="number" sortable="true" />
+    </inandu-grid>
+  `,
+})
+export class DemoComponent {
+  rows = [{ name: 'Ada', age: 36 }, { name: 'Alan', age: 41 }];
+}
+```
+
+- **▶️ [Live demo](https://inandusolutions.github.io/inandu-grid/)** — try every feature in the browser.
+- **⚡ [Edit in StackBlitz](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz)** — the grid in a bare Angular app; edit `src/app/app.component.ts` and it updates live ([source](examples/stackblitz)).
+- **📘 [User manual](https://inandusolutions.github.io/inandu-grid/manual.html)** — every feature with examples + a full API reference.
+
+## Who is this for?
+
+- **CRUD / business apps** that need a sortable, filterable, editable table without pulling in a
+  full enterprise grid framework.
+- **Admin dashboards** that need grouping, aggregates and CSV/Excel/PDF export out of the box.
+- **Data-heavy Angular apps** that need virtual scroll or server-side paging for large datasets,
+  including a first-class ASP.NET Core / EF Core story — see [Server-side data](#server-side-data-net) below.
+
+**When not to use it:** if you need pivot tables or integrated charting built into the grid
+itself, this isn't that — see [Not included](#not-included) below.
 
 ## Why inandu-grid?
 
@@ -46,24 +66,46 @@ licence**. inandu-grid is **MIT in full**: every feature on this page is free. I
 a **small dependency footprint** and a modern **Angular-native** design — standalone
 components, signal inputs/outputs, no `NgModule`s.
 
-It is deliberately *not* a kitchen sink: no pivoting and no integrated charts. Server-side
-paging, sorting and filtering **are** supported — put the grid in `serverSide` mode and wire it
-to any backend, or drop in the official .NET companion
-[`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions), which
-implements the server half for ASP.NET Core / EF Core. If you need pivoting or integrated charts,
-AG Grid Enterprise is the right tool. If you want a solid, free, lightweight grid, this is it.
-
 | | inandu-grid | AG Grid | PrimeNG Table |
 | --- | --- | --- | --- |
 | Licence | **MIT, all features** | MIT core + **paid Enterprise** (grouping, Excel, range selection, pivot, tree data…) | MIT |
 | Footprint | deliberately minimal (`@angular/cdk`, `@ngx-translate`, `jspdf` lazy-loaded) | large | ships as part of the full PrimeNG library |
 | Frameworks | Angular only (signals, standalone) | Angular / React / Vue / vanilla | Angular only |
 | Row grouping & aggregates | ✅ free | Enterprise | ✅ |
-| Excel / CSV / PDF export | ✅ free (`.xls` + CSV + PDF) | CSV free; Excel is Enterprise | CSV free |
+| Excel-compatible / CSV / PDF export | ✅ free (`.xls` + CSV + PDF) | CSV free; Excel is Enterprise | CSV free |
 | Pivoting, integrated charts | ❌ | Enterprise | ❌ |
 | Server-side paging / sorting / filtering | ✅ `serverSide` mode + [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) (.NET / EF Core companion) | Enterprise | bring-your-own |
 
-<sub>Orientation, not a scorecard — check each project's own docs for the current details.</sub>
+<sub>Orientation, not a scorecard — check each project's own docs for the current details. Coming
+from [AG Grid](docs/migrating-from-ag-grid.html) or [PrimeNG](docs/migrating-from-primeng.html)?
+There are migration guides for both.</sub>
+
+## Not included
+
+Deliberately *not* a kitchen sink: no pivoting and no integrated charts — those stay out of scope
+so the core stays small and auditable. If you need pivot tables or built-in charts, AG Grid
+Enterprise is the right tool. Server-side paging, sorting and filtering **are** supported — put
+the grid in `serverSide` mode and wire it to any backend, or drop in the official .NET companion
+below. If you want a solid, free, lightweight grid, this is it.
+
+## Server-side data (.NET)
+
+[`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) is the
+official .NET / EF Core companion. Put `<inandu-grid serverSide>` against your API and a single
+`ToInanduGrid()` call turns each sort / filter / page request into one paged SQL query (paging,
+sorting, filtering, grouping, aggregates, keyset cursors). MIT, on NuGet — see the
+[ASP.NET Core tutorial](docs/aspnet-core-server-side.html) for a full walkthrough.
+
+## React version & commercial add-ons
+
+- **React version:** [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) —
+  feature-complete with this package, published as `@inandu-solutions/grid-react`. Its core
+  (sorting, filtering, aggregation, export, i18n) is ported by hand from this repo's
+  [`projects/inandu-grid/src/lib/core/`](projects/inandu-grid/src/lib/core/). Has its own
+  [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-react/tree/main/examples/stackblitz).
+- **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)* — a React
+  port, `@inandu-solutions/grid-pro-react`, is also in progress (private). The bare
+  `@inandu-solutions/grid` name is intentionally reserved for a future framework-neutral umbrella.
 
 ## See it
 
