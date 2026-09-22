@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, of } from 'rxjs';
 import {
@@ -63,6 +63,7 @@ function buildLargeDataset(count: number): InanduGridRow[] {
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.less',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent, RouterOutlet],
 })
 export class AppComponent {

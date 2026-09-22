@@ -1,4 +1,4 @@
-import { Component, Type } from '@angular/core';
+import { Component, Type, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, fakeAsync, flush, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
@@ -14,6 +14,7 @@ import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column
       <inandu-column title="Score" field="score"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class HostComponent {
@@ -70,6 +71,7 @@ describe('InanduGridComponent sorting', () => {
       <inandu-column title="Nickname" field="nickname" type="string"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class FormattingHostComponent {
@@ -113,6 +115,7 @@ describe('InanduGridComponent formatting', () => {
       <inandu-column title="Value" field="value" sortable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class NoPagingHostComponent {
@@ -125,6 +128,7 @@ class NoPagingHostComponent {
       <inandu-column title="Value" field="value" sortable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class PagingHostComponent {
@@ -196,6 +200,7 @@ describe('InanduGridComponent paging', () => {
       <inandu-column title="Nombre" field="name" sortable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class SpanishLangHostComponent {
@@ -210,6 +215,7 @@ class SpanishLangHostComponent {
       <inandu-column title="Color" field="color"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class FilterHostComponent {
@@ -265,6 +271,7 @@ describe('InanduGridComponent filter', () => {
       <inandu-column field="qty" title="Qty" type="number" filter="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ExtraRowFilterHostComponent {
@@ -352,6 +359,7 @@ describe('InanduGridComponent extraRowFilter', () => {
       <inandu-column field="qty" title="Qty" type="number"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class PinnedRowsHostComponent {
@@ -431,6 +439,7 @@ describe('InanduGridComponent pinned rows', () => {
       <inandu-column field="qty" title="Qty" type="number" sortable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class TreeHostComponent {
@@ -528,6 +537,7 @@ describe('InanduGridComponent lang', () => {
 
 @Component({
   template: `<inandu-grid [data]="[]" [theme]="theme"></inandu-grid>`,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent],
 })
 class ThemeHostComponent {
@@ -565,6 +575,7 @@ describe('InanduGridComponent theme', () => {
       <inandu-column title="Extra" field="extra"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ColumnFilterHostComponent {
@@ -753,6 +764,7 @@ describe('InanduGridComponent column filter', () => {
       <inandu-column title="Value" field="value" type="number" filter="yes"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ColumnFilterPagingHostComponent {
@@ -789,6 +801,7 @@ describe('InanduGridComponent column filter with paging', () => {
       <inandu-column title="Region" field="region" groupable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class GroupByHostComponent {
@@ -876,6 +889,7 @@ describe('InanduGridComponent group by', () => {
       <inandu-column title="Id" field="id" width="60" resize="false"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ResizeHostComponent {
@@ -959,6 +973,7 @@ describe('InanduGridComponent column resize', () => {
       <inandu-column title="A very wide header that easily beats its cells" field="wide" width="60"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class AutosizeHostComponent {
@@ -1028,6 +1043,7 @@ describe('InanduGridComponent autosize (#33)', () => {
       <inandu-column title="D" field="d"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ReorderHostComponent {
@@ -1216,6 +1232,7 @@ describe('InanduGridComponent runtime column pinning', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class SelectableHostComponent {
@@ -1282,6 +1299,7 @@ describe('InanduGridComponent row selection', () => {
       <inandu-column title="Score" field="score" type="number"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ExportHostComponent {
@@ -1295,6 +1313,7 @@ class ExportHostComponent {
 
 @Component({
   template: `<inandu-grid id="empty" [data]="rows" exportable="true"></inandu-grid>`,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent],
 })
 class EmptyExportHostComponent {
@@ -1423,6 +1442,7 @@ describe('InanduGridComponent export', () => {
       <inandu-column title="Name &amp; Co" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class MarkupEscapingHostComponent {
@@ -1470,6 +1490,7 @@ describe('InanduGridComponent export markup escaping', () => {
       <inandu-column title="C" field="c" width="60"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class StickyHostComponent {
@@ -1536,6 +1557,7 @@ describe('InanduGridComponent sticky columns', () => {
       <inandu-column title="Val" field="val" width="60"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class StickyGroupedHostComponent {
@@ -1570,6 +1592,7 @@ describe('InanduGridComponent sticky columns while grouped', () => {
       <inandu-column title="Extra" field="extra"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class EditableHostComponent {
@@ -1708,6 +1731,7 @@ describe('InanduGridComponent row editing', () => {
       <inandu-column title="Score" field="score" type="number"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class DeletableHostComponent {
@@ -1728,6 +1752,7 @@ class DeletableHostComponent {
       <inandu-column title="Name" field="name" editable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class EditableDeletableHostComponent {
@@ -1829,6 +1854,7 @@ describe('InanduGridComponent row deletion', () => {
       <inandu-column title="Extra" field="extra"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class CreatableHostComponent {
@@ -1983,6 +2009,7 @@ describe('InanduGridComponent row creation', () => {
       <inandu-column title="Qty" field="qty" type="number" editable="true" [validator]="qtyValidator"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ValidatorHostComponent {
@@ -2092,6 +2119,7 @@ describe('InanduGridComponent column validation', () => {
       <inandu-column title="Value" field="value" sortable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualScrollHostComponent {
@@ -2106,6 +2134,7 @@ class VirtualScrollHostComponent {
       <inandu-column title="Value" field="value"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualScrollTallRowsHostComponent {
@@ -2120,6 +2149,7 @@ class VirtualScrollTallRowsHostComponent {
       <inandu-column title="Value" field="value"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualScrollExplicitRowHeightHostComponent {
@@ -2132,6 +2162,7 @@ class VirtualScrollExplicitRowHeightHostComponent {
       <inandu-column title="Value" field="value"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualScrollWithPagingHostComponent {
@@ -2146,6 +2177,7 @@ class VirtualScrollWithPagingHostComponent {
       <inandu-column title="Value" field="value"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualScrollGroupedHostComponent {
@@ -2163,6 +2195,7 @@ class VirtualScrollGroupedHostComponent {
       <inandu-column title="Value" field="value" editable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualScrollEditableGroupedHostComponent {
@@ -2179,6 +2212,7 @@ class VirtualScrollEditableGroupedHostComponent {
       <inandu-column title="Value" field="value"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualScrollLargeGroupedHostComponent {
@@ -2364,6 +2398,7 @@ describe('InanduGridComponent virtual scroll', () => {
       <inandu-column title="Score" field="score" type="number"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ColumnToggleHostComponent {
@@ -2380,6 +2415,7 @@ class ColumnToggleHostComponent {
       <inandu-column title="Score" field="score" type="number"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class TwoHideableColumnsHostComponent {
@@ -2527,6 +2563,7 @@ describe('InanduGridComponent column visibility', () => {
       <inandu-column title="Name" field="name" sortable="true" filter="yes"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ServerSideHostComponent {
@@ -2587,6 +2624,7 @@ describe('InanduGridComponent server-side mode', () => {
       </inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class CellTemplateHostComponent {
@@ -2632,6 +2670,7 @@ describe('InanduGridComponent custom cell templates', () => {
       </inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class HeaderTemplateHostComponent {
@@ -2694,6 +2733,7 @@ describe('InanduGridComponent custom header templates', () => {
       </inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class EditTemplateHostComponent {
@@ -2795,6 +2835,7 @@ describe('InanduGridComponent custom edit templates', () => {
       <inandu-column title="Name" field="name" sortable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class MultiSortHostComponent {
@@ -2857,6 +2898,7 @@ describe('InanduGridComponent multi-column sort', () => {
       <inandu-column title="Sales" field="sales" type="number" aggregate="sum"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class GroupAggregateHostComponent {
@@ -2895,6 +2937,7 @@ describe('InanduGridComponent group-by aggregates', () => {
       <inandu-column title="Score" field="score"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class PersistedStateHostComponent {
@@ -2978,6 +3021,7 @@ describe('InanduGridComponent persisted state', () => {
       <inandu-column title="Score" field="score"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class AriaHostComponent {
@@ -3028,6 +3072,7 @@ describe('InanduGridComponent grid accessibility', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class BulkDeleteHostComponent {
@@ -3083,6 +3128,7 @@ describe('InanduGridComponent bulk row deletion', () => {
       <inandu-column title="C" field="c" [width]="50" sticky="true" stickySide="right"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class StickyRightHostComponent {
@@ -3116,6 +3162,7 @@ describe('InanduGridComponent sticky columns on the right', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class LoadingErrorHostComponent {
@@ -3159,6 +3206,7 @@ describe('InanduGridComponent loading and error states', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class DragFeedbackHostComponent {
@@ -3204,6 +3252,7 @@ describe('InanduGridComponent drag-and-drop visual feedback', () => {
       <inandu-column title="Code" field="code" editable="true" required="true" [asyncValidator]="codeAsyncValidator"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class AsyncValidatorHostComponent {
@@ -3285,6 +3334,7 @@ describe('InanduGridComponent async column validation', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class CustomTranslationsHostComponent {
@@ -3336,6 +3386,7 @@ interface TypedCustomer extends InanduGridRow {
       <inandu-column title="Score" field="score" type="number" editable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class TypedRowHostComponent {
@@ -3392,6 +3443,7 @@ describe('InanduGridComponent generic row typing', () => {
       </ng-template>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class RowActionsOnlyHostComponent {
@@ -3411,6 +3463,7 @@ class RowActionsOnlyHostComponent {
       </ng-template>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class RowActionsWithDeleteHostComponent {
@@ -3468,6 +3521,7 @@ describe('InanduGridComponent custom row actions', () => {
       </ng-template>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent, InanduDetailTemplateDirective],
 })
 class MasterDetailHostComponent {
@@ -3487,6 +3541,7 @@ class MasterDetailHostComponent {
       </ng-template>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent, InanduDetailTemplateDirective],
 })
 class MasterDetailWithRowActionsHostComponent {
@@ -3646,6 +3701,7 @@ describe('InanduGridComponent master-detail', () => {
       <inandu-column field="id" title="ID"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent, InanduColumnGroupComponent],
 })
 class ColumnGroupsHostComponent {
@@ -3758,6 +3814,7 @@ describe('InanduGridComponent select-column width custom property', () => {
       <inandu-column title="Name" field="name" sortable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ProgrammaticApiHostComponent {
@@ -3844,6 +3901,7 @@ describe('InanduGridComponent programmatic API', () => {
       <inandu-column title="Id" field="id"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class RowReorderHostComponent {
@@ -3862,6 +3920,7 @@ class RowReorderHostComponent {
 
 @Component({
   template: `<inandu-grid [data]="rows" lang="en"><inandu-column title="Id" field="id"></inandu-column></inandu-grid>`,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class NoRowReorderHostComponent {
@@ -3944,6 +4003,7 @@ describe('InanduGridComponent row reorder', () => {
       <inandu-column title="Active" field="active" type="boolean" editable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ClipboardHostComponent {
@@ -4064,6 +4124,7 @@ describe('InanduGridComponent clipboard copy/paste', () => {
       <inandu-column title="Qty" field="qty" type="number" aggregate="avg"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class TotalsHostComponent {
@@ -4081,6 +4142,7 @@ class TotalsHostComponent {
       <inandu-column title="Amount" field="amount" type="number" aggregate="sum"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class VirtualTotalsHostComponent {
@@ -4124,6 +4186,7 @@ describe('InanduGridComponent totals footer row', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class RtlHostComponent {
@@ -4133,6 +4196,7 @@ class RtlHostComponent {
 
 @Component({
   template: `<inandu-grid [data]="rows"><inandu-column title="Name" field="name"></inandu-column></inandu-grid>`,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class DefaultDirHostComponent {
@@ -4193,6 +4257,7 @@ describe('InanduGridComponent RTL support', () => {
       <inandu-column title="C" field="c"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class CellRangeHostComponent {
@@ -4324,6 +4389,7 @@ describe('InanduGridComponent cell range selection', () => {
       <inandu-column title="C" field="c"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class MultiRangeHostComponent {
@@ -4411,6 +4477,7 @@ describe('InanduGridComponent multi-range selection (#16)', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class InfiniteScrollHostComponent {
@@ -4428,6 +4495,7 @@ class InfiniteScrollHostComponent {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class NoInfiniteScrollHostComponent {
@@ -4509,6 +4577,7 @@ describe('InanduGridComponent infinite scroll', () => {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ViewportRangeHostComponent {
@@ -4527,6 +4596,7 @@ class ViewportRangeHostComponent {
       <inandu-column title="Name" field="name"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class ViewportRangeNoServerHostComponent {
@@ -4610,6 +4680,7 @@ describe('InanduGridComponent viewport range (#21)', () => {
       <inandu-column title="Sum" field="sum" type="number" aggregate="sum"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class AggregateCoercionHostComponent {
@@ -4639,6 +4710,7 @@ describe('InanduGridComponent aggregate value coercion', () => {
       <inandu-column title="When" field="when" type="date" editable="true"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class DateEditRoundTripHostComponent {
@@ -4674,6 +4746,7 @@ describe('InanduGridComponent date edit round-trip', () => {
       <inandu-column title="Code" field="code" editable="true" pattern="["></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class BadPatternHostComponent {
@@ -4704,6 +4777,7 @@ describe('InanduGridComponent invalid column pattern', () => {
       <inandu-column title="When" field="when" type="date" format="DD/MM/YYYY HH:mm"></inandu-column>
     </inandu-grid>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [InanduGridComponent, InanduColumnComponent],
 })
 class SpaceSeparatedDateHostComponent {
