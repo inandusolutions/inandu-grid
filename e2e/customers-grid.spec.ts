@@ -31,8 +31,10 @@ test('sorting by a column changes row order', async ({ page }) => {
   // row, so comparing ascending vs. descending (guaranteed to differ unless every name is
   // identical) is the reliable way to prove sorting actually reorders the rows.
   await sortButton.click(); // ascending
+  await expect(firstCompanyCell()).toHaveText('Alfreds Futterkiste');
   const ascending = await firstCompanyCell().textContent();
   await sortButton.click(); // descending
+  await expect(firstCompanyCell()).not.toHaveText(ascending ?? '');
   const descending = await firstCompanyCell().textContent();
 
   expect(ascending).not.toBe(descending);

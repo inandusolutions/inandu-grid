@@ -28,5 +28,14 @@ module.exports = defineConfig([
   {
     files: ["**/*.html"],
     rules: {},
-  }
+  },
+  {
+    // Test-harness components intentionally use non-OnPush change detection to exercise the
+    // library's default (non-OnPush) behavior — that's a legitimate test concern here, not a
+    // production code smell the rule is meant to catch.
+    files: ["**/*.spec.ts"],
+    rules: {
+      "@angular-eslint/prefer-on-push-component-change-detection": "off",
+    },
+  },
 ]);

@@ -63,7 +63,7 @@ function buildLargeDataset(count: number): InanduGridRow[] {
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.less',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [InanduGridComponent, InanduColumnComponent, RouterOutlet],
 })
 export class AppComponent {
