@@ -45,7 +45,7 @@ jobs:
           [ -d "$SRC" ] || SRC=dist/grid-app
           mkdir _site
           cp -r "$SRC"/. _site/
-          cp docs/manual.html docs/screenshot.png _site/
+          cp docs/*.html docs/screenshot.png _site/
           cp _site/index.html _site/404.html   # SPA fallback
 
       - uses: actions/configure-pages@v6
