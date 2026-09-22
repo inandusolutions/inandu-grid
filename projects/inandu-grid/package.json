@@ -1,6 +1,6 @@
 {
   "name": "@inandu-solutions/grid-angular",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Standalone Angular data grid: sorting, free-text and per-column filtering, grouping, pagination, row virtualization, inline row editing/creation/deletion with validation, CSV/Excel/PDF export and print, i18n (5 languages) and 3 built-in themes, with a deliberately small dependency footprint.",
   "keywords": [
     "angular",
