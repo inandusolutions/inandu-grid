@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-22
+
+### Added
+
+- **Angular 22 support** — peer/dependency ranges broadened to `^21.2.0 || ^22.0.0` for
+  `@angular/core`, `@angular/common` and `@angular/cdk`. No library source changes were needed;
+  Angular 22 requires TypeScript ~6.0, which the library's own tooling now accommodates.
+
 ## [1.1.0] - 2026-09-22
 
 ### Added
@@ -92,6 +100,7 @@ framework-agnostic core (`projects/inandu-grid/src/lib/core/`, no `@angular/*`).
 - A real Open XML `.xlsx` export is a `@inandu-solutions/grid-pro` feature, not part of the
   MIT core.
 
-[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/inandusolutions/inandu-grid/releases/tag/v1.0.0

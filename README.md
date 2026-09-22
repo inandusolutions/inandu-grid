@@ -10,7 +10,7 @@ deliberately small dependency footprint.
 [![CI](https://github.com/inandusolutions/inandu-grid/actions/workflows/ci.yml/badge.svg)](https://github.com/inandusolutions/inandu-grid/actions/workflows/ci.yml)
 [![minzipped size](https://img.shields.io/bundlephobia/minzip/@inandu-solutions/grid-angular)](https://bundlephobia.com/package/@inandu-solutions/grid-angular)
 [![license](https://img.shields.io/npm/l/@inandu-solutions/grid-angular.svg)](LICENSE)
-![Angular](https://img.shields.io/badge/Angular-21-dd0031)
+![Angular](https://img.shields.io/badge/Angular-21%20%7C%2022-dd0031)
 [![live demo](https://img.shields.io/badge/demo-live-0e7c74)](https://inandusolutions.github.io/inandu-grid/)
 [![docs](https://img.shields.io/badge/docs-manual-0e7c74)](https://inandusolutions.github.io/inandu-grid/manual.html)
 [![Open in StackBlitz](https://img.shields.io/badge/StackBlitz-open%20example-1389FD?logo=stackblitz&logoColor=white)](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz)
@@ -135,7 +135,7 @@ This is an Angular CLI **multi-project workspace**:
 
 | | |
 | --- | --- |
-| Angular | `^21.2.0` (`@angular/core` + `@angular/common`, peer dependencies) |
+| Angular | `^21.2.0 || ^22.0.0` (`@angular/core` + `@angular/common`, peer dependencies) |
 | Node | whatever your Angular 21 app needs — `^20.19.0 \|\| ^22.12.0 \|\| >=24` |
 | Browsers | current Chrome / Firefox / Safari (Safari 16+ for fully correct sticky columns); no IE |
 
