@@ -231,4 +231,4 @@ Source, issues, and the demo app: <https://github.com/inandusolutions/inandu-gri
 
 ## License
 
-[MIT](./LICENSE) © [Inandu SAS](https://inandu.com)
+[MIT](./LICENSE) © [Inandu SAS](https://www.inandu.com/)
