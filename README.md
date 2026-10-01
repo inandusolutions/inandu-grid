@@ -206,4 +206,4 @@ Maintainers: see [`PUBLISHING.md`](PUBLISHING.md).
 
 ## License
 
-[MIT](LICENSE) © [Inandu SAS](https://inandu.com)
+[MIT](LICENSE) © [Inandu SAS](https://www.inandu.com/)
