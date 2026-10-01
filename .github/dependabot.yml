@@ -17,6 +17,13 @@ updates:
           - zone.js
       dev-minor-patch:
         dependency-type: development
+        # Angular tooling (@angular/build, cli, compiler-cli) peer-pins the exact
+        # @angular/compiler version, so it must move with the angular group.
+        exclude-patterns:
+          - "@angular*"
+          - "@angular-devkit/*"
+          - ng-packagr
+          - zone.js
         update-types:
           - minor
           - patch
