@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-14
+
+### Changed
+
+- Releases are now published from GitHub Actions via npm trusted publishing, so the package carries a
+  provenance attestation. No library source changes.
+- Author URL in `package.json` now points to `https://www.inandu.com/`.
+
 ## [1.2.0] - 2026-09-22
 
 ### Added
@@ -100,7 +108,8 @@ framework-agnostic core (`projects/inandu-grid/src/lib/core/`, no `@angular/*`).
 - A real Open XML `.xlsx` export is a `@inandu-solutions/grid-pro` feature, not part of the
   MIT core.
 
-[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/inandusolutions/inandu-grid/releases/tag/v1.0.0
