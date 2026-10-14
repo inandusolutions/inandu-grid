@@ -67,7 +67,8 @@ Done for `@inandu-solutions/grid-angular`: the npm org `@inandu-solutions` exist
 3. The workflow checks the tag matches the library's version, then lint → `test:lib` → `build:lib`,
    and runs `npm publish --provenance --access public` from `dist/inandu-grid`. It can also be run by
    hand from *Actions → Publish to npm* with the version typed in.
-4. **GitHub Release** (still manual, as below).
+4. The workflow also creates the **GitHub Release** for the tag, with the `CHANGELOG.md` section for that
+   version as its notes (or GitHub-generated notes if there is none). Nothing to do by hand.
 
 One-time setup, on npmjs.com → the package → *Settings → Trusted Publisher → GitHub Actions*:
 organization `inandusolutions`, repository `inandu-grid`, workflow filename `publish.yml`, no

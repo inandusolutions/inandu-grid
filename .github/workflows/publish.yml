@@ -24,7 +24,7 @@ on:
         required: true
 
 permissions:
-  contents: read
+  contents: write   # create the GitHub Release after publishing
   id-token: write   # required for npm trusted publishing + provenance
 
 jobs:
@@ -47,6 +47,7 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
           fi
           PKG_VERSION=$(node -p "require('./projects/inandu-grid/package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "publishing=$VERSION  package.json=$PKG_VERSION"
           if [ "$VERSION" != "$PKG_VERSION" ]; then
             echo "::error::Version $VERSION does not match \"version\": \"$PKG_VERSION\" in projects/inandu-grid/package.json — bump it first."
@@ -86,3 +87,22 @@ jobs:
       - name: Publish (provenance)
         working-directory: dist/inandu-grid
         run: npm publish --provenance --access public
+
+      # The release notes come from the CHANGELOG.md section for this version when there is one,
+      # otherwise GitHub generates them from the merged PRs since the previous tag.
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists"; exit 0; fi
+          NOTES=""
+          if [ -f CHANGELOG.md ]; then
+            NOTES=$(awk -v v="$VERSION" 'BEGIN{p=0} /^## \[/{ if (p) exit; if (index($0,"## [" v "]")==1) {p=1; next} } p{print}' CHANGELOG.md)
+          fi
+          if [ -n "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
+            printf '%s\n' "$NOTES" > "$RUNNER_TEMP/release-notes.md"
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          fi
