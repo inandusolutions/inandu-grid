@@ -8,19 +8,19 @@
     "build": "ng build"
   },
   "dependencies": {
-    "@angular/common": "^21.2.19",
-    "@angular/compiler": "^21.2.19",
-    "@angular/core": "^21.2.19",
-    "@angular/platform-browser": "^21.2.19",
-    "@inandu-solutions/grid-angular": "^1.0.0",
+    "@angular/common": "^22.2.2",
+    "@angular/compiler": "^22.2.2",
+    "@angular/core": "^22.2.2",
+    "@angular/platform-browser": "^22.2.2",
+    "@inandu-solutions/grid-angular": "^1.2.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
-    "zone.js": "~0.15.1"
+    "zone.js": "~0.16.3"
   },
   "devDependencies": {
-    "@angular/build": "^21.2.26",
-    "@angular/cli": "^21.2.26",
-    "@angular/compiler-cli": "^21.2.19",
-    "typescript": "~5.9.3"
+    "@angular/build": "^22.2.2",
+    "@angular/cli": "^22.2.2",
+    "@angular/compiler-cli": "^22.2.2",
+    "typescript": "~6.0.3"
   }
 }
