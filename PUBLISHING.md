@@ -1,8 +1,9 @@
 # Publishing `@inandu-solutions/grid-angular`
 
-Maintainer runbook. Releases are cut **manually from a maintainer's machine** (see
-[Cutting a release](#cutting-a-release)); an optional GitHub Actions path exists but is not
-in use.
+Maintainer runbook. Releases are published by the **`Publish to npm` GitHub Actions workflow**
+(`.github/workflows/publish.yml`, npm *trusted publishing* over OIDC — no token, no 2FA prompt, with
+a provenance attestation) when you push a `vX.Y.Z` tag. The manual path from a maintainer's machine
+is kept below as a fallback (see [Cutting a release](#cutting-a-release)).
 
 ## Package naming
 
@@ -55,7 +56,25 @@ Done for `@inandu-solutions/grid-angular`: the npm org `@inandu-solutions` exist
 - Deploy the demo **and `docs/manual.html`** to GitHub Pages; link the hosted manual URL
   from both READMEs (they currently link the file path).
 
-## Cutting a release
+## Cutting a release (CI)
+
+1. **Bump the version** in `projects/inandu-grid/package.json` and **update `CHANGELOG.md`** (steps 1–2
+   of the manual flow below), and merge that PR to `main`.
+2. **Tag from `main`:**
+   ```bash
+   git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+3. The workflow checks the tag matches the library's version, then lint → `test:lib` → `build:lib`,
+   and runs `npm publish --provenance --access public` from `dist/inandu-grid`. It can also be run by
+   hand from *Actions → Publish to npm* with the version typed in.
+4. **GitHub Release** (still manual, as below).
+
+One-time setup, on npmjs.com → the package → *Settings → Trusted Publisher → GitHub Actions*:
+organization `inandusolutions`, repository `inandu-grid`, workflow filename `publish.yml`, no
+environment. npm shows it as *Pending validation* until the first publish through the workflow
+succeeds (that publish must happen within the window npm shows).
+
+## Cutting a release (manual fallback)
 
 Published **manually** from a maintainer's machine — an npm account that is an **Owner**
 of the `@inandu-solutions` org, with an authenticator app for the 2FA prompt.
@@ -99,8 +118,10 @@ of the `@inandu-solutions` org, with an authenticator app for the 2FA prompt.
 - **Stale `~/.npmrc`:** a leftover `//registry.npmjs.org/:_authToken=…` line shadows your
   `npm login` session. If auth misbehaves: `del "$env:USERPROFILE\.npmrc"`, then `npm login`.
 - **`--provenance`** needs the GitHub Actions OIDC token, so it's not part of the manual
-  command. (There used to be a tag-triggered `release.yml` workflow; it was removed after
-  the 1.0.0 attempt against it kept failing on token/2FA issues — manual is the flow now.)
+  command — publishing through the `Publish to npm` workflow is what gives the package its
+  provenance. (An older token-based `release.yml` was removed after the 1.0.0 attempt kept
+  failing on token/2FA issues; the current workflow uses trusted publishing instead, which has no
+  token to expire.)
 
 ## Package managers: npm, pnpm, yarn, bun
 
