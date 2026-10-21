@@ -18,9 +18,11 @@ alternative to the big commercial Angular grids.
 
 > This is the **core** (MIT) package. Commercial add-ons ship separately as
 > `@inandu-solutions/grid-pro` *(proprietary, private)*. The bare `@inandu-solutions/grid`
-> name is reserved for a future framework-neutral umbrella. There's also a React port:
+> name is reserved for a future framework-neutral umbrella. There are also React and Vue ports:
 > [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react), ships as
-> `@inandu-solutions/grid-react`.
+> `@inandu-solutions/grid-react`, and
+> [`inandu-grid-vue`](https://github.com/inandusolutions/inandu-grid-vue), ships as
+> `@inandu-solutions/grid-vue`.
 
 ▶️ **Live demo:** <https://inandusolutions.github.io/inandu-grid/>
 &nbsp;·&nbsp; ⚡ **StackBlitz:** [editable example](https://stackblitz.com/github/inandusolutions/inandu-grid/tree/main/examples/stackblitz)

@@ -27,8 +27,10 @@ happens here directly — PRs, issues, CI, releases.
 Commercial add-ons ship separately as **`@inandu-solutions/grid-pro`** (proprietary, its
 own private repo), which peer-depends on this package. Nothing about grid-pro lives here.
 
-A future React port (`@inandu-solutions/grid-react`) would live in this same repo as a
-second package — see [Future: a React package](#future-a-react-package).
+The React and Vue ports live in their own public repos —
+[`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) and
+[`inandu-grid-vue`](https://github.com/inandusolutions/inandu-grid-vue) — and are kept in sync
+with this package by hand; see [Framework ports](#future-a-react-package).
 
 ## Project identifiers
 
@@ -143,6 +145,13 @@ Optional extra registries (only if there's a concrete reason):
   publish`. Nice-to-have, not required; skip unless asked.
 
 ## Future: a React package
+
+> **Status (2026-10-21): superseded.** The React and Vue ports shipped as separate repos
+> (`inandu-grid-react` → `@inandu-solutions/grid-react`, `inandu-grid-vue` →
+> `@inandu-solutions/grid-vue`), each bundling a hand-synced copy of the framework-agnostic core
+> instead of a monorepo with a shared core. The section below is the original 2026-08-31 plan,
+> kept for context; the "third consumer" condition for a published `grid-core` has now arrived,
+> but no decision has been made.
 
 **A React port lives in the same public repo** (decided 2026-08-31), which then becomes a
 small multi-package monorepo:

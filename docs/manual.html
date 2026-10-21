@@ -283,11 +283,13 @@
         <li><strong>Self-contained.</strong> No dependency on Angular Material or any theming engine. Internal dependencies (<code>@angular/cdk</code>, <code>@ngx-translate/core</code>, <code>jspdf</code>) are implementation details you never configure.</li>
         <li><strong>Rows are identified by object reference.</strong> There is no row-id concept — keep your row objects stable across re-renders (a static array or a signal you update immutably both qualify).</li>
       </ul>
-      <div class="note"><span class="label">React</span>
+      <div class="note"><span class="label">React &amp; Vue</span>
         Not on Angular? <a href="https://github.com/inandusolutions/inandu-grid-react">inandu-grid-react</a>
-        is the React port — feature-complete with this package, published as
-        <code>@inandu-solutions/grid-react</code>. It ships both a batteries-included
-        <code>&lt;InanduGrid&gt;</code> component and a headless <code>useInanduGrid()</code> hook.</div>
+        is the React port and <a href="https://github.com/inandusolutions/inandu-grid-vue">inandu-grid-vue</a>
+        the Vue 3 port — both feature-complete with this package, published as
+        <code>@inandu-solutions/grid-react</code> and <code>@inandu-solutions/grid-vue</code>. Each ships
+        a batteries-included <code>&lt;InanduGrid&gt;</code> component and a headless
+        <code>useInanduGrid()</code> hook / composable.</div>
       <div class="note"><span class="label">Guides</span>
         Coming from <a href="migrating-from-ag-grid.html">AG Grid</a> or
         <a href="migrating-from-primeng.html">PrimeNG Table</a>? There's a factual migration guide
