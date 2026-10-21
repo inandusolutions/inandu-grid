@@ -30,6 +30,16 @@
 
   --shell: 1160px;
 
+  /* feature tones: a solid for icons/links, a soft tint for chips */
+  --teal: #0e7c74;   --teal-soft: rgba(14, 124, 116, 0.12);
+  --green: #2f9e6b;  --green-soft: rgba(47, 158, 107, 0.13);
+  --amber: #c9801a;  --amber-soft: rgba(217, 138, 31, 0.15);
+  --violet: #6f5bd0; --violet-soft: rgba(111, 91, 208, 0.12);
+  --rose: #cf4f74;   --rose-soft: rgba(207, 79, 116, 0.12);
+  --blue: #3478bd;   --blue-soft: rgba(52, 120, 189, 0.12);
+  --brand: #dd0031;  /* Angular red, used sparingly */
+  --brand-2: #b4268a;
+
   display: block;
   color: var(--ink);
   background: var(--bg);
@@ -63,6 +73,15 @@
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
     --shadow-md: 0 6px 22px rgba(0, 0, 0, 0.45);
+
+    --teal: #2dd4bf;   --teal-soft: rgba(45, 212, 191, 0.14);
+    --green: #4ade80;  --green-soft: rgba(74, 222, 128, 0.13);
+    --amber: #fbbf24;  --amber-soft: rgba(251, 191, 36, 0.14);
+    --violet: #a594f9; --violet-soft: rgba(165, 148, 249, 0.15);
+    --rose: #fb7da0;   --rose-soft: rgba(251, 125, 160, 0.14);
+    --blue: #6cb2f5;   --blue-soft: rgba(108, 178, 245, 0.14);
+    --brand: #ff5a7a;
+    --brand-2: #e064c0;
   }
 }
 
@@ -269,8 +288,16 @@ code {
   overflow: hidden;
   border-bottom: 1px solid var(--line-soft);
   background:
-    radial-gradient(70ch 40ch at 50% -18%, var(--accent-soft), transparent 70%),
+    radial-gradient(60ch 34ch at 10% -12%, rgba(221, 0, 49, 0.08), transparent 70%),
+    radial-gradient(70ch 40ch at 90% -18%, var(--accent-soft), transparent 70%),
     var(--bg);
+}
+
+.hl {
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .hero-inner {
@@ -504,28 +531,165 @@ code {
 
 /* -------------------------------------------------------------------- features */
 
-.feature-grid {
+.tone-teal   { --tone: var(--teal);   --tone-soft: var(--teal-soft); }
+.tone-green  { --tone: var(--green);  --tone-soft: var(--green-soft); }
+.tone-amber  { --tone: var(--amber);  --tone-soft: var(--amber-soft); }
+.tone-violet { --tone: var(--violet); --tone-soft: var(--violet-soft); }
+.tone-rose   { --tone: var(--rose);   --tone-soft: var(--rose-soft); }
+.tone-blue   { --tone: var(--blue);   --tone-soft: var(--blue-soft); }
+
+.explorer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+  grid-template-columns: 17.5rem 1fr;
+  gap: 24px;
+  align-items: start;
 }
 
-.feature {
-  padding: 26px 24px;
-  background: var(--surface);
+.explorer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
 
-  h3 { margin-bottom: 8px; }
+.explorer-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.93rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 
-  p {
-    margin: 0;
-    color: var(--ink-soft);
-    font-size: 0.925rem;
-    line-height: 1.6;
+  &:hover { background: var(--surface-sunken); }
+
+  &.active {
+    background: var(--surface);
+    border-color: var(--line);
+    box-shadow: var(--shadow-md);
+    font-weight: 600;
   }
+
+  &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--tone-soft);
+  color: var(--tone);
+
+  &.big { width: 42px; height: 42px; border-radius: 10px; }
+}
+
+.explorer-panel {
+  min-width: 0;
+  padding: 26px 28px 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--tone);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.explorer-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  h3 { font-size: 1.3rem; }
+}
+
+.explorer-blurb {
+  margin: 15px 0 20px;
+  max-width: 62ch;
+  color: var(--ink-soft);
+}
+
+.codebox {
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--code-bg);
+}
+
+.codebox-bar {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  color: #8a98a0;
+  font-size: 0.78rem;
+
+  .copy-btn {
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--code-ink);
+    font-size: 0.78rem;
+
+    &:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+  }
+}
+
+.dots {
+  display: inline-flex;
+  gap: 5px;
+
+  i { width: 10px; height: 10px; border-radius: 50%; background: #3a464e; }
+  i:nth-child(1) { background: #e0675a; }
+  i:nth-child(2) { background: #e3b04b; }
+  i:nth-child(3) { background: #58b97a; }
+}
+
+.codebox-name {
+  flex: 1;
+  font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
+}
+
+.codebox .code-block {
+  margin: 0;
+  padding: 17px 19px;
+  min-height: 9rem;
+  overflow-x: auto;
+  color: var(--code-ink);
+  font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+/* syntax tokens live inside [innerHTML], which the component's encapsulation can't reach */
+:host ::ng-deep {
+  .tok-comment { color: #6f8590; font-style: italic; }
+  .tok-string  { color: #a5d6a7; }
+  .tok-tag     { color: #5ec8a8; }
+  .tok-attr    { color: #f0c987; }
+  .tok-keyword { color: #c4a7f0; }
+  .tok-number  { color: #f19c8a; }
+}
+
+.explorer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin-top: 20px;
+}
+
+@media (max-width: 860px) {
+  .explorer { grid-template-columns: 1fr; }
+  .explorer-list { flex-direction: row; overflow-x: auto; padding-bottom: 5px; }
+  .explorer-item { width: auto; white-space: nowrap; }
 }
 
 /* --------------------------------------------------------------------- compare */

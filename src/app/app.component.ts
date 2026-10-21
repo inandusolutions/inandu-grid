@@ -1,4 +1,4 @@
-import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, of } from 'rxjs';
 import {
@@ -10,6 +10,8 @@ import {
   InanduGridNewRowValues,
 } from '@inandu-solutions/grid-angular';
 import { RouterOutlet } from '@angular/router';
+import { FEATURES, ICON_PATHS, featureDocUrl } from './features';
+import { highlight } from './highlight';
 
 const USERS_API_URL = 'https://jsonplaceholder.typicode.com/users';
 
@@ -103,6 +105,49 @@ export class AppComponent {
 
   selectTab(tab: DemoTab): void {
     this.activeTab.set(tab);
+  }
+
+  // ------------------------------------------------------------ feature explorer
+
+  readonly features = FEATURES;
+  readonly iconPaths = ICON_PATHS;
+  readonly featureDocUrl = featureDocUrl;
+
+  readonly activeFeatureId = signal(FEATURES[0].id);
+  readonly activeFeature = computed(() => FEATURES.find(f => f.id === this.activeFeatureId()) ?? FEATURES[0]);
+  /** Syntax-coloured HTML for the active snippet (built from escaped text, spans carry only class names). */
+  readonly activeFeatureHtml = computed(() => highlight(this.activeFeature().code));
+  readonly codeCopied = signal(false);
+
+  selectFeature(id: string): void {
+    this.activeFeatureId.set(id);
+  }
+
+  /** Arrow keys move through the feature tabs, as the ARIA tabs pattern expects. */
+  onFeatureKey(event: KeyboardEvent): void {
+    const i = FEATURES.findIndex(f => f.id === this.activeFeatureId());
+    const next =
+      event.key === 'ArrowDown' || event.key === 'ArrowRight' ? i + 1
+      : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? i - 1
+      : null;
+    if (next === null) return;
+    event.preventDefault();
+    const target = FEATURES[(next + FEATURES.length) % FEATURES.length].id;
+    this.activeFeatureId.set(target);
+    requestAnimationFrame(() => document.getElementById(`ftab-${target}`)?.focus());
+  }
+
+  copyFeatureCode(): void {
+    void navigator.clipboard?.writeText(this.activeFeature().code).then(() => {
+      this.codeCopied.set(true);
+      setTimeout(() => this.codeCopied.set(false), 1500);
+    });
+  }
+
+  /** "See it running": switch to the matching demo tab and scroll to it. */
+  openDemo(tab: DemoTab): void {
+    this.selectTab(tab);
+    document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   /** Copy-to-clipboard state for the install snippet in the hero. */
