@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-21
+
+### Changed
+
+- README and npm page now mention the React and Vue ports (`@inandu-solutions/grid-react`,
+  `@inandu-solutions/grid-vue`). No library source changes.
+
 ## [1.2.1] - 2026-10-14
 
 ### Changed
