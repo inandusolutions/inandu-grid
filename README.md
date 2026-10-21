@@ -96,16 +96,21 @@ official .NET / EF Core companion. Put `<inandu-grid serverSide>` against your A
 sorting, filtering, grouping, aggregates, keyset cursors). MIT, on NuGet — see the
 [ASP.NET Core tutorial](docs/aspnet-core-server-side.html) for a full walkthrough.
 
-## React version & commercial add-ons
+## React and Vue versions & commercial add-ons
 
 - **React version:** [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) —
   feature-complete with this package, published as `@inandu-solutions/grid-react`. Its core
   (sorting, filtering, aggregation, export, i18n) is ported by hand from this repo's
   [`projects/inandu-grid/src/lib/core/`](projects/inandu-grid/src/lib/core/). Has its own
   [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-react/tree/main/examples/stackblitz).
-- **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)* — a React
-  port, `@inandu-solutions/grid-pro-react`, is also in progress (private). The bare
-  `@inandu-solutions/grid` name is intentionally reserved for a future framework-neutral umbrella.
+- **Vue version:** [`inandu-grid-vue`](https://github.com/inandusolutions/inandu-grid-vue) — the
+  Vue 3 port, published as `@inandu-solutions/grid-vue`, kept in sync with this package and the
+  React one. Has its own [live demo](https://inandusolutions.github.io/inandu-grid-vue/) and
+  [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-vue/tree/main/examples/stackblitz).
+- **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)* — React and
+  Vue ports, `@inandu-solutions/grid-pro-react` and `@inandu-solutions/grid-pro-vue`, are also in
+  progress (private). The bare `@inandu-solutions/grid` name is intentionally reserved for a future
+  framework-neutral umbrella.
 
 ## See it
 
