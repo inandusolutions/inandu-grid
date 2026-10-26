@@ -62,9 +62,11 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install Playwright browsers
-        # With a cache hit the browser download is skipped; --with-deps still installs the OS libraries.
+        # No --with-deps: that pulls ~a dozen font packages through apt, and the Ubuntu mirror is
+        # sometimes slow enough to stall the job for 10+ minutes. The runner image already ships the
+        # libraries Chromium needs; the fonts only affect screenshots, which these specs don't take.
         timeout-minutes: 8
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: E2E tests
         # playwright.config.ts's webServer builds the library and serves the demo on :4202.
