@@ -33,6 +33,8 @@ export interface InanduHeaderTemplateContext {
  * for the add-new-row), `field` is the raw field name, `setValue` writes a new draft value back
  * (pass the same raw shape the built-in control would produce, so save-time parsing/validation still
  * applies), and `error` is that field's current inline validation message (`''` when valid).
+ *
+ * Because `value` is always the raw control shape, a cell that holds an array or an object arrives as text (`String(raw)`: `['a','b']` becomes `"a,b"`, `{ ... }` becomes `"[object Object]"`). Store such values as strings (comma-joined, `from..to`, ...) and let the editor parse and format them - as grid-pro's multiselect (`joinWith`) and date-range (`sep`) editors do - or read the original typed value from `row[field]`.
  */
 export interface InanduEditTemplateContext {
   $implicit: unknown;
