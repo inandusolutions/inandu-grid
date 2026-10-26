@@ -43,6 +43,8 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # The Chromium/apt download occasionally stalls on GitHub's runners; fail fast instead of hanging.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -53,7 +55,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
+        # With a cache hit the browser download is skipped; --with-deps still installs the OS libraries.
+        timeout-minutes: 8
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
