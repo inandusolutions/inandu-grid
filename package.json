@@ -38,7 +38,7 @@
     "@angular/platform-browser": "^22.2.3",
     "@angular/platform-browser-dynamic": "^22.2.3",
     "@angular/router": "^22.2.3",
-    "@ngx-translate/core": "^18.0.0",
+    "@ngx-translate/core": "^18.1.0",
     "jspdf": "^4.2.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
@@ -65,7 +65,7 @@
     "less": "^4.9.1",
     "ng-packagr": "^22.2.5",
     "typescript": "~6.0.3",
-    "typescript-eslint": "8.72.0"
+    "typescript-eslint": "8.72.1"
   },
   "overrides": {
     "vite": "^8.3.3"
