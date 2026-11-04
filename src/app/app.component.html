@@ -444,6 +444,34 @@
     </div>
   </section>
 
+  <!-- ---------------------------------------------------------- architecture -->
+  <section class="section" id="architecture">
+    <div class="shell">
+      <header class="section-head">
+        <h2>One core, three interfaces</h2>
+        <p>
+          Filtering, sorting, dates, parsing and export are not re-written per framework. They live
+          in <code>&#64;inandu-solutions/grid-core</code>, shared by the Angular, React and Vue grids,
+          so a fix is made once and the three behave the same. Only the UI layer is framework code.
+        </p>
+      </header>
+
+      <img
+        class="arch-fig"
+        src="https://raw.githubusercontent.com/inandusolutions/inandu-grid-core/main/docs/architecture.svg"
+        alt="Angular, React and Vue grids on top of one shared core package, which shares its query contract with Inandu.Grid.Extensions on .NET"
+        width="900"
+        height="560"
+        loading="lazy"
+      />
+
+      <p class="arch-cta">
+        <a class="btn btn-primary" href="architecture.html">How it fits together</a>
+        <a class="btn btn-secondary" href="https://github.com/inandusolutions/inandu-grid-core" target="_blank" rel="noopener">grid-core on GitHub →</a>
+      </p>
+    </div>
+  </section>
+
   <!-- ----------------------------------------------------------- get started -->
   <section class="section" id="start">
     <div class="shell">
@@ -491,6 +519,7 @@
       <a [href]="repoUrl" target="_blank" rel="noopener">GitHub</a>
       <a [href]="npmUrl" target="_blank" rel="noopener">npm</a>
       <a [href]="manualUrl">Manual</a>
+      <a href="architecture.html">Architecture</a>
       <a [href]="stackblitzUrl" target="_blank" rel="noopener">StackBlitz</a>
       <a [href]="extensionsUrl" target="_blank" rel="noopener">.NET companion</a>
       <a href="https://github.com/inandusolutions/inandu-grid-react" target="_blank" rel="noopener">React version</a>
