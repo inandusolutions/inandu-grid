@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The framework-agnostic core is now the `@inandu-solutions/grid-core` package (a dependency) instead of a copy in
+  `src/lib/core`, shared with the React and Vue grids. With it come the fixes made there: a bare `yyyy-mm-dd` cell is
+  read as a local calendar day (it showed the previous day west of UTC), CSV cells that start with `=`, `+`, `-`,
+  `@`, a tab or a carriage return are prefixed with a quote so a spreadsheet does not run them as formulas, the
+  Excel export drops characters XML cannot carry, `downloadBlob` revokes its URL a second after the click, and tree
+  flattening terminates on cyclic data.
+
 ## [1.2.3] - 2026-11-04
 
 ### Accessibility
