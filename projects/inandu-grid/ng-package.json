@@ -5,6 +5,7 @@
     "entryFile": "src/public-api.ts"
   },
   "allowedNonPeerDependencies": [
+    "@inandu-solutions/grid-core",
     "@ngx-translate/core",
     "jspdf",
     "@angular/cdk"

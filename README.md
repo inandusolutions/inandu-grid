@@ -5,6 +5,12 @@ paid enterprise licence — row grouping, aggregates, inline editing and Excel-c
 export.** Sorting, filtering, pagination, virtual scroll, i18n and theming come with it too, in a
 deliberately small dependency footprint.
 
+**One core, three interfaces.** Filtering, sorting, dates, parsing and export live in
+[`@inandu-solutions/grid-core`](https://github.com/inandusolutions/inandu-grid-core), shared with the
+React and Vue grids, so a fix is made once and the three behave the same.
+
+<p align="center"><img src="https://raw.githubusercontent.com/inandusolutions/inandu-grid-core/main/docs/architecture.svg" alt="Angular, React and Vue grids on top of one shared core package, which shares its query contract with Inandu.Grid.Extensions on .NET" width="820"></p>
+
 [![npm](https://img.shields.io/npm/v/@inandu-solutions/grid-angular.svg)](https://www.npmjs.com/package/@inandu-solutions/grid-angular)
 [![downloads](https://img.shields.io/npm/dm/@inandu-solutions/grid-angular.svg)](https://www.npmjs.com/package/@inandu-solutions/grid-angular)
 [![CI](https://github.com/inandusolutions/inandu-grid/actions/workflows/ci.yml/badge.svg)](https://github.com/inandusolutions/inandu-grid/actions/workflows/ci.yml)
@@ -100,11 +106,11 @@ sorting, filtering, grouping, aggregates, keyset cursors). MIT, on NuGet — see
 
 - **React version:** [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) —
   covers the core feature set (see the [feature matrix](docs/feature-matrix.md) for what is Angular-only), published as `@inandu-solutions/grid-react`. Its core
-  (sorting, filtering, aggregation, export, i18n) is ported by hand from this repo's
-  [`projects/inandu-grid/src/lib/core/`](projects/inandu-grid/src/lib/core/). Has its own
+  (sorting, filtering, aggregation, export, i18n) is the same
+  [`@inandu-solutions/grid-core`](https://github.com/inandusolutions/inandu-grid-core) package this one uses. Has its own
   [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-react/tree/main/examples/stackblitz).
 - **Vue version:** [`inandu-grid-vue`](https://github.com/inandusolutions/inandu-grid-vue) — the
-  Vue 3 port, published as `@inandu-solutions/grid-vue`, sharing this package's core and the
+  Vue 3 port, published as `@inandu-solutions/grid-vue`, sharing the same `@inandu-solutions/grid-core` and the
   React one's feature set ([matrix](docs/feature-matrix.md)). Has its own [live demo](https://inandusolutions.github.io/inandu-grid-vue/) and
   [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-vue/tree/main/examples/stackblitz).
 - **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)* — React and

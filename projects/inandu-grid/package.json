@@ -50,6 +50,7 @@
   },
   "dependencies": {
     "tslib": "^2.3.0",
+    "@inandu-solutions/grid-core": "^0.1.0",
     "@ngx-translate/core": "^18.0.0",
     "jspdf": "^4.2.1",
     "@angular/cdk": "^21.2.0 || ^22.0.0"
