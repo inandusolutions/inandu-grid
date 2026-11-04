@@ -1,18 +1,28 @@
 name: Publish to npm
 
-# Publishes @inandu-solutions/grid-angular to npm via trusted publishing (OIDC) — no npm token and
-# no 2FA prompt, and the package gets a provenance attestation.
+# Publishes @inandu-solutions/grid-angular to npm via trusted publishing (OIDC): no npm token, and the package gets a
+# provenance attestation.
 #
-# Runs on a pushed v* tag, or manually (Actions > Publish to npm > Run workflow) with the version
-# typed in.
+# Three jobs, so that nothing which runs project code ever holds the publishing credential:
+#   build    read-only token. Checks the tag is a commit of main, installs with --ignore-scripts, runs the tests,
+#            builds and packs the tarball, and uploads it as an artifact.
+#   publish  the only job with `id-token: write`. It installs nothing from the project: it downloads the tarball
+#            built above and publishes that exact file. It runs in the `npm-publish` environment, so add required
+#            reviewers there (Settings > Environments) and put the same name in the package's Trusted Publisher.
+#   release  creates the GitHub Release (`contents: write`).
 #
-# One-time setup, on npmjs.com > the package > Settings > Trusted Publisher > GitHub Actions:
+# Runs on a pushed v* tag, or manually (Actions > Publish to npm > Run workflow) with the version typed in.
+# `dry_run` runs the build job only (nothing is published, no release): use it to rehearse a release from main.
+#
+# Trusted Publisher (npmjs.com > the package > Settings > Trusted Publisher > GitHub Actions):
 #   Organization or user: inandusolutions
 #   Repository:           inandu-grid
 #   Workflow filename:    publish.yml
+#   Environment name:     npm-publish   (once the environment has reviewers)
+# The connection needs the "npm publish" permission, not only "stage publish".
 #
-# Release flow (see PUBLISHING.md): bump "version" in projects/inandu-grid/package.json, update
-# CHANGELOG.md, merge, then `git tag vX.Y.Z && git push origin vX.Y.Z` from main.
+# Release flow: bump "version" in projects/inandu-grid/package.json (npm version <x.y.z> --no-git-tag-version), merge
+# that PR, then `git tag vX.Y.Z && git push origin vX.Y.Z` from main.
 
 on:
   push:
@@ -20,28 +30,49 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish — must match "version" in projects/inandu-grid/package.json (e.g. 1.3.0)'
+        description: 'Version to publish — must match "version" in projects/inandu-grid/package.json (e.g. 1.4.0)'
         required: true
+      dry_run:
+        description: 'Build and test only: do not publish and do not create a release'
+        type: boolean
+        default: false
 
-permissions:
-  contents: write   # create the GitHub Release after publishing
-  id-token: write   # required for npm trusted publishing + provenance
+# Nothing is granted by default; each job asks for what it needs.
+permissions: {}
 
 jobs:
-  publish:
-    # Publishing credentials are only for a release tag or main: a manual run from any other branch is skipped.
+  build:
+    # Release tag or main only: a manual run from any other branch is skipped.
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tarball: ${{ steps.pack.outputs.tarball }}
+      sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0          # the ancestry check below needs main's history
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      # A tag can be pushed on any commit by anyone with write access: only a commit of main may publish.
+      - name: The commit must be on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_SHA is not a commit of main. Release tags must be cut from main."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc
           cache: npm
-          registry-url: https://registry.npmjs.org
 
       - name: Resolve version
+        id: ver
         env:
           # Passed through the environment, never interpolated into the script.
           EVENT_NAME: ${{ github.event_name }}
@@ -57,23 +88,16 @@ jobs:
             exit 1
           fi
           PKG_VERSION=$(node -p "require('./projects/inandu-grid/package.json').version")
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "publishing=$VERSION  package.json=$PKG_VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "publishing=$VERSION  projects/inandu-grid/package.json=$PKG_VERSION"
           if [ "$VERSION" != "$PKG_VERSION" ]; then
             echo "::error::Version $VERSION does not match \"version\": \"$PKG_VERSION\" in projects/inandu-grid/package.json — bump it first."
             exit 1
           fi
 
-      # Node 22 ships npm 10.x; trusted publishing needs npm >= 11.5.1.
-      - name: Update npm
-        run: npm install -g npm@^11.5.1
-
-      - name: Check npm supports trusted publishing (>= 11.5.1)
-        run: |
-          npm --version
-          node -e "const [a,b,c]=process.argv[1].split('.').map(Number); if (a<11 || (a===11 && (b<5 || (b===5 && c<1)))) { console.error('npm >= 11.5.1 is required for trusted publishing'); process.exit(1); }" "$(npm --version)"
-
-      - run: npm ci
+      # Dependencies' install scripts do not run: nothing the project pulls in executes while this job can read secrets.
+      - name: Install (no lifecycle scripts)
+        run: npm ci --ignore-scripts
 
       - name: Lint
         run: npm run lint
@@ -84,7 +108,6 @@ jobs:
       - name: Build library
         run: npm run build:lib
 
-      # Publish from dist/inandu-grid, never the repo root (the root package.json is the private workspace).
       - name: Check the built package
         working-directory: dist/inandu-grid
         run: |
@@ -94,15 +117,81 @@ jobs:
           [ "$NAME" = "@inandu-solutions/grid-angular" ] || { echo "::error::unexpected package name $NAME"; exit 1; }
           [ "$BUILT" = "$(node -p "require('../../projects/inandu-grid/package.json').version")" ] || { echo "::error::dist version $BUILT differs from source"; exit 1; }
 
-      - name: Publish (provenance)
-        working-directory: dist/inandu-grid
-        run: npm publish --provenance --access public
+      - name: Pack
+        id: pack
+        run: |
+          mkdir -p "$RUNNER_TEMP/pkg"
+          npm pack ./dist/inandu-grid --pack-destination "$RUNNER_TEMP/pkg"
+          TARBALL=$(ls "$RUNNER_TEMP"/pkg/*.tgz)
+          echo "tarball=$(basename "$TARBALL")" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$TARBALL" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          tar -xzOf "$TARBALL" package/package.json | node -e "
+            const p = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+            console.log('packed ' + p.name + '@' + p.version);
+            if (p.name !== '@inandu-solutions/grid-angular') { console.error('::error::unexpected package name ' + p.name); process.exit(1); }
+            if (p.version !== process.env.EXPECTED) { console.error('::error::packed version ' + p.version + ' differs from ' + process.env.EXPECTED); process.exit(1); }
+          "
+        env:
+          EXPECTED: ${{ steps.ver.outputs.version }}
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/pkg/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      id-token: write   # npm trusted publishing + provenance: the only job that has it
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Node 22 ships npm 10.x; trusted publishing needs npm >= 11.5.1. Pinned, not a range.
+      - name: Install npm 11.21.1
+        run: npm install -g npm@11.21.1
+
+      - name: Check npm supports trusted publishing (>= 11.5.1)
+        run: |
+          npm --version
+          node -e "const [a,b,c]=process.argv[1].split('.').map(Number); if (a<11 || (a===11 && (b<5 || (b===5 && c<1)))) { console.error('npm >= 11.5.1 is required for trusted publishing'); process.exit(1); }" "$(npm --version)"
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-package
+          path: pkg
+
+      - name: Publish the tarball that was tested (provenance)
+        env:
+          TARBALL: ${{ needs.build.outputs.tarball }}
+          EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          echo "$EXPECTED_SHA256  pkg/$TARBALL" | sha256sum --check
+          npm publish "pkg/$TARBALL" --provenance --access public
+
+  release:
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the GitHub Release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       # The release notes come from the CHANGELOG.md section for this version when there is one,
       # otherwise GitHub generates them from the merged PRs since the previous tag.
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           TAG="v$VERSION"
           if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists"; exit 0; fi
