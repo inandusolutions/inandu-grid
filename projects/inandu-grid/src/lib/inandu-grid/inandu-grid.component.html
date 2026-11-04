@@ -1,4 +1,5 @@
 <div [class]="rootClasses()" [attr.id]="id() || null" [attr.dir]="dir()" [style.width.px]="width() || null" [style.height.px]="height() || null" [style.--inandu-select-column-width.px]="selectColumnWidthPx" [style.--inandu-row-drag-column-width.px]="rowDragColumnWidthPx" [style.--inandu-detail-toggle-column-width.px]="detailToggleColumnWidthPx" tabindex="-1" (keydown)="onGridKeyDown($event)">
+  <div class="inandu-sr-only" role="status" aria-live="polite">{{ liveMessage() }}</div>
   @if (exportable() || columnToggle() || (selectable() && deletable())) {
     <div class="inandu-toolbar">
       @if (exportable()) {
@@ -128,6 +129,7 @@
           @let headerDraggable = column.groupable() || column.reorder();
           <th class="inandu-column" scope="col" role="columnheader"
             [attr.data-field]="column.field()"
+            [attr.aria-sort]="column.sortable() ? ariaSort(column.field()) : null"
             [attr.tabindex]="colIndex === 0 && !selectable() ? 0 : -1"
             [class.inandu-groupable-header]="column.groupable()"
             [class.inandu-sticky-column]="columnPinnedSide(column)"
@@ -262,7 +264,7 @@
        cell carries the depth indent and an expand/collapse toggle when the node has children;
        every other cell renders like a normal data cell (cellTemplate / formatted value). -->
   <ng-template #treeRow let-node let-index="index">
-    <tr class="inandu-row inandu-tree-row" role="row" [attr.aria-level]="node.depth + 1" [attr.aria-expanded]="node.expandable ? node.expanded : null">
+    <tr class="inandu-row inandu-tree-row" role="row" [attr.aria-selected]="selectable() ? isRowSelected(node.row) : null" [attr.aria-level]="node.depth + 1" [attr.aria-expanded]="node.expandable ? node.expanded : null">
       @if (selectable()) {
         <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" style="inset-inline-start: 0">
           <input type="checkbox" class="inandu-select-checkbox" [attr.aria-label]="selectRowLabel(index)"
@@ -308,7 +310,7 @@
 
   @if (virtualScroll()) {
     <cdk-virtual-scroll-viewport [itemSize]="effectiveVirtualRowHeight()" [style.height.px]="virtualViewportHeight()" class="inandu-virtual-viewport" (scrolledIndexChange)="onVirtualScrolledIndexChange($event)">
-      <table class="xtable" role="grid">
+      <table class="xtable" role="grid" [attr.aria-rowcount]="ariaRowCount()">
         <ng-container *ngTemplateOutlet="tableHead"></ng-container>
         <tbody>
           @if (error()) {
@@ -332,6 +334,7 @@
               [class.inandu-row]="item.kind === 'row'"
               [class.inandu-group-row]="item.kind === 'group'"
               [attr.role]="item.kind === 'row' ? 'row' : null"
+              [attr.aria-selected]="item.kind === 'row' && selectable() ? isRowSelected(item.row) : null"
             >
               @if (item.kind === 'group') {
                 <td [attr.colspan]="totalColumnCount() || 1">
@@ -418,7 +421,7 @@
       </table>
     </cdk-virtual-scroll-viewport>
   } @else {
-    <table class="xtable" role="grid">
+    <table class="xtable" role="grid" [attr.aria-rowcount]="ariaRowCount()">
       <ng-container *ngTemplateOutlet="tableHead"></ng-container>
     @if (pinnedTopRows().length) {
       <tbody class="inandu-pinned-rows inandu-pinned-top">
@@ -455,7 +458,7 @@
             </td>
           </tr>
           @for (row of group.rows; track row) {
-            <tr class="inandu-row" role="row">
+            <tr class="inandu-row" role="row" [attr.aria-selected]="selectable() ? isRowSelected(row) : null">
               @if (selectable()) {
                 <td class="inandu-select-cell inandu-sticky-column" role="gridcell" tabindex="-1" style="inset-inline-start: 0">
                   <input type="checkbox" class="inandu-select-checkbox"
@@ -602,6 +605,7 @@
         }
         @for (row of pagedData(); track row; let rowIndex = $index) {
           <tr class="inandu-row" role="row"
+            [attr.aria-selected]="selectable() ? isRowSelected(row) : null"
             [attr.data-row-index]="rowIndex"
             [class.inandu-drag-over]="hasRowDragHandle() && isDragOverRow(row)"
             [attr.draggable]="hasRowDragHandle() ? true : null"

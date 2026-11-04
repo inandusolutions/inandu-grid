@@ -4795,3 +4795,77 @@ describe('InanduGridComponent cross-browser date parsing', () => {
     expect((cell.nativeElement as HTMLElement).textContent?.trim()).toBe('15/06/2025 14:30');
   });
 });
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" [selectable]="true" [paging]="paging" [loading]="loading" [error]="error" lang="en">
+      <inandu-column title="Name" field="name" sortable="true"></inandu-column>
+      <inandu-column title="Score" field="score"></inandu-column>
+    </inandu-grid>
+  `,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class AccessibilityHostComponent {
+  rows: InanduGridRow[] = Array.from({ length: 5 }, (_, i) => ({ name: `N${i + 1}`, score: i }));
+  paging: InanduGridPagingOptions = { pageSize: 2 };
+  loading = false;
+  error = '';
+}
+
+describe('InanduGridComponent accessibility', () => {
+  let fixture: ComponentFixture<AccessibilityHostComponent>;
+  const live = () => fixture.debugElement.query(By.css('[role="status"]')).nativeElement as HTMLElement;
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(AccessibilityHostComponent);
+    fixture.detectChanges();
+  });
+
+  it('exposes the sort state on sortable column headers only', () => {
+    const [name, score] = fixture.debugElement.queryAll(By.css('th[data-field]')).map(h => h.nativeElement as HTMLElement);
+    expect(name.getAttribute('aria-sort')).toBe('none');
+    expect(score.hasAttribute('aria-sort')).toBeFalse();
+
+    (name.querySelector('.inandu-sort-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(name.getAttribute('aria-sort')).toBe('ascending');
+
+    (name.querySelector('.inandu-sort-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(name.getAttribute('aria-sort')).toBe('descending');
+  });
+
+  it('reports the full row count (header included) when the DOM holds only a page', () => {
+    const table = fixture.debugElement.query(By.css('table')).nativeElement as HTMLElement;
+    expect(table.getAttribute('aria-rowcount')).toBe('6');
+  });
+
+  it('marks data rows as selected or not once the grid is selectable', () => {
+    const rows = () => fixture.debugElement.queryAll(By.css('tbody tr[role="row"]')).map(r => r.nativeElement as HTMLElement);
+    expect(rows().map(r => r.getAttribute('aria-selected'))).toEqual(['false', 'false']);
+
+    (rows()[0].querySelector('.inandu-select-checkbox') as HTMLInputElement).click();
+    fixture.detectChanges();
+    expect(rows().map(r => r.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+  });
+
+  it('announces loading, errors and an empty result in a polite live region', () => {
+    expect(live().getAttribute('aria-live')).toBe('polite');
+    expect(live().textContent?.trim()).toBe('');
+
+    fixture.componentInstance.loading = true;
+    fixture.detectChanges();
+    expect(live().textContent?.trim()).not.toBe('');
+
+    fixture.componentInstance.loading = false;
+    fixture.componentInstance.error = 'HTTP 500';
+    fixture.detectChanges();
+    expect(live().textContent?.trim()).toBe('HTTP 500');
+
+    fixture.componentInstance.error = '';
+    fixture.componentInstance.rows = [];
+    fixture.detectChanges();
+    expect(live().textContent?.trim()).not.toBe('');
+  });
+});
