@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture: one core, three interfaces</title>
+<meta name="description" content="How the Inandu data grids share one framework-agnostic core: what lives in it, what stays in each framework, and how the .NET server contract is kept in step.">
+<style>
+  :root { --bg:#fff; --fg:#1b1f24; --muted:#59636e; --line:#d8dee4; --card:#f6f8fa; --accent:#0b57d0; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e1116; --fg:#e6edf3; --muted:#9aa4af; --line:#30363d; --card:#161b22; --accent:#6ea8fe; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:40px 16px 72px; }
+  h1 { font-size:1.9rem; margin:.4rem 0 .3rem; } h2 { font-size:1.3rem; margin:2.4rem 0 .6rem; }
+  .lead { color:var(--muted); font-size:1.08rem; margin:0 0 1.4rem; }
+  a { color:var(--accent); }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.9em; background:var(--card); padding:1px 5px; border-radius:4px; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; }
+  pre code { background:none; padding:0; }
+  img.fig { width:100%; height:auto; border-radius:10px; border:1px solid var(--line); }
+  .tablewrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; min-width:560px; } th,td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-size:.85rem; font-weight:600; }
+  .top a { text-decoration:none; font-size:.95rem; }
+  ul { padding-left:1.2rem; } li { margin:.35rem 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><a href="./">&larr; Live demo</a></div>
+  <h1>One core. Three interfaces.</h1>
+  <p class="lead">The Angular, React and Vue grids do not each re-implement filtering, sorting, dates, parsing and export. They share one framework-agnostic package, and only the UI layer is written per framework.</p>
+
+  <img class="fig" src="https://raw.githubusercontent.com/inandusolutions/inandu-grid-core/main/docs/architecture.svg" alt="Angular, React and Vue grids on top of one shared core package, which shares its query contract with Inandu.Grid.Extensions on .NET" width="860" height="560">
+
+  <h2>What lives where</h2>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Layer</th><th>Holds</th><th>Does not hold</th></tr>
+    <tr><td><strong>UI</strong><br><code>grid-angular</code> <code>grid-react</code> <code>grid-vue</code></td>
+        <td>The component, the headless hook / signals / composables, rendering, focus and keyboard handling, virtual scroll, theming, the server data hook.</td>
+        <td>Any rule about what a value means: how it is compared, filtered, formatted, parsed or exported.</td></tr>
+    <tr><td><strong>Core</strong><br><code>@inandu-solutions/grid-core</code></td>
+        <td>Column filters, sorting, date and number formatting, aggregates, tree flattening, paste and draft parsing, CSV / Excel markup / PDF helpers, translated messages in 5 languages.</td>
+        <td>Frameworks, components and the DOM (the single exception is <code>downloadBlob</code>).</td></tr>
+    <tr><td><strong>Server</strong><br><code>Inandu.Grid.Extensions</code> (.NET)</td>
+        <td>Turning the grid's query string into an <code>IQueryable</code>: filters, sorts, paging, keyset cursors, deny-by-default field allow-list.</td>
+        <td>Any client code. It only agrees with the clients on the wire format.</td></tr>
+  </table>
+  </div>
+
+  <h2>What this buys you</h2>
+  <ul>
+    <li><strong>A fix is made once.</strong> A date bug, a CSV injection or a filter edge case is fixed in the core and reaches the three grids in the same release. There are no copies to drift.</li>
+    <li><strong>Parity is a property, not a promise.</strong> The three grids give the same result for the same input because they run the same code, which is tested in several time zones.</li>
+    <li><strong>Behaviour is stated in tests.</strong> The core has its own suite, with the date rules run under <code>TZ=America/Bogota</code> as well as UTC.</li>
+    <li><strong>Swap the UI, keep the rules.</strong> A new framework port is a UI layer on top of the same package, not a rewrite of the data logic.</li>
+  </ul>
+
+  <h2>The contract with the server</h2>
+  <p>The query the grids send and what the .NET extensions accept are checked against one shared fixture, <code>server-queries.json</code>. The same cases run on the TypeScript side (the clients) and on the .NET side (the server), so a change to the wire format fails a test on whichever side did not follow.</p>
+
+  <h2>Use the core on its own</h2>
+<pre><code>npm install @inandu-solutions/grid-core
+
+import { formatCellValue, matchesColumnFilter, escapeCsvValue } from '@inandu-solutions/grid-core';
+
+formatCellValue('2024-01-05', 'date', 'YYYY-MM-DD', 'en-US'); // "2024-01-05", in every time zone
+escapeCsvValue('=HYPERLINK("http://example.com","x")');       // opens as text, not as a formula</code></pre>
+  <p>
+    <a href="https://github.com/inandusolutions/inandu-grid-core">grid-core on GitHub</a> ·
+    <a href="https://www.npmjs.com/package/@inandu-solutions/grid-core">npm</a> ·
+    <a href="https://github.com/inandusolutions/inandu-grid">grid-angular</a> ·
+    <a href="https://github.com/inandusolutions/inandu-grid-react">grid-react</a> ·
+    <a href="https://github.com/inandusolutions/inandu-grid-vue">grid-vue</a> ·
+    <a href="https://github.com/inandusolutions/inandu-grid-extensions">Inandu.Grid.Extensions</a>
+  </p>
+</main>
+</body>
+</html>
