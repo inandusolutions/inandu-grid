@@ -99,13 +99,13 @@ sorting, filtering, grouping, aggregates, keyset cursors). MIT, on NuGet — see
 ## React and Vue versions & commercial add-ons
 
 - **React version:** [`inandu-grid-react`](https://github.com/inandusolutions/inandu-grid-react) —
-  feature-complete with this package, published as `@inandu-solutions/grid-react`. Its core
+  covers the core feature set (see the [feature matrix](docs/feature-matrix.md) for what is Angular-only), published as `@inandu-solutions/grid-react`. Its core
   (sorting, filtering, aggregation, export, i18n) is ported by hand from this repo's
   [`projects/inandu-grid/src/lib/core/`](projects/inandu-grid/src/lib/core/). Has its own
   [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-react/tree/main/examples/stackblitz).
 - **Vue version:** [`inandu-grid-vue`](https://github.com/inandusolutions/inandu-grid-vue) — the
-  Vue 3 port, published as `@inandu-solutions/grid-vue`, kept in sync with this package and the
-  React one. Has its own [live demo](https://inandusolutions.github.io/inandu-grid-vue/) and
+  Vue 3 port, published as `@inandu-solutions/grid-vue`, sharing this package's core and the
+  React one's feature set ([matrix](docs/feature-matrix.md)). Has its own [live demo](https://inandusolutions.github.io/inandu-grid-vue/) and
   [StackBlitz example](https://stackblitz.com/github/inandusolutions/inandu-grid-vue/tree/main/examples/stackblitz).
 - **Commercial add-ons:** `@inandu-solutions/grid-pro` *(proprietary, separate package)* — React and
   Vue ports, `@inandu-solutions/grid-pro-react` and `@inandu-solutions/grid-pro-vue`, are also in
