@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Accessibility
+
+- Sortable column headers expose `aria-sort` (`ascending` / `descending` / `none`).
+- Data rows expose `aria-selected` when the grid is `selectable`.
+- Paged, virtual-scroll and server-side grids expose `aria-rowcount` (header row included), so assistive
+  technology can say "row 3 of 240" although only a page is in the DOM.
+- A visually hidden polite live region (`role="status"`) announces loading, an error message and an empty
+  result. It reuses the existing translated messages, so there are no new strings.
+
 ### Documentation
 
 - `InanduEditTemplateContext`: documented that `value` is always the raw control shape (text), so a cell

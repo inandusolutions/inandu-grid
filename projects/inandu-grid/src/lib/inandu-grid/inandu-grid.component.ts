@@ -1421,6 +1421,36 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.requestedPage.set(1);
   }
 
+  /** `aria-sort` for a sortable column header: the direction applied to `field`, or `none`. */
+  ariaSort(field: string): 'ascending' | 'descending' | 'none' {
+    const direction = this.sortDirectionFor(field);
+    return direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none';
+  }
+
+  /**
+   * `aria-rowcount` (header row included) when the DOM holds only part of the data — paged, virtual
+   * or server-side — so assistive tech can announce "row 3 of 240". `null` otherwise: the browser
+   * counts the rows that are really there.
+   */
+  readonly ariaRowCount = computed<number | null>(() => {
+    if (!this.paging() && !this.virtualScroll() && !this.serverSide()) {
+      return null;
+    }
+    const total = this.serverSide() ? (this.totalItems() ?? this.data().length) : this.sortedData().length;
+    return total + 1;
+  });
+
+  /** Text for the polite live region: the states a sighted user sees without any focus change. */
+  readonly liveMessage = computed(() => {
+    if (this.error()) {
+      return this.error();
+    }
+    if (this.loading()) {
+      return this.msgLoading();
+    }
+    return this.visibleRowCount() === 0 ? this.msgNoData() : '';
+  });
+
   /** The sort direction currently applied to `field`, or `undefined` if it isn't part of the active sort — what the header button's icon binds to. */
   sortDirectionFor(field: string): SortDirection | undefined {
     return this.sortCriteria().find(c => c.field === field)?.direction;
