@@ -7,7 +7,8 @@ deliberately small dependency footprint.
 
 **One core, three interfaces.** Filtering, sorting, dates, parsing and export live in
 [`@inandu-solutions/grid-core`](https://github.com/inandusolutions/inandu-grid-core), shared with the
-React and Vue grids, so a fix is made once and the three behave the same.
+React and Vue grids, so a fix is made once and the three behave the same
+([how it fits together](https://inandusolutions.github.io/inandu-grid/architecture.html)).
 
 <p align="center"><img src="https://raw.githubusercontent.com/inandusolutions/inandu-grid-core/main/docs/architecture.svg" alt="Angular, React and Vue grids on top of one shared core package, which shares its query contract with Inandu.Grid.Extensions on .NET" width="820"></p>
 
