@@ -66,15 +66,20 @@ Done for `@inandu-solutions/grid-angular`: the npm org `@inandu-solutions` exist
    ```bash
    git checkout main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z
    ```
-3. The workflow checks the tag matches the library's version, then lint → `test:lib` → `build:lib`,
-   and runs `npm publish --provenance --access public` from `dist/inandu-grid`. It can also be run by
-   hand from *Actions → Publish to npm* with the version typed in.
+3. The workflow runs three jobs. `build` (read-only token) checks the tag is a commit of `main`, that it matches
+   the library's version, installs with `--ignore-scripts`, runs lint → `test:lib` → `build:lib` and packs
+   `dist/inandu-grid`. `publish` (the only job with `id-token: write`, in the `npm-publish` environment) installs
+   nothing from the project: it downloads that tarball and runs `npm publish --provenance --access public` on it.
+   `release` creates the GitHub Release. It can also be run by hand from *Actions → Publish to npm* with the
+   version typed in; tick `dry_run` to rehearse it (build only, nothing is published) from `main`.
 4. The workflow also creates the **GitHub Release** for the tag, with the `CHANGELOG.md` section for that
    version as its notes (or GitHub-generated notes if there is none). Nothing to do by hand.
 
 One-time setup, on npmjs.com → the package → *Settings → Trusted Publisher → GitHub Actions*:
-organization `inandusolutions`, repository `inandu-grid`, workflow filename `publish.yml`, no
-environment. npm shows it as *Pending validation* until the first publish through the workflow
+organization `inandusolutions`, repository `inandu-grid`, workflow filename `publish.yml`, and the
+environment `npm-publish` once it has required reviewers (*Settings → Environments → npm-publish*): that is what
+stops a tag or workflow edit on another branch from publishing. The connection needs the *npm publish*
+permission, not only *stage publish*. npm shows it as *Pending validation* until the first publish through the workflow
 succeeds (that publish must happen within the window npm shows).
 
 ## Cutting a release (manual fallback)
