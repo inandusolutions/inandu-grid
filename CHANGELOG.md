@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Needs `@inandu-solutions/grid-core` 0.1.2.
+## [1.4.0] - 2026-11-05
+
+Requires `@inandu-solutions/grid-core` ^0.1.2.
 
 ### Fixed
 
