@@ -174,7 +174,7 @@ jobs:
           EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
         run: |
           echo "$EXPECTED_SHA256  pkg/$TARBALL" | sha256sum --check
-          npm publish "pkg/$TARBALL" --provenance --access public
+          npm publish "./pkg/$TARBALL" --provenance --access public
 
   release:
     needs: [build, publish]
