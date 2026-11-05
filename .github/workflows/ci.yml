@@ -94,7 +94,7 @@ jobs:
   corpus-sync:
     runs-on: ubuntu-latest
     env:
-      EXT_REF: 7298765488cbdf8fffea663498c059ffef26d871    # inandusolutions/inandu-grid-extensions
+      EXT_REF: 7b1b60b16683b64534f6195933d5c786ed1dbe60    # inandusolutions/inandu-grid-extensions v0.8.0
       CORPUS: projects/inandu-grid/src/lib/contract/diff-corpus.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
