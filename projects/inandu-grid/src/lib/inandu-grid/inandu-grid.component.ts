@@ -31,7 +31,7 @@ import {
   hasMeaningfulFilterValue,
   matchesColumnFilter,
   parseDraftValue,
-  parsePastedCellValue,
+  parsePastedCell,
   placeColumnsByOrder,
   truncatePdfText,
 } from '../core';
@@ -1120,7 +1120,11 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         if (!targetColumn || !targetColumn.editable()) {
           return;
         }
-        updates.push({ row: targetRow, field: targetColumn.field(), value: parsePastedCellValue(cellText, targetColumn.type()) });
+        // Text the column cannot hold (an unparseable number, an ambiguous date, a word that is no boolean) is skipped, never written as a clear.
+        const parsed = parsePastedCell(cellText, targetColumn.type(), { locale: this.locale });
+        if (parsed) {
+          updates.push({ row: targetRow, field: targetColumn.field(), value: parsed.value });
+        }
       });
     });
     if (updates.length > 0) {
@@ -1381,10 +1385,11 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     if (criteria.length === 0) {
       return rows;
     }
+    const types = new Map(this.columns().map(column => [column.field(), column.type()] as const));
     return [...rows].sort((a, b) => {
       for (const { field, direction } of criteria) {
         const sign = direction === 'asc' ? 1 : -1;
-        const cmp = compareCellValues(a[field], b[field], this.locale) * sign;
+        const cmp = compareCellValues(a[field], b[field], { locale: this.locale, type: types.get(field) }) * sign;
         if (cmp !== 0) {
           return cmp;
         }
@@ -1810,10 +1815,11 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       : undefined;
 
     const criteria = this.sortCriteria();
+    const types = new Map(this.columns().map(column => [column.field(), column.type()] as const));
     const compare = criteria.length
       ? (a: T, b: T): number => {
           for (const { field, direction } of criteria) {
-            const cmp = compareCellValues(a[field], b[field], this.locale) * (direction === 'asc' ? 1 : -1);
+            const cmp = compareCellValues(a[field], b[field], { locale: this.locale, type: types.get(field) }) * (direction === 'asc' ? 1 : -1);
             if (cmp !== 0) return cmp;
           }
           return 0;
@@ -1982,7 +1988,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     (value, locale, digitsInfo) => formatNumber(value, locale, digitsInfo || undefined);
 
   formatValue(column: InanduColumnComponent, row: T): string {
-    return formatCellValue(row[column.field()], column.type(), column.format(), this.locale, this.numberFormatter);
+    return formatCellValue(row[column.field()], column.type(), column.format(), this.locale, this.numberFormatter, column.timeZone());
   }
 
   /** The `*ngTemplateOutlet` context for `column.cellTemplate()` — `$implicit`/`value` is the cell's raw value, `row` the full row. */

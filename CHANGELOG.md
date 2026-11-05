@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Needs `@inandu-solutions/grid-core` 0.1.2.
+
+### Fixed
+
+- **Pasting is strict and follows the grid's locale.** A number is read with the locale's separators (`1.234,56` in `es`),
+  a numeric date in the order the locale writes it, and a boolean through a dictionary. Text a column cannot hold
+  (`Infinity`, `0x10`, an ambiguous date, a word that is no boolean) is skipped instead of clearing the cell.
+- **Sorting follows the column type**: text in a number or date column is compared as a number or a date (`'9'` before `'10'`).
+- A numeric column shows an empty or blank cell as empty and a boolean as itself, not `0` / `1`; a `min` / `max` of `0` in a
+  column filter now filters.
+
+### Added
+
+- `timeZone` input on `<inandu-column>`: the zone dates are shown and filtered in (`'local'`, `'utc'` or an IANA name such as `'America/Bogota'`).
+- Date formats accept `MMM` / `MMMM` (month name in the grid's locale) and `[literal text]`.
+
 ## [1.3.0] - 2026-11-04
 
 ### Changed

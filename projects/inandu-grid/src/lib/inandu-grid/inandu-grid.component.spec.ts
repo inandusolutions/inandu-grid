@@ -4869,3 +4869,52 @@ describe('InanduGridComponent accessibility', () => {
     expect(live().textContent?.trim()).not.toBe('');
   });
 });
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" clipboard="true" (cellsPaste)="onCellsPaste($event)">
+      <inandu-column title="Name" field="name" editable="true"></inandu-column>
+      <inandu-column title="Qty" field="qty" type="number" editable="true"></inandu-column>
+      <inandu-column title="On" field="on" type="boolean" editable="true"></inandu-column>
+      <inandu-column title="At" field="at" type="date" format="YYYY-MM-DD" timeZone="America/Bogota"></inandu-column>
+    </inandu-grid>
+  `,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class CoreBehaviourHostComponent {
+  rows: InanduGridRow[] = [{ name: 'a', qty: 1, on: false, at: '2024-01-05T00:00:00Z' }];
+  lastPaste?: InanduGridCellPaste[];
+
+  onCellsPaste(paste: InanduGridCellPaste[]): void {
+    this.lastPaste = paste;
+  }
+}
+
+describe('InanduGridComponent grid-core 0.1.2 behaviour', () => {
+  let fixture: ComponentFixture<CoreBehaviourHostComponent>;
+  let grid: InanduGridComponent;
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(CoreBehaviourHostComponent);
+    fixture.detectChanges();
+    grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+  });
+
+  it('pasteAt() reads a number strictly and skips what a column cannot hold', () => {
+    const [row] = fixture.componentInstance.rows;
+    grid.pasteAt(row, 'name', 'x\tInfinity\tquizás');
+    expect(fixture.componentInstance.lastPaste).toEqual([{ row, field: 'name', value: 'x' }]);
+  });
+
+  it('pasteAt() reads a number with the separators of the locale', () => {
+    const [row] = fixture.componentInstance.rows;
+    grid.pasteAt(row, 'qty', '1,234.5');
+    expect(fixture.componentInstance.lastPaste).toEqual([{ row, field: 'qty', value: 1234.5 }]);
+  });
+
+  it('shows a date in the timeZone of its column', () => {
+    const [row] = fixture.componentInstance.rows;
+    expect(grid.copyCellText(row, 'at')).toBe('2024-01-04');
+  });
+});

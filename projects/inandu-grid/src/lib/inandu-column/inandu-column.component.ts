@@ -234,6 +234,12 @@ export class InanduColumnComponent {
   readonly aggregate = input<InanduColumnAggregate>('');
 
   /**
+   * `type="date"` columns: the zone a date is shown and filtered in — `'local'` (the default, the browser's), `'utc'`, or an IANA
+   * name such as `'America/Bogota'`. Without it `2024-01-05T00:00:00Z` shows as the 4th west of UTC.
+   */
+  readonly timeZone = input<string | undefined>(undefined);
+
+  /**
    * Every `<ng-template>` declared as this column's content, and (index-aligned, same document
    * order) each one's own anchor `ElementRef` — together, used internally to tell `cellTemplate()`
    * apart from `headerTemplate()` when both are declared on the same column (see `headerTemplate`'s
