@@ -28,6 +28,10 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // The other engines and a touch device: CI runs them in the e2e-cross-browser job (npm run e2e:all locally).
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     // Screen recordings for docs/gifs. Not part of `npm run e2e` (--project=chromium); .ts (not
     // .spec.ts) also keeps promo-scenes out of the default match. See scripts/make-gifs.mjs.
     {

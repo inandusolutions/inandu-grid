@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, TemplateRef, booleanAttribute, computed, contentChild, contentChildren, input, numberAttribute } from '@angular/core';
-import type { InanduColumnAggregate, InanduColumnStickySide, InanduColumnType } from '../core';
+import type { InanduColumnAggregate, InanduColumnStickySide, InanduColumnType } from '@inandu-solutions/grid-core';
 
 // Re-exported for back-compat: these string-literal unions used to be declared here. They now live
 // in @inandu-solutions/grid-core (framework-agnostic); public-api.ts still re-exports them from this module.
