@@ -1,5 +1,5 @@
 import { TranslateService } from '@ngx-translate/core';
-import { INANDU_GRID_TRANSLATIONS } from '../core';
+import { INANDU_GRID_TRANSLATIONS } from '@inandu-solutions/grid-core';
 
 const TRANSLATIONS = INANDU_GRID_TRANSLATIONS;
 const DEFAULT_LANG = 'en';

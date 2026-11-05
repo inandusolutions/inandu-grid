@@ -1,0 +1,679 @@
+{
+  "comment": "Differential corpus. The same rows and the same requests are run through every implementation of the grid semantics: grid-core, grid-angular, grid-react, grid-vue (client side, 'client') and Inandu.Grid.Extensions (server side, 'server', an in-memory ToInanduGrid). Each must return expectedIds, in order. Canonical copy: inandu-grid-extensions tests/Inandu.Grid.Extensions.Tests/Contract/diff-corpus.json; the others must be identical (core-sync checks it). No case depends on the time zone or the culture of the machine.",
+  "columns": {
+    "id": "number",
+    "name": "string",
+    "qty": "number",
+    "price": "number",
+    "when": "date",
+    "active": "boolean",
+    "tag": "string"
+  },
+  "rows": [
+    {
+      "id": 1,
+      "name": "Alpha, One",
+      "qty": 10,
+      "price": 5.5,
+      "when": "2026-01-05T14:00:00",
+      "active": true,
+      "tag": "x"
+    },
+    {
+      "id": 2,
+      "name": "Beta",
+      "qty": 0,
+      "price": 19.25,
+      "when": "2026-01-05T23:59:59",
+      "active": false,
+      "tag": "y"
+    },
+    {
+      "id": 3,
+      "name": "Gamma",
+      "qty": null,
+      "price": 7,
+      "when": "2026-01-06T00:00:00",
+      "active": true,
+      "tag": null
+    },
+    {
+      "id": 4,
+      "name": "Delta",
+      "qty": 5,
+      "price": 12.5,
+      "when": "2026-01-07T09:30:00",
+      "active": true,
+      "tag": "x"
+    },
+    {
+      "id": 5,
+      "name": "Epsilon",
+      "qty": 5,
+      "price": 12.5,
+      "when": "2026-01-07T09:30:00",
+      "active": false,
+      "tag": "x"
+    },
+    {
+      "id": 6,
+      "name": "Zeta",
+      "qty": 20,
+      "price": 3,
+      "when": "2026-01-04T08:00:00",
+      "active": true,
+      "tag": "z"
+    },
+    {
+      "id": 7,
+      "name": "Eta",
+      "qty": null,
+      "price": 100,
+      "when": "2026-02-01T12:00:00",
+      "active": false,
+      "tag": "y"
+    },
+    {
+      "id": 8,
+      "name": "Theta",
+      "qty": 7,
+      "price": 0,
+      "when": "2026-01-05T00:00:00",
+      "active": true,
+      "tag": "z"
+    },
+    {
+      "id": 9,
+      "name": "Iota",
+      "qty": 1,
+      "price": 8.75,
+      "when": "2025-12-31T23:00:00",
+      "active": false,
+      "tag": null
+    },
+    {
+      "id": 10,
+      "name": "Kappa",
+      "qty": 30,
+      "price": 41,
+      "when": "2026-01-08T18:45:00",
+      "active": true,
+      "tag": "y"
+    },
+    {
+      "id": 11,
+      "name": "Beta Two",
+      "qty": 12,
+      "price": 19.25,
+      "when": "2026-01-06T12:00:00",
+      "active": true,
+      "tag": "x"
+    },
+    {
+      "id": 12,
+      "name": " padded",
+      "qty": 3,
+      "price": 2,
+      "when": "2026-01-09T07:15:00",
+      "active": false,
+      "tag": "z"
+    }
+  ],
+  "cases": [
+    {
+      "name": "everything, by id",
+      "client": {
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "sort=id",
+      "expectedIds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "name": "text contains, ignoring case",
+      "client": {
+        "filters": {
+          "name": {
+            "text": "BETA"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "name_contains=BETA&sort=id",
+      "expectedIds": [
+        2,
+        11
+      ]
+    },
+    {
+      "name": "text with a comma",
+      "client": {
+        "filters": {
+          "name": {
+            "text": "alpha, one"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "name_contains=alpha%2C%20one&sort=id",
+      "expectedIds": [
+        1
+      ]
+    },
+    {
+      "name": "number min of 0 keeps zero and drops null",
+      "client": {
+        "filters": {
+          "qty": {
+            "min": "0"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "qty_gte=0&sort=id",
+      "expectedIds": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "name": "number max of 0",
+      "client": {
+        "filters": {
+          "qty": {
+            "max": "0"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "qty_lte=0&sort=id",
+      "expectedIds": [
+        2
+      ]
+    },
+    {
+      "name": "number range",
+      "client": {
+        "filters": {
+          "qty": {
+            "min": "5",
+            "max": "12"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "qty_gte=5&qty_lte=12&sort=id",
+      "expectedIds": [
+        1,
+        4,
+        5,
+        8,
+        11
+      ]
+    },
+    {
+      "name": "decimal range",
+      "client": {
+        "filters": {
+          "price": {
+            "min": "7",
+            "max": "19.25"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "price_gte=7&price_lte=19.25&sort=id",
+      "expectedIds": [
+        2,
+        3,
+        4,
+        5,
+        9,
+        11
+      ]
+    },
+    {
+      "name": "a whole day: lte a bare date includes its last second",
+      "client": {
+        "filters": {
+          "when": {
+            "from": "2026-01-05",
+            "to": "2026-01-05"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "when_gte=2026-01-05&when_lte=2026-01-05&sort=id",
+      "expectedIds": [
+        1,
+        2,
+        8
+      ]
+    },
+    {
+      "name": "only an upper date",
+      "client": {
+        "filters": {
+          "when": {
+            "to": "2026-01-04"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "when_lte=2026-01-04&sort=id",
+      "expectedIds": [
+        6,
+        9
+      ]
+    },
+    {
+      "name": "only a lower date",
+      "client": {
+        "filters": {
+          "when": {
+            "from": "2026-01-08"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "when_gte=2026-01-08&sort=id",
+      "expectedIds": [
+        7,
+        10,
+        12
+      ]
+    },
+    {
+      "name": "boolean true",
+      "client": {
+        "filters": {
+          "active": {
+            "bool": "true"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "active_eq=true&sort=id",
+      "expectedIds": [
+        1,
+        3,
+        4,
+        6,
+        8,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "boolean false",
+      "client": {
+        "filters": {
+          "active": {
+            "bool": "false"
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "active_eq=false&sort=id",
+      "expectedIds": [
+        2,
+        5,
+        7,
+        9,
+        12
+      ]
+    },
+    {
+      "name": "set filter, with a comma in a value",
+      "client": {
+        "filters": {
+          "name": {
+            "values": [
+              "Alpha, One",
+              "Beta"
+            ]
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "name_in=Alpha%2C%20One&name_in=Beta&inEncoding=repeat&sort=id",
+      "expectedIds": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "empty set matches nothing",
+      "client": {
+        "filters": {
+          "name": {
+            "values": []
+          }
+        },
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "name_none=1&sort=id",
+      "expectedIds": []
+    },
+    {
+      "name": "sort ascending puts null first",
+      "client": {
+        "sort": [
+          [
+            "qty",
+            "asc"
+          ],
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "sort=qty,id",
+      "expectedIds": [
+        3,
+        7,
+        2,
+        9,
+        12,
+        4,
+        5,
+        8,
+        1,
+        11,
+        6,
+        10
+      ]
+    },
+    {
+      "name": "sort descending puts null last",
+      "client": {
+        "sort": [
+          [
+            "qty",
+            "desc"
+          ],
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "sort=-qty,id",
+      "expectedIds": [
+        10,
+        6,
+        11,
+        1,
+        8,
+        4,
+        5,
+        12,
+        9,
+        2,
+        3,
+        7
+      ]
+    },
+    {
+      "name": "sort by a decimal, then a tie-break",
+      "client": {
+        "sort": [
+          [
+            "price",
+            "desc"
+          ],
+          [
+            "id",
+            "desc"
+          ]
+        ]
+      },
+      "server": "sort=-price,-id",
+      "expectedIds": [
+        7,
+        10,
+        11,
+        2,
+        5,
+        4,
+        9,
+        3,
+        1,
+        6,
+        12,
+        8
+      ]
+    },
+    {
+      "name": "sort by a date",
+      "client": {
+        "sort": [
+          [
+            "when",
+            "asc"
+          ],
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "sort=when,id",
+      "expectedIds": [
+        9,
+        6,
+        8,
+        1,
+        2,
+        3,
+        11,
+        4,
+        5,
+        10,
+        12,
+        7
+      ]
+    },
+    {
+      "name": "sort by a boolean",
+      "client": {
+        "sort": [
+          [
+            "active",
+            "asc"
+          ],
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "sort=active,id",
+      "expectedIds": [
+        2,
+        5,
+        7,
+        9,
+        12,
+        1,
+        3,
+        4,
+        6,
+        8,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "free text over the text columns",
+      "client": {
+        "query": "beta",
+        "sort": [
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "q=beta&sort=id",
+      "expectedIds": [
+        2,
+        11
+      ]
+    },
+    {
+      "name": "two filters and a sort",
+      "client": {
+        "filters": {
+          "active": {
+            "bool": "true"
+          },
+          "qty": {
+            "min": "5"
+          }
+        },
+        "sort": [
+          [
+            "price",
+            "desc"
+          ],
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "active_eq=true&qty_gte=5&sort=-price,id",
+      "expectedIds": [
+        10,
+        11,
+        4,
+        1,
+        6,
+        8
+      ]
+    },
+    {
+      "name": "date filter with a sort on another column",
+      "client": {
+        "filters": {
+          "when": {
+            "from": "2026-01-05",
+            "to": "2026-01-07"
+          }
+        },
+        "sort": [
+          [
+            "qty",
+            "desc"
+          ],
+          [
+            "id",
+            "asc"
+          ]
+        ]
+      },
+      "server": "when_gte=2026-01-05&when_lte=2026-01-07&sort=-qty,id",
+      "expectedIds": [
+        11,
+        1,
+        8,
+        4,
+        5,
+        2,
+        3
+      ]
+    }
+  ]
+}

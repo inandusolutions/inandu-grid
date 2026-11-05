@@ -15,6 +15,15 @@ Needs `@inandu-solutions/grid-core` with the print and state helpers (the releas
   `'pinnedOverrides'`, `'sortCriteria'`, `'filterQuery'`, `'columnFilters'`). Leave out the last two to keep what the user
   typed out of storage. `clearPersistedState()` removes what was saved.
 
+### Fixed
+
+- **The published type declarations were broken in 1.3.0 and 1.4.0.** `inandu-solutions-grid-angular.d.ts` referred to a namespace
+  `index_d_exports` that it never defined, so with `skipLibCheck: true` every type that comes from `@inandu-solutions/grid-core`
+  (`InanduGridRow`, `InanduColumnType`, `InanduGridColumnFilterValue`, ...) silently became `any` in a consumer's code, and with
+  `skipLibCheck: false` the compiler reported `Cannot find namespace 'index_d_exports'`. The library now imports the core package
+  directly instead of through a local `export *` barrel, which the declaration bundler mangled, and CI type-checks the generated
+  declarations with `skipLibCheck` off (`npm run check:dts`).
+
 ### Changed
 
 - **The saved state is validated.** What `stateKey` reads back from `localStorage` is checked for shape, types and sizes

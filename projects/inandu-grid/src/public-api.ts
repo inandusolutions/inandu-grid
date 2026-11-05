@@ -35,3 +35,7 @@ export type {
   InanduHeaderTemplateContext,
   InanduEditTemplateContext,
 } from './lib/inandu-column/inandu-column.component';
+
+// Used by grid-pro (and handy for any add-on): strict locale-aware paste, the validated saved state, and the print page.
+export { parsePastedCell, parseLocaleNumber, sanitizeGridState, buildPrintHtml, printHtmlDocument, GRID_STATE_VERSION } from '@inandu-solutions/grid-core';
+export type { InanduPasteOptions, InanduGridSavedState } from '@inandu-solutions/grid-core';

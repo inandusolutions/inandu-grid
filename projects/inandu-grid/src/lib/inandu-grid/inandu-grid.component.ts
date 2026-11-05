@@ -39,8 +39,8 @@ import {
   parsePastedCell,
   placeColumnsByOrder,
   truncatePdfText,
-} from '../core';
-import type { InanduGridColumnFilterValue, InanduGridRow, InanduGridStatePart, NumberFormatter, TreeVisibleRow } from '../core';
+} from '@inandu-solutions/grid-core';
+import type { InanduGridColumnFilterValue, InanduGridRow, InanduGridStatePart, NumberFormatter, TreeVisibleRow } from '@inandu-solutions/grid-core';
 
 export type SortDirection = 'asc' | 'desc';
 
