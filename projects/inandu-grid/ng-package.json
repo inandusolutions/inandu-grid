@@ -6,8 +6,7 @@
   },
   "allowedNonPeerDependencies": [
     "@inandu-solutions/grid-core",
-    "@ngx-translate/core",
-    "jspdf",
+    "@ngx-translate/core",
     "@angular/cdk"
   ]
 }

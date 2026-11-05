@@ -25,6 +25,11 @@ import {
   escapeAttributeSelectorValue,
   escapeCsvValue,
   escapeMarkup,
+  sanitizeGridState,
+  GRID_STATE_VERSION,
+  ALL_GRID_STATE_PARTS,
+  buildPrintHtml,
+  printHtmlDocument,
   collectTreeRows,
   flattenTree,
   formatCellValue,
@@ -35,13 +40,13 @@ import {
   placeColumnsByOrder,
   truncatePdfText,
 } from '../core';
-import type { InanduGridColumnFilterValue, InanduGridRow, NumberFormatter, TreeVisibleRow } from '../core';
+import type { InanduGridColumnFilterValue, InanduGridRow, InanduGridStatePart, NumberFormatter, TreeVisibleRow } from '../core';
 
 export type SortDirection = 'asc' | 'desc';
 
 // `InanduGridRow` and `InanduGridColumnFilterValue` moved to ../core; re-exported here because
 // `public-api.ts` re-exports them from this module (keeping the library's public API unchanged).
-export type { InanduGridRow, InanduGridColumnFilterValue };
+export type { InanduGridRow, InanduGridColumnFilterValue, InanduGridStatePart };
 
 /** One entry of the grid's active multi-column sort (see `InanduGridComponent.sortChange`), in priority order (index 0 sorts first). */
 export interface InanduGridSortCriterion {
@@ -269,6 +274,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly stateKey = input('');
 
   /**
+   * Which parts of the state `stateKey` saves and restores. All of them by default; leave out `'filterQuery'` and
+   * `'columnFilters'` to keep what a user typed into the search and the filters out of storage (they can hold personal data).
+   */
+  readonly persist = input<readonly InanduGridStatePart[]>(ALL_GRID_STATE_PARTS);
+
+  /**
    * Shows a loading row in place of the data rows (and disables the export/print toolbar) while
    * `true` — for a grid whose `data()` is still being fetched. Doesn't affect `filteredData()`/
    * `sortedData()`/pagination math, only what actually renders in `<tbody>`.
@@ -305,6 +316,19 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     columnFilters: this.columnFilters(),
   }));
 
+  /** Removes what `stateKey` saved for this grid from `localStorage` (the grid on screen keeps its current state). A no-op without a `stateKey`. */
+  clearPersistedState(): void {
+    const key = this.stateKey();
+    if (!key) {
+      return;
+    }
+    try {
+      localStorage.removeItem(STATE_STORAGE_PREFIX + key);
+    } catch {
+      // Storage may be unavailable; there is nothing saved to clear then.
+    }
+  }
+
   /** Best-effort restore of a previously-persisted state blob for `key` — silently does nothing if there's none, it's unparseable, or `localStorage` itself throws. */
   private restorePersistedState(key: string): void {
     if (!key) {
@@ -315,31 +339,25 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       if (!raw) {
         return;
       }
-      const state = JSON.parse(raw) as Partial<{
-        columnWidths: Record<string, number>;
-        reorderedFields: string[];
-        hiddenFields: string[];
-        pinnedOverrides: Record<string, InanduColumnStickySide | 'none'>;
-        sortCriteria: InanduGridSortCriterion[];
-        filterQuery: string;
-        columnFilters: Record<string, InanduGridColumnFilterValue>;
-      }>;
+      // Whatever is in storage may be stale, edited by hand or from another version: only the parts with the right
+      // shape, types and sizes get through (see `sanitizeGridState`), never the raw parsed object.
+      const state = sanitizeGridState(JSON.parse(raw), this.persist());
       if (state.columnWidths) {
         this.columnWidths.set(state.columnWidths);
       }
       if (state.reorderedFields) {
         this.reorderedFields.set(state.reorderedFields);
       }
-      if (Array.isArray(state.hiddenFields)) {
+      if (state.hiddenFields) {
         this.hiddenFields.set(new Set(state.hiddenFields));
       }
       if (state.pinnedOverrides) {
         this.pinnedOverrides.set(state.pinnedOverrides);
       }
-      if (Array.isArray(state.sortCriteria)) {
+      if (state.sortCriteria) {
         this.sortCriteria.set(state.sortCriteria);
       }
-      if (typeof state.filterQuery === 'string') {
+      if (state.filterQuery !== undefined) {
         this.filterQuery.set(state.filterQuery);
       }
       if (state.columnFilters) {
@@ -509,7 +527,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         return;
       }
       try {
-        localStorage.setItem(STATE_STORAGE_PREFIX + key, JSON.stringify(state));
+        const wanted = new Set(this.persist());
+        const saved = Object.fromEntries(Object.entries(state).filter(([part]) => wanted.has(part as InanduGridStatePart)));
+        localStorage.setItem(STATE_STORAGE_PREFIX + key, JSON.stringify({ v: GRID_STATE_VERSION, ...saved }));
       } catch {
         // Persistence is a convenience, not a guarantee — silently skip a save that can't happen.
       }
@@ -2469,7 +2489,10 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * `jspdf` is dynamically imported so a grid that never calls this never pays to load it.
    */
   async exportPdf(): Promise<void> {
-    const { jsPDF: JsPdf } = await import('jspdf');
+    const { jsPDF: JsPdf } = await import('jspdf').catch((error: unknown) => {
+      // `jspdf` is an optional peer dependency: a project that never exports PDF does not install it.
+      throw new Error('PDF export needs the "jspdf" package: run `npm install jspdf`.', { cause: error });
+    });
     const columns = this.visibleColumns();
     const rows = this.visibleRows();
     const headerValues = columns.map(column => column.title() || column.field());
@@ -2555,28 +2578,18 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * Opens a new tab with a plain, print-styled `<table>` of the currently-visible rows and triggers
    * the browser's print dialog on it — reusing the exact same `visibleColumns()`/`visibleRows()`/
    * `formatValue()` pipeline the other three export methods do, rather than printing the live page
-   * (which would include the toolbar, pager, and any surrounding app chrome).
+   * (which would include the toolbar, pager, and any surrounding app chrome). The page is a `Blob` URL opened with
+   * `noopener`, so it has no handle back to the app.
    */
   printTable(): void {
     const columns = this.visibleColumns();
-    const headerCells = columns.map(column => `<th>${escapeMarkup(column.title() || column.field())}</th>`).join('');
-    const bodyRows = this.visibleRows()
-      .map(row => `<tr>${columns.map(column => `<td>${escapeMarkup(this.formatValue(column, row))}</td>`).join('')}</tr>`)
-      .join('');
-    const html = '<!doctype html><html><head><meta charset="utf-8">'
-      + `<title>${escapeMarkup(this.id() || 'inandu-grid')}</title>`
-      + '<style>table{border-collapse:collapse;width:100%}th,td{border:1px solid #333;padding:4px 8px;text-align:left}th{background:#eee}</style>'
-      + `</head><body><table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table></body></html>`;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      return;
-    }
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    // Lets the popup finish parsing/laying out the document before the print dialog opens on it.
-    setTimeout(() => printWindow.print(), 0);
+    printHtmlDocument(
+      buildPrintHtml(
+        this.id() || 'inandu-grid',
+        columns.map(column => column.title() || column.field()),
+        this.visibleRows().map(row => columns.map(column => this.formatValue(column, row))),
+      ),
+    );
   }
 
   /** Emitted when a row's "Save" button is clicked — see `InanduGridRowSave`. */
