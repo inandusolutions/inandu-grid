@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Needs `@inandu-solutions/grid-core` with the print and state helpers (the release after 0.1.2).
+## [1.5.0] - 2026-11-05
 
 ### Added
 
@@ -192,7 +192,8 @@ framework-agnostic core (`projects/inandu-grid/src/lib/core/`, no `@angular/*`).
 - A real Open XML `.xlsx` export is a `@inandu-solutions/grid-pro` feature, not part of the
   MIT core.
 
-[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.4.0...v1.5.0
 [1.3.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.1...v1.2.2
