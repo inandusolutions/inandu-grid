@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Needs `@inandu-solutions/grid-core` with the print and state helpers (the release after 0.1.2).
+
+### Added
+
+- `persist` input: which parts of the state `stateKey` saves (`'columnWidths'`, `'reorderedFields'`, `'hiddenFields'`,
+  `'pinnedOverrides'`, `'sortCriteria'`, `'filterQuery'`, `'columnFilters'`). Leave out the last two to keep what the user
+  typed out of storage. `clearPersistedState()` removes what was saved.
+
+### Changed
+
+- **The saved state is validated.** What `stateKey` reads back from `localStorage` is checked for shape, types and sizes
+  (`sanitizeGridState`): a part that is wrong is dropped, field names like `__proto__` are refused, widths are clamped, and a
+  blob written by a newer version is ignored. The blob now carries a version (`v`); blobs without one still load.
+
+### Fixed
+
+- `printTable` opens the print page through a `Blob` URL with `noopener` instead of writing it with `document.write` into a
+  same-origin window: the page has no `window.opener` and shares nothing with the app. The page prints itself once loaded.
+- **`jspdf` is an optional peer dependency** instead of a dependency. A project that never exports PDF no longer installs
+  it (and its `core-js` postinstall script). Install it with `npm install jspdf` to use PDF export; without it the export
+  rejects with a clear message.
+
 ## [1.4.0] - 2026-11-05
 
 Requires `@inandu-solutions/grid-core` ^0.1.2.

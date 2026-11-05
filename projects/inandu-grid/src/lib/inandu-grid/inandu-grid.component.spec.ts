@@ -1400,24 +1400,23 @@ describe('InanduGridComponent export', () => {
     expect(xml).toContain('<Data ss:Type="String">Doe, Jane</Data>');
   });
 
-  it('opens a print window with the currently-visible rows and triggers print()', async () => {
-    const fakeWindow = {
-      document: { write: jasmine.createSpy('write'), close: jasmine.createSpy('close') },
-      focus: jasmine.createSpy('focus'),
-      print: jasmine.createSpy('print'),
-    } as unknown as Window;
-    const openSpy = spyOn(window, 'open').and.returnValue(fakeWindow);
+  it('opens the print page as a noopener blob with the currently-visible rows', async () => {
+    let page: Blob | undefined;
+    spyOn(URL, 'createObjectURL').and.callFake((blob: Blob | MediaSource) => {
+      page = blob as Blob;
+      return 'blob:print';
+    });
+    spyOn(URL, 'revokeObjectURL');
+    const openSpy = spyOn(window, 'open').and.returnValue(null);
 
     gridInstance().printTable();
-    // print() fires from a setTimeout(..., 0) so the popup finishes parsing the written document first.
-    await new Promise(resolve => setTimeout(resolve, 10));
 
-    expect(openSpy).toHaveBeenCalledWith('', '_blank');
-    const html = (fakeWindow.document.write as jasmine.Spy).calls.mostRecent().args[0] as string;
+    expect(openSpy).toHaveBeenCalledWith('blob:print', '_blank', 'noopener');
+    expect(page!.type).toContain('text/html');
+    const html = await page!.text();
     expect(html).toContain('<th>Name</th>');
     expect(html).toContain('<td>Alice</td>');
-    expect(fakeWindow.document.close).toHaveBeenCalled();
-    expect(fakeWindow.print).toHaveBeenCalled();
+    expect(html).toContain('print()'); // the page prints itself: the app has no handle on a noopener window
   });
 
   it('does not throw when the print popup is blocked', () => {
@@ -1468,15 +1467,10 @@ describe('InanduGridComponent export markup escaping', () => {
     expect(xml).toContain('<Data ss:Type="String">Name &amp; Co</Data>');
     expect(xml).toContain('<Data ss:Type="String">&lt;b&gt;Bold&lt;/b&gt; &amp; co</Data>');
 
-    const fakeWindow = {
-      document: { write: jasmine.createSpy('write'), close: jasmine.createSpy('close') },
-      focus: jasmine.createSpy('focus'),
-      print: jasmine.createSpy('print'),
-    } as unknown as Window;
-    spyOn(window, 'open').and.returnValue(fakeWindow);
+    spyOn(window, 'open').and.returnValue(null);
 
-    grid.printTable();
-    const html = (fakeWindow.document.write as jasmine.Spy).calls.mostRecent().args[0] as string;
+    grid.printTable(); // the createObjectURL spy above now receives the print page
+    const html = await capturedBlob!.text();
     expect(html).toContain('<th>Name &amp; Co</th>');
     expect(html).toContain('<td>&lt;b&gt;Bold&lt;/b&gt; &amp; co</td>');
   });
@@ -2987,6 +2981,81 @@ describe('InanduGridComponent persisted state', () => {
     const grid2 = fixture2.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
     expect(grid2.displayColumns().map(c => c.field())).toEqual(['score', 'name']);
     expect(grid2.columnPinnedSide(grid2.displayColumns()[0])).toBe('left');
+  });
+
+  const mount = () => {
+    TestBed.configureTestingModule({ imports: [PersistedStateHostComponent] });
+    const fixture = TestBed.createComponent(PersistedStateHostComponent);
+    fixture.detectChanges();
+    return { fixture, grid: fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent };
+  };
+
+  it('restores only the parts of a stored blob that have the right shape', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ hiddenFields: ['score'], sortCriteria: 'not-a-list', columnFilters: 7, filterQuery: { evil: true }, columnWidths: { name: 'wide' } }),
+    );
+    const { grid } = mount();
+
+    expect(grid.visibleColumns().map(c => c.field())).toEqual(['name']); // the good part is applied
+    expect(grid.sortCriteria()).toEqual([]);                                // the rest is not
+    expect(grid.filterQuery()).toBe('');
+  });
+
+  it('ignores a blob written by a newer version and one with prototype keys', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 99, hiddenFields: ['score'] }));
+    expect(mount().grid.visibleColumns().map(c => c.field())).toEqual(['name', 'score']);
+
+    TestBed.resetTestingModule();
+    localStorage.setItem(STORAGE_KEY, '{"hiddenFields":["__proto__"],"columnWidths":{"__proto__":50}}');
+    const { grid } = mount();
+    expect(grid.visibleColumns().map(c => c.field())).toEqual(['name', 'score']);
+    expect(({} as Record<string, unknown>)['__proto__']).toBe(Object.prototype);
+  });
+
+  it('writes a version with the state', () => {
+    const { fixture, grid } = mount();
+    grid.toggleColumnVisibility('score');
+    fixture.detectChanges();
+
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).v).toBe(1);
+  });
+
+  it('clearPersistedState() removes what was saved', () => {
+    const { fixture, grid } = mount();
+    grid.toggleColumnVisibility('score');
+    fixture.detectChanges();
+    expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+
+    grid.clearPersistedState();
+
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('persist limits what is saved and restored', () => {
+    @Component({
+      template: `
+        <inandu-grid [data]="rows" stateKey="persist-test-grid" [persist]="['hiddenFields']" columnToggle="true">
+          <inandu-column title="Name" field="name" sortable="true"></inandu-column>
+          <inandu-column title="Score" field="score"></inandu-column>
+        </inandu-grid>
+      `,
+      changeDetection: ChangeDetectionStrategy.Eager,
+      imports: [InanduGridComponent, InanduColumnComponent],
+    })
+    class PartialPersistHostComponent {
+      rows: InanduGridRow[] = [{ name: 'Bob', score: 1 }];
+    }
+    TestBed.configureTestingModule({ imports: [PartialPersistHostComponent] });
+    const fixture = TestBed.createComponent(PartialPersistHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    grid.toggleColumnVisibility('score');
+    grid.filterQuery.set('secret');
+    fixture.detectChanges();
+
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    expect(Object.keys(saved).sort()).toEqual(['hiddenFields', 'v']);
   });
 
   it('does not persist anything when stateKey is unset', () => {

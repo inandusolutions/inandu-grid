@@ -16,6 +16,7 @@ export type {
   InanduGridPageState,
   InanduGridFilterState,
   InanduGridColumnFilterValue,
+  InanduGridStatePart,
   InanduGridCustomTranslations,
   InanduRowActionsContext,
   InanduDetailTemplateContext,
