@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `toolbarLabels` input: prints the action name next to each export/print toolbar icon (icons only below 600px). Off by default.
+- Keyboard focus on a toolbar icon now shows the action name as a tooltip.
+
+### Changed
+
+- Sort, column-filter, tree-toggle, pager and row-selection controls are at least 24x24 CSS px (WCAG 2.2 SC 2.5.8). Only padding/min-size changed; the icons keep their size.
+
 ## [1.5.0] - 2026-11-05
 
 ### Added
