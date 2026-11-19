@@ -117,7 +117,9 @@ jobs:
   # Firefox, WebKit and a touch device (the main e2e job is Chromium only).
   e2e-cross-browser:
     name: e2e ${{ matrix.project }}
-    runs-on: ubuntu-latest
+    # Pinned to 24.04 on purpose. ubuntu-latest became 26.04 on 2026-11-18/19, and there `playwright install --with-deps` takes 4-10
+    # minutes (it was 30-60 s on 24.04), which put the step at its time limit. Unpin once that install is fast again.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -135,18 +137,8 @@ jobs:
 
       - name: Install Playwright browser
         # WebKit and Firefox need system libraries the runner image does not all ship, hence --with-deps here.
-        # The install normally takes 20-90 s, but apt on the runner sometimes stalls for 10+ minutes (Ubuntu mirror): cut an attempt
-        # off after 4 minutes and try again, up to 3 times, instead of failing the job and blocking the pull request.
-        timeout-minutes: 15
-        run: |
-          for attempt in 1 2 3; do
-            if timeout --kill-after=15s 4m npx playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project }}; then
-              exit 0
-            fi
-            echo "::warning::browser install attempt $attempt did not finish, retrying"
-            sleep 5
-          done
-          exit 1
+        timeout-minutes: 10
+        run: npx playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project }}
 
       - name: E2E tests
         run: npx playwright test --project=${{ matrix.project }} --workers=2
