@@ -18,6 +18,18 @@ const USERS_API_URL = 'https://jsonplaceholder.typicode.com/users';
 /** Which demo panel the showcase tabs are showing. */
 export type DemoTab = 'overview' | 'editing' | 'tree' | 'scale' | 'themes';
 
+/** A parent row's `units` is the sum of its children, so the tree demo never shows a misleading 0 on a branch. */
+function withUnitTotals(rows: InanduGridRow[]): InanduGridRow[] {
+  return rows.map((row) => {
+    const children = row['children'] as InanduGridRow[] | undefined;
+    if (!children?.length) {
+      return row;
+    }
+    const nested = withUnitTotals(children);
+    return { ...row, children: nested, units: nested.reduce((sum, child) => sum + Number(child['units'] ?? 0), 0) };
+  });
+}
+
 /** Pads the hand-written account list up to 100+ rows so pagination has something to page through. */
 function buildAdditionalAccounts(count: number): InanduGridRow[] {
   const cities = ['Madrid', 'Barcelona', 'Lisbon', 'Rome', 'Paris', 'Berlin', 'Amsterdam', 'Vienna', 'Zurich', 'Dublin'];
@@ -226,18 +238,18 @@ export class AppComponent {
   // -------------------------------------------------------------------- tree
 
   /** `treeChildrenKey="children"` — each row's nested `children` array is its subtree. */
-  readonly catalog: InanduGridRow[] = [
+  readonly catalog: InanduGridRow[] = withUnitTotals([
     {
-      name: 'Electronics', units: 0, active: true, children: [
+      name: 'Electronics', active: true, children: [
         {
-          name: 'Computing', units: 0, active: true, children: [
+          name: 'Computing', active: true, children: [
             { name: 'Laptops', units: 42, active: true },
             { name: 'Monitors', units: 65, active: true },
             { name: 'Keyboards', units: 120, active: false },
           ],
         },
         {
-          name: 'Audio', units: 0, active: true, children: [
+          name: 'Audio', active: true, children: [
             { name: 'Headphones', units: 60, active: true },
             { name: 'Speakers', units: 25, active: false },
           ],
@@ -245,13 +257,18 @@ export class AppComponent {
       ],
     },
     {
-      name: 'Home', units: 0, active: true, children: [
+      name: 'Home', active: true, children: [
         { name: 'Lighting', units: 200, active: true },
-        { name: 'Furniture', units: 15, active: true, children: [{ name: 'Chairs', units: 8, active: true }] },
+        {
+          name: 'Furniture', active: true, children: [
+            { name: 'Chairs', units: 8, active: true },
+            { name: 'Tables', units: 7, active: true },
+          ],
+        },
       ],
     },
     { name: 'Uncategorised', units: 3, active: false },
-  ];
+  ]);
 
   // ------------------------------------------------------------------- scale
 

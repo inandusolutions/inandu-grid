@@ -1320,6 +1320,15 @@ class EmptyExportHostComponent {
   rows: InanduGridRow[] = [];
 }
 
+@Component({
+  template: `<inandu-grid id="lbl" [data]="rows" exportable="true" toolbarLabels="true" lang="en"></inandu-grid>`,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [InanduGridComponent],
+})
+class LabelledToolbarHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Alice' }];
+}
+
 describe('InanduGridComponent export', () => {
   let fixture: ComponentFixture<ExportHostComponent>;
 
@@ -1331,6 +1340,18 @@ describe('InanduGridComponent export', () => {
 
   const toolbarButtons = () => fixture.debugElement.queryAll(By.css('.inandu-toolbar button')).map(el => el.nativeElement as HTMLButtonElement);
   const gridInstance = () => fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+  it('keeps the toolbar icon-only unless toolbarLabels is set, and every action keeps its accessible name', () => {
+    expect(fixture.debugElement.query(By.css('.inandu-toolbar')).nativeElement.classList.contains('inandu-toolbar-labels')).toBeFalse();
+    expect(toolbarButtons().map(b => b.getAttribute('aria-label'))).toEqual(['Export CSV', 'Export Excel', 'Export PDF', 'Print']);
+
+    const labelled = TestBed.createComponent(LabelledToolbarHostComponent);
+    labelled.detectChanges();
+    const toolbar = labelled.debugElement.query(By.css('.inandu-toolbar')).nativeElement as HTMLElement;
+
+    expect(toolbar.classList.contains('inandu-toolbar-labels')).toBeTrue();
+    expect(Array.from(toolbar.querySelectorAll('button')).map(b => b.getAttribute('aria-label'))).toEqual(['Export CSV', 'Export Excel', 'Export PDF', 'Print']);
+  });
 
   it('does not render the export toolbar when exportable is not set', () => {
     const noExportFixture = TestBed.createComponent(PagingHostComponent);
