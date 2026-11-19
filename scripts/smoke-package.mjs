@@ -53,8 +53,8 @@ try {
       2,
     ),
   );
-  // Two consumers: the Angular CLI default (skipLibCheck on, no jspdf installed) and a strict one (skipLibCheck off, jspdf installed
-  // because the declarations of grid-core reference its types).
+  // Two consumers, neither with jspdf installed (it is an optional peer): the Angular CLI default (skipLibCheck on) and a strict one
+  // (skipLibCheck off), which fails if any published declaration, grid-core's included, imports a package that is not installed.
   const tsconfig = (skipLibCheck) =>
     JSON.stringify(
       {
@@ -96,8 +96,7 @@ export class SmokeApp {
   console.log('ngc (AOT, strict templates, skipLibCheck on, no jspdf)...');
   ngc('tsconfig.json');
 
-  console.log('ngc (AOT, strict templates, skipLibCheck off, jspdf installed)...');
-  npm(['install', '--no-save', '--no-audit', '--no-fund', '--ignore-scripts', '--loglevel=error', `jspdf@${version('jspdf')}`], app);
+  console.log('ngc (AOT, strict templates, skipLibCheck off)...');
   ngc('tsconfig.strict.json');
 
   console.log('node import...');
