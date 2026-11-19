@@ -40,6 +40,14 @@ jobs:
       - name: Check the generated declarations
         run: npm run check:dts
 
+      # The exported API (names, kinds, members, types) is a committed snapshot: a removed or retyped export shows up in the pull
+      # request. After an intended change run `npm run build:lib && npm run api:update` and commit api/public-api.txt.
+      - name: Check the public API snapshot
+        run: npm run api:check
+
+      # jspdf stays on-demand, size budgets, tarball contents and entry points (scripts/check-package.mjs).
+      - name: Check the package
+        run: npm run check:package
       - name: Unit tests (library)
         run: npm run test:lib -- --watch=false --browsers=ChromeHeadlessCI
 
@@ -157,3 +165,22 @@ jobs:
           path: playwright-report/
           retention-days: 7
           if-no-files-found: ignore
+
+  # Installs the packed tarball into an empty project and compiles a consumer against it (scripts/smoke-package.mjs).
+  package-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build library
+        run: npm run build:lib
+
+      - name: Smoke test the packed package
+        run: npm run smoke:package
