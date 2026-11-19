@@ -39,7 +39,7 @@
     <div class="shell hero-inner">
       <p class="eyebrow">MIT licensed · Angular 21 · no enterprise tier</p>
 
-      <h1>The Angular data grid<br />with <span class="hl">nothing behind a paywall</span>.</h1>
+      <h1>The Angular data grid <br />with <span class="hl">nothing behind a paywall</span>.</h1>
 
       <p class="lede">
         Sorting, filtering, row grouping, tree data, virtual scroll, inline editing and
@@ -110,7 +110,7 @@
 
           <div class="grid-frame">
             <inandu-grid id="customers-grid" width="100%" height="620" lang="en" filter="true"
-              selectable="true" exportable="true" columnToggle="true"
+              selectable="true" exportable="true" toolbarLabels="true" columnToggle="true"
               [data]="accounts" [paging]="accountsPaging"
               (selectionChange)="onAccountsSelectionChange($event)">
               <inandu-column title="Id" field="Id" width="90" resize="false" reorder="false"></inandu-column>
@@ -151,7 +151,7 @@
               <inandu-column title="In stock" field="inStock" width="110" type="boolean" format="Yes|No" editable="true"></inandu-column>
               <inandu-column title="Restock" field="restock" width="130" type="date" format="DD/MM/YYYY" editable="true"></inandu-column>
               <ng-template let-row>
-                <button type="button" class="inandu-pager-button" (click)="onInventoryRowDuplicate(row)">Duplicate</button>
+                <button type="button" class="inandu-pager-button demo-row-action" (click)="onInventoryRowDuplicate(row)">Duplicate</button>
               </ng-template>
             </inandu-grid>
           </div>
@@ -186,7 +186,7 @@
           [hidden]="activeTab() !== 'tree'">
           <p class="panel-hint">
             <code>treeChildrenKey="children"</code> — each row's nested <code>children</code> array
-            is its subtree. Click ▸ to expand. Filtering keeps a branch when the node
+            is its subtree (a branch's <em>Units</em> is the sum of its children). Click ▸ to expand. Filtering keeps a branch when the node
             <em>or a descendant</em> matches, and opens the path to it; sorting orders each sibling
             level independently.
           </p>
