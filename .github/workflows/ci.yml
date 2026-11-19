@@ -52,8 +52,8 @@ jobs:
       # jspdf stays on-demand, size budgets, tarball contents and entry points (scripts/check-package.mjs).
       - name: Check the package
         run: npm run check:package
-      - name: Unit tests (library)
-        run: npm run test:lib -- --watch=false --browsers=ChromeHeadlessCI
+      - name: Unit tests (library, with the coverage thresholds)
+        run: npm run test:lib -- --watch=false --code-coverage --browsers=ChromeHeadlessCI
 
       - name: Unit tests (demo app)
         run: npm test -- --watch=false --browsers=ChromeHeadlessCI
