@@ -1,0 +1,16 @@
+{
+  "$comment": "What this repo supports, written once. `npm run check:support` (a CI step) fails when package.json, the library manifest, .nvmrc, the CI workflow or the README tables say something different. Change a number here and the check lists every place that has to follow.",
+  "angular": {
+    "peer": "^21.2.0 || ^22.0.0"
+  },
+  "node": {
+    "engines": "^20.19.0 || ^22.12.0 || >=24.0.0",
+    "ci": [22],
+    "e2eVerified": [22, 24]
+  },
+  "browsers": {
+    "unitTests": ["ChromeHeadless"],
+    "e2e": ["chromium"],
+    "e2eCrossBrowser": ["firefox", "webkit", "mobile-chrome"]
+  }
+}
