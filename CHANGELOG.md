@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-19
+
 ### Added
 
 - `toolbarLabels` input: prints the action name next to each export/print toolbar icon (icons only below 600px). Off by default.
@@ -15,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Sort, column-filter, tree-toggle, pager and row-selection controls are at least 24x24 CSS px (WCAG 2.2 SC 2.5.8). Only padding/min-size changed; the icons keep their size.
+- Depends on `@inandu-solutions/grid-core` `^0.1.4` (it was `^0.1.2`). 0.1.4 stops the published declarations from importing the types of `jspdf`, which
+  an optional peer: with `skipLibCheck: false` and no jspdf installed they raised `TS2307`. `jspdf` stays an optional peer of this package for PDF export.
+
+### Added (tooling, no effect on the published code)
+
+- CI checks for the package: the exported API against the committed `api/public-api.txt` (`npm run api:check`), size budgets, lazy `jspdf` and
+  tarball contents (`npm run check:package`), and a smoke test that installs the packed tarball in an empty project and compiles a consumer
+  (`npm run smoke:package`). The cross-browser e2e job runs in the official Playwright image.
 
 ## [1.5.0] - 2026-11-05
 
@@ -201,7 +211,8 @@ framework-agnostic core (`projects/inandu-grid/src/lib/core/`, no `@angular/*`).
 - A real Open XML `.xlsx` export is a `@inandu-solutions/grid-pro` feature, not part of the
   MIT core.
 
-[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.4.0...v1.5.0
 [1.3.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.2...v1.2.3
