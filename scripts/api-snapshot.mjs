@@ -95,7 +95,8 @@ if (!existsSync(snapshotFile)) {
   process.exit(2);
 }
 
-const expected = readFileSync(snapshotFile, 'utf8');
+// Git may check the file out with CRLF (autocrlf on Windows): compare content, not line endings.
+const expected = readFileSync(snapshotFile, 'utf8').replace(/\r\n/g, '\n');
 if (expected === actual) {
   console.log(`public API matches api/public-api.txt (${lines.length} lines)`);
   process.exit(0);
