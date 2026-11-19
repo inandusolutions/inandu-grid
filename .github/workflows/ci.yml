@@ -29,6 +29,10 @@ jobs:
 
       - run: npm ci
 
+      # What the repo supports is written once, in support-matrix.json: package.json, .nvmrc, this workflow and the README must agree with it.
+      - name: Check the support matrix
+        run: npm run check:support
+
       - name: Lint
         run: npm run lint
 

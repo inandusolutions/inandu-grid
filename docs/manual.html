@@ -280,7 +280,7 @@
       <ul>
         <li><strong>Opt-in.</strong> Out of the box you get a plain sortless, filterless table. Each capability is a single attribute.</li>
         <li><strong>The grid never mutates your data.</strong> Edits, deletes, reorders and pastes are emitted as events — you decide whether and how to persist them.</li>
-        <li><strong>Self-contained.</strong> No dependency on Angular Material or any theming engine. Internal dependencies (<code>@angular/cdk</code>, <code>@ngx-translate/core</code>, <code>jspdf</code>) are implementation details you never configure.</li>
+        <li><strong>Self-contained.</strong> No dependency on Angular Material or any theming engine. Internal dependencies (<code>@angular/cdk</code>, <code>@ngx-translate/core</code>, <code>@inandu-solutions/grid-core</code>) are implementation details you never configure. <code>jspdf</code> is an optional peer, needed only for PDF export.</li>
         <li><strong>Rows are identified by object reference.</strong> There is no row-id concept — keep your row objects stable across re-renders (a static array or a signal you update immutably both qualify).</li>
       </ul>
       <div class="note"><span class="label">React &amp; Vue</span>
@@ -307,8 +307,12 @@
       <ul>
         <li><code>@angular/cdk</code> — virtual scroll.</li>
         <li><code>@ngx-translate/core</code> — internal i18n; each grid instance gets its own isolated translation service.</li>
-        <li><code>jspdf</code> — PDF export, dynamically imported only when <code>exportPdf()</code> is actually called.</li>
+        <li><code>@inandu-solutions/grid-core</code> — the framework-free engine (sorting, filtering, parsing, formatting).</li>
         <li><code>tslib</code>.</li>
+      </ul>
+      <h4>Optional peer</h4>
+      <ul>
+        <li><code>jspdf</code> — PDF export only. Install it yourself (<code>npm install jspdf</code>); it is dynamically imported the first time <code>exportPdf()</code> is called, and without it the grid reports that the package is missing.</li>
       </ul>
     </section>
 

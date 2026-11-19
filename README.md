@@ -76,7 +76,7 @@ components, signal inputs/outputs, no `NgModule`s.
 | | inandu-grid | AG Grid | PrimeNG Table |
 | --- | --- | --- | --- |
 | Licence | **MIT, all features** | MIT core + **paid Enterprise** (grouping, Excel, range selection, pivot, tree data…) | MIT |
-| Footprint | deliberately minimal (`@angular/cdk`, `@ngx-translate`, `jspdf` lazy-loaded) | large | ships as part of the full PrimeNG library |
+| Footprint | deliberately minimal (`@angular/cdk`, `@ngx-translate`; `jspdf` is an optional peer, loaded lazily) | large | ships as part of the full PrimeNG library |
 | Frameworks | Angular only (signals, standalone) | Angular / React / Vue / vanilla | Angular only |
 | Row grouping & aggregates | ✅ free | Enterprise | ✅ |
 | Excel-compatible / CSV / PDF export | ✅ free (`.xls` + CSV + PDF) | CSV free; Excel is Enterprise | CSV free |
@@ -151,8 +151,9 @@ This is an Angular CLI **multi-project workspace**:
 | Node | whatever your Angular 21 app needs — `^20.19.0 \|\| ^22.12.0 \|\| >=24` |
 | Browsers | current Chrome / Firefox / Safari (Safari 16+ for fully correct sticky columns); no IE |
 
-`@angular/cdk`, `@ngx-translate/core`, `jspdf` and `tslib` are pulled in automatically —
-nothing to configure. See [`projects/inandu-grid/README.md`](projects/inandu-grid/README.md).
+`@angular/cdk`, `@ngx-translate/core`, `@inandu-solutions/grid-core` and `tslib` are installed with the package —
+nothing to configure. PDF export needs the optional peer `jspdf` (`npm install jspdf`; it is loaded
+lazily the first time a PDF is exported). See [`projects/inandu-grid/README.md`](projects/inandu-grid/README.md).
 
 **To develop this repo:**
 
@@ -161,7 +162,10 @@ nothing to configure. See [`projects/inandu-grid/README.md`](projects/inandu-gri
 | Node | `^20.19.0 \|\| ^22.12.0 \|\| >=24` — [`.nvmrc`](.nvmrc) pins **22** |
 | npm | 10+ |
 | Unit tests | a Chrome / Chromium install (Karma `ChromeHeadless`); optionally Firefox for `--browsers=FirefoxHeadless` |
-| e2e | Playwright browsers (`npx playwright install`) — **run under Node 22**; Playwright's test runner currently fails to load under Node 24 |
+| e2e | Playwright browsers (`npx playwright install`) — runs under Node 22 and 24 (the full Chromium suite passes on Node 24.19 with Playwright 1.65; CI uses 22) |
+
+The versions this repo supports are written once in [`support-matrix.json`](support-matrix.json). `npm run check:support`
+(a CI step) fails when that file disagrees with `package.json`, `.nvmrc`, the CI workflow or the tables above.
 
 ## Quick start (using the library in your app)
 

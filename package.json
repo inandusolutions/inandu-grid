@@ -17,6 +17,7 @@
     "build": "npm run build:lib && ng build",
     "build:lib": "ng build inandu-grid && npm run build:schematics",
     "check:dts": "tsc --ignoreConfig --noEmit --skipLibCheck false --strict --target es2022 --module esnext --moduleResolution bundler dist/inandu-grid/types/inandu-solutions-grid-angular.d.ts",
+    "check:support": "node scripts/check-support.mjs",
     "api:check": "node scripts/api-snapshot.mjs",
     "api:update": "node scripts/api-snapshot.mjs --update",
     "check:package": "node scripts/check-package.mjs",

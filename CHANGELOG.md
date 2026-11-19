@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Documentation: the README, the package README and the manual said `jspdf` is installed automatically with the package. It is an optional peer
+  dependency: install it (`npm install jspdf`) only if you use PDF export. Also corrected: the README claimed Playwright fails under Node 24
+  (the e2e suite passes on Node 24.19 with Playwright 1.65).
+
+### Added (tooling, no effect on the published code)
+
+- `support-matrix.json` writes the supported Angular, Node and browser versions once, and `npm run check:support` (a CI step) fails when`
+  `package.json`, the library manifest, `.nvmrc`, the CI workflow or the README tables disagree with it.
+
 ## [1.6.0] - 2026-11-19
 
 ### Added

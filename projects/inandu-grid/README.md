@@ -92,7 +92,7 @@ supported — via `serverSide` + outputs, wired to any backend or to the .NET/EF
 | **Validation** | `required` / `min` / `max` / `pattern` / `[validator]` / `[asyncValidator]` per column, checked at save time. `grid.validateCell(column, value, row?)` runs the same synchronous chain against any value — for a whole-grid check |
 | **Custom cell & header templates** | `<ng-template>` with `InanduCellTemplateContext` / `InanduHeaderTemplateContext` |
 | **Custom row actions** | project your own buttons via the row-actions slot (`InanduRowActionsContext`) |
-| **Export & print** | `exportable="true"` — CSV (UTF-8 BOM), Excel (SpreadsheetML `.xls`, dependency-free), PDF (`jspdf`), and print. Real `.xlsx` is a `@inandu-solutions/grid-pro` feature. |
+| **Export & print** | `exportable="true"` — CSV (UTF-8 BOM), Excel (SpreadsheetML `.xls`, dependency-free), PDF (needs the optional peer `jspdf`), and print. Real `.xlsx` is a `@inandu-solutions/grid-pro` feature. |
 | **i18n** | `lang="es-AR"` — 5 built-in languages (en, es, fr, it, zh) + `[customTranslations]`; each grid instance is isolated |
 | **RTL** | `dir="rtl"` (or `"auto"`) |
 | **Theming** | `theme="material"` — 3 presets (`material`, `dark`, `minimal`), pure CSS; or bring your own `.inandu-theme-<name>` rule |
@@ -133,9 +133,13 @@ ng generate @inandu-solutions/grid-angular:grid my-grid
 
 **Peer** (you provide): `@angular/core`, `@angular/common` `^21.2.0 || ^22.0.0`.
 
-**Bundled** (installed automatically, nothing to configure — internal implementation
-details): `@angular/cdk` (virtual scroll), `@ngx-translate/core` (i18n), `jspdf`
-(PDF export — loaded lazily), and `tslib`.
+**Optional peer**: `jspdf` `^4.2.1`, only if you use PDF export (`npm install jspdf`). It is loaded
+lazily the first time a PDF is exported; without it the grid works and PDF export reports that the
+package is missing.
+
+**Installed with the package** (nothing to configure — internal implementation details):
+`@angular/cdk` (virtual scroll), `@ngx-translate/core` (i18n), `@inandu-solutions/grid-core`
+(sorting, filtering, parsing, formatting) and `tslib`.
 
 ## Quick start
 
