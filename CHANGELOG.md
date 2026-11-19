@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-19
+
 ### Fixed
 
 - Row editing: cancelling and then editing the *same* row again, while an `asyncValidator` from the first attempt is still running, no
@@ -41,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `support-matrix.json` writes the supported Angular, Node and browser versions once, and `npm run check:support` (a CI step) fails when
   `package.json`, the library manifest, `.nvmrc`, the CI workflow or the README tables disagree with it.
+
+### Changed
+
+- Depends on `@inandu-solutions/grid-core` `^0.1.5` (it was `^0.1.4`). 0.1.5 fixes `truncatePdfText`, which cut an emoji in half in the PDF export.
+
 
 ## [1.6.0] - 2026-11-19
 
