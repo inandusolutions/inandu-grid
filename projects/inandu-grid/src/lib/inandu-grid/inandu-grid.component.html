@@ -1,4 +1,4 @@
-<div [class]="rootClasses()" [attr.id]="id() || null" [attr.dir]="dir()" [style.width.px]="width() || null" [style.height.px]="height() || null" [style.--inandu-select-column-width.px]="selectColumnWidthPx" [style.--inandu-row-drag-column-width.px]="rowDragColumnWidthPx" [style.--inandu-detail-toggle-column-width.px]="detailToggleColumnWidthPx" tabindex="-1" (keydown)="onGridKeyDown($event)">
+<div [class]="rootClasses()" [attr.id]="id() || null" [attr.dir]="dir()" [style.width.px]="width() || null" [style.height.px]="height() || null" [style.--inandu-select-column-width.px]="selectColumnWidthPx" [style.--inandu-row-drag-column-width.px]="rowDragColumnWidthPx" [style.--inandu-detail-toggle-column-width.px]="detailToggleColumnWidthPx" tabindex="-1" (keydown)="onGridKeyDown($event)" (focusin)="onGridFocusIn($event)" (focusout)="onGridFocusOut($event)">
   <div class="inandu-sr-only" role="status" aria-live="polite">{{ liveMessage() }}</div>
   @if (exportable() || columnToggle() || (selectable() && deletable())) {
     <div class="inandu-toolbar" [class.inandu-toolbar-labels]="toolbarLabels()">
@@ -309,7 +309,7 @@
   </ng-template>
 
   @if (virtualScroll()) {
-    <cdk-virtual-scroll-viewport [itemSize]="effectiveVirtualRowHeight()" [style.height.px]="virtualViewportHeight()" class="inandu-virtual-viewport" (scrolledIndexChange)="onVirtualScrolledIndexChange($event)">
+    <cdk-virtual-scroll-viewport tabindex="-1" [itemSize]="effectiveVirtualRowHeight()" [style.height.px]="virtualViewportHeight()" class="inandu-virtual-viewport" (scrolledIndexChange)="onVirtualScrolledIndexChange($event)">
       <table class="xtable" role="grid" [attr.aria-rowcount]="ariaRowCount()">
         <ng-container *ngTemplateOutlet="tableHead"></ng-container>
         <tbody>
@@ -330,7 +330,8 @@
             <!-- One cdkVirtualFor for both grouped and ungrouped data — see virtualItems()'s doc
                  comment for why switching between two separate structural directive instances is
                  deliberately avoided here. -->
-            <tr #virtualRowEl *cdkVirtualFor="let item of virtualItems(); trackBy: trackVirtualItem"
+            <tr #virtualRowEl *cdkVirtualFor="let item of virtualItems(); trackBy: trackVirtualItem; let itemIndex = index"
+              [attr.data-virtual-index]="itemIndex"
               [class.inandu-row]="item.kind === 'row'"
               [class.inandu-group-row]="item.kind === 'group'"
               [attr.role]="item.kind === 'row' ? 'row' : null"

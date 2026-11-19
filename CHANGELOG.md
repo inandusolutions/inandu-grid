@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Row editing: cancelling and then editing the *same* row again, while an `asyncValidator` from the first attempt is still running, no
+  longer saves the first attempt when the validator returns. The grid now tells the attempts apart instead of comparing the row alone.
+  The same applies to adding a row (`rowCreate`). Pressing Save twice while a validator runs saves once.
+- Row editing: an `asyncValidator` that throws (a network error, say) is shown as the message of its field and the row stays in edit
+  mode. Before, the click was left with an unhandled promise rejection and no message.
+- `virtualScroll`: a grid created while hidden (a tab panel, a collapsed section) is measured by the CDK at 0px and was never measured
+  again, so after it was shown it rendered only a handful of rows, left blank space in the viewport and, at the very bottom, did not render
+  the last rows. The grid now asks the CDK to measure the viewport again whenever its size changes.
+- `virtualScroll` with the keyboard: a fast run of ArrowDown or ArrowUp no longer loses keys at the edge of the window, and if the focused
+  cell scrolls out of the window focus waits on the grid and returns to the cell, instead of falling to `<body>`. Rendered virtual rows carry
+  a `data-virtual-index` attribute and the viewport is focusable by code (`tabindex="-1"`).
+- Documentation: the README documents the fixed row height of `virtualScroll` as a known limitation and `ACCESSIBILITY.md` is new.
+
 - Documentation: the README, the package README and the manual said `jspdf` is installed automatically with the package. It is an optional peer
   dependency: install it (`npm install jspdf`) only if you use PDF export. Also corrected: the README claimed Playwright fails under Node 24
   (the e2e suite passes on Node 24.19 with Playwright 1.65).

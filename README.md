@@ -95,6 +95,17 @@ Enterprise is the right tool. Server-side paging, sorting and filtering **are** 
 the grid in `serverSide` mode and wire it to any backend, or drop in the official .NET companion
 below. If you want a solid, free, lightweight grid, this is it.
 
+## Known limitations
+
+- **Virtual scroll assumes a fixed row height.** `virtualScroll` is built on the CDK's fixed-size strategy: the scrollbar length and the
+  position of the window are computed from one row height, taken from `virtualRowHeight` or, if you do not set it, measured from the first
+  rendered row. A row that is taller than the others (wrapped text, a custom cell that grows) makes the scroll position drift against the
+  rows. Keep cells to one line. Variable row height is not supported and is not currently scheduled; if you need it, open an issue
+  describing the case.
+- Virtual scroll replaces pagination, and it does not combine with master/detail.
+
+Keyboard behaviour (including on a virtual grid) and the manual accessibility checklist are in [`ACCESSIBILITY.md`](ACCESSIBILITY.md).
+
 ## Server-side data (.NET)
 
 [`inandu-grid-extensions`](https://github.com/inandusolutions/inandu-grid-extensions) is the
