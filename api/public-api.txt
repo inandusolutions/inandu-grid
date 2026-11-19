@@ -1,0 +1,370 @@
+function buildPrintHtml(title: string, headers: readonly string[], rows: ReadonlyArray<readonly string[]>): string
+const GRID_STATE_VERSION: 1
+interface InanduCellTemplateContext
+  $implicit: unknown
+  row: Record<string, unknown>
+type InanduColumnAggregate = 'sum' | 'avg' | 'min' | 'max' | 'count' | ''
+type InanduColumnAsyncValidator = (value: unknown, row: Record<string, unknown>) => Promise<string | null>
+class InanduColumnComponent
+  readonly aggregate: i0.InputSignal<InanduColumnAggregate>
+  readonly asyncValidator: i0.InputSignal<InanduColumnAsyncValidator | undefined>
+  readonly cellTemplate: i0.Signal<i0.TemplateRef<InanduCellTemplateContext> | undefined>
+  readonly editTemplate: i0.Signal<i0.TemplateRef<InanduEditTemplateContext> | undefined>
+  readonly editable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly field: i0.InputSignal<string>
+  readonly filter: i0.InputSignalWithTransform<boolean, unknown>
+  readonly format: i0.InputSignal<string>
+  readonly groupable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly headerTemplate: i0.Signal<i0.TemplateRef<InanduHeaderTemplateContext> | undefined>
+  readonly hideable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly max: i0.InputSignalWithTransform<number | undefined, unknown>
+  readonly min: i0.InputSignalWithTransform<number | undefined, unknown>
+  readonly order: i0.InputSignalWithTransform<number | undefined, unknown>
+  readonly pattern: i0.InputSignal<string>
+  readonly reorder: i0.InputSignalWithTransform<boolean, unknown>
+  readonly required: i0.InputSignalWithTransform<boolean, unknown>
+  readonly resize: i0.InputSignalWithTransform<boolean, unknown>
+  readonly sortable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly sticky: i0.InputSignalWithTransform<boolean, unknown>
+  readonly stickySide: i0.InputSignal<InanduColumnStickySide>
+  readonly timeZone: i0.InputSignal<string | undefined>
+  readonly title: i0.InputSignal<string>
+  readonly type: i0.InputSignal<InanduColumnType>
+  readonly validator: i0.InputSignal<InanduColumnValidator | undefined>
+  readonly width: i0.InputSignalWithTransform<number, unknown>
+class InanduColumnGroupComponent
+  readonly columns: i0.Signal<readonly InanduColumnComponent[]>
+  readonly title: i0.InputSignal<string>
+type InanduColumnStickySide = 'left' | 'right'
+type InanduColumnType = 'string' | 'number' | 'boolean' | 'date'
+type InanduColumnValidator = (value: unknown, row: Record<string, unknown>) => string | null
+interface InanduDetailTemplateContext
+  $implicit: T
+  row: T
+class InanduDetailTemplateDirective
+  readonly templateRef: i0.TemplateRef<any>
+interface InanduEditTemplateContext
+  $implicit: unknown
+  error: string
+  field: string
+  row: Record<string, unknown>
+  setValue: (value: unknown) => void
+  value: unknown
+interface InanduGridCellPaste
+  field: string
+  row: T
+  value: unknown
+interface InanduGridCellRangeSelection
+  fields: string[]
+  rows: T[]
+interface InanduGridColumnFilterValue
+  bool?: string | undefined
+  from?: string | undefined
+  max?: string | undefined
+  min?: string | undefined
+  text?: string | undefined
+  to?: string | undefined
+  values?: string[] | undefined
+class InanduGridComponent
+  aggregateLabel: (column: InanduColumnComponent, aggregates: Record<string, number>) => string
+  ariaSort: (field: string) => "ascending" | "descending" | "none"
+  booleanFilterLabels: (column: InanduColumnComponent) => [string, string]
+  cancelAddRow: () => void
+  cancelRowEdit: () => void
+  cellEditLabel: (column: InanduColumnComponent) => string
+  cellTemplateContext: (column: InanduColumnComponent, row: T) => InanduCellTemplateContext
+  clearAllColumnFilters: () => void
+  clearCellRangeSelection: () => void
+  clearColumnFilter: (field: string) => void
+  clearGrouping: () => void
+  clearPersistedState: () => void
+  clearSort: () => void
+  columnFilterLabel: (column: InanduColumnComponent) => string
+  columnPinnedSide: (column: InanduColumnComponent) => InanduColumnStickySide | undefined
+  columnToggleLabel: (column: InanduColumnComponent) => string
+  copyCellText: (row: T, field: string) => string
+  deleteRow: (row: T) => void
+  deleteSelectedLabel: () => string
+  deleteSelectedRows: () => void
+  deselectAll: () => void
+  detailContext: (row: T) => InanduDetailTemplateContext<T>
+  detailToggleLabel: (row: T) => string
+  editTemplateContext: (column: InanduColumnComponent, row?: T | Record<string, unknown>) => InanduEditTemplateContext
+  effectiveWidth: (column: InanduColumnComponent) => number
+  exportCsv: () => void
+  exportExcel: () => void
+  exportPdf: () => Promise<void>
+  fieldError: (field: string) => string
+  formatValue: (column: InanduColumnComponent, row: T) => string
+  goToFirstPage: () => void
+  goToLastPage: () => void
+  goToNextPage: () => void
+  goToPage: (page: number) => void
+  goToPreviousPage: () => void
+  groupHeaderLabel: (column: InanduColumnComponent, value: string, count: number) => string
+  hasColumnFilter: (field: string) => boolean
+  headerTemplateContext: (column: InanduColumnComponent) => InanduHeaderTemplateContext
+  isAnotherRowEditing: (row: T) => boolean
+  isAnyRowEditing: () => boolean
+  isCellInRange: (rowIndex: number, colIndex: number) => boolean
+  isColumnHidden: (field: string) => boolean
+  isColumnTogglePopupOpen: () => boolean
+  isCreatingRow: () => boolean
+  isDragOverGroupZone: () => boolean
+  isDragOverHeaderField: (field: string) => boolean
+  isDragOverRow: (row: T) => boolean
+  isEditingRow: (row: T) => boolean
+  isFilterPopupOpen: (field: string) => boolean
+  isRowExpanded: (row: T) => boolean
+  isRowSelected: (row: T) => boolean
+  isTreeRowExpanded: (row: T) => boolean
+  onCellRangeMouseDown: (event: MouseEvent, rowIndex: number, colIndex: number) => void
+  onCellRangeMouseEnter: (rowIndex: number, colIndex: number) => void
+  onColumnDragStart: (event: DragEvent, field: string) => void
+  onColumnFilterInput: (field: string, key: keyof InanduGridColumnFilterValue, event: Event) => void
+  onColumnHeaderDragLeave: (field: string) => void
+  onColumnHeaderDragOver: (event: DragEvent, field: string) => void
+  onColumnHeaderDrop: (event: DragEvent, targetField: string) => void
+  onDocumentClick: (event: MouseEvent) => void
+  onDocumentMouseUp: () => void
+  onFilterInput: (event: Event) => void
+  onGridKeyDown: (event: KeyboardEvent) => void
+  onGroupZoneDragLeave: () => void
+  onGroupZoneDragOver: (event: DragEvent) => void
+  onGroupZoneDrop: (event: DragEvent) => void
+  onResizeHandleDblClick: (event: MouseEvent, column: InanduColumnComponent) => void
+  onResizeHandleMouseDown: (event: MouseEvent, column: InanduColumnComponent) => void
+  onRowDragLeave: (row: T) => void
+  onRowDragOver: (event: DragEvent, row: T) => void
+  onRowDragStart: (event: DragEvent, row: T) => void
+  onRowDrop: (event: DragEvent, targetRow: T) => void
+  onRowFieldChange: (column: InanduColumnComponent, event: Event) => void
+  onVirtualScrolledIndexChange: (startIndex: number) => void
+  pasteAt: (row: T, field: string, text: string) => void
+  printTable: () => void
+  readonly allVisibleSelected: i0.Signal<boolean>
+  readonly ariaRowCount: i0.Signal<number | null>
+  readonly autosize: i0.InputSignalWithTransform<boolean, unknown>
+  readonly bulkDeleteConfirmMessage: i0.InputSignal<string>
+  readonly cellRangeChange: i0.OutputEmitterRef<InanduGridCellRangeSelection<T> | undefined>
+  readonly cellRangeSelection: i0.InputSignalWithTransform<boolean, unknown>
+  readonly cellRanges: i0.Signal<InanduGridCellRangeSelection<T>[]>
+  readonly cellRangesChange: i0.OutputEmitterRef<InanduGridCellRangeSelection<T>[]>
+  readonly cellsPaste: i0.OutputEmitterRef<InanduGridCellPaste<T>[]>
+  readonly clipboard: i0.InputSignalWithTransform<boolean, unknown>
+  readonly columnFilters: i0.WritableSignal<Record<string, InanduGridColumnFilterValue>>
+  readonly columnGroupRuns: i0.Signal<{ group: InanduColumnGroupComponent | undefined; columns: InanduColumnComponent[]; }[]>
+  readonly columnGroups: i0.Signal<readonly InanduColumnGroupComponent[]>
+  readonly columnToggle: i0.InputSignalWithTransform<boolean, unknown>
+  readonly columns: i0.Signal<InanduColumnComponent[]>
+  readonly creatable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly currentPage: i0.Signal<number>
+  readonly customTranslations: i0.InputSignal<InanduGridCustomTranslations | undefined>
+  readonly data: i0.InputSignal<T[]>
+  readonly deletable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly deleteConfirmMessage: i0.InputSignal<string>
+  readonly detailTemplate: i0.Signal<i0.TemplateRef<InanduDetailTemplateContext<T>> | undefined>
+  readonly dir: i0.InputSignal<"ltr" | "rtl" | "auto">
+  readonly displayColumns: i0.Signal<InanduColumnComponent[]>
+  readonly editableColumns: i0.Signal<InanduColumnComponent[]>
+  readonly effectiveVirtualRowHeight: i0.Signal<number>
+  readonly error: i0.InputSignal<string>
+  readonly exportable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly extraRowFilter: i0.InputSignal<((row: T) => boolean) | undefined>
+  readonly filter: i0.InputSignalWithTransform<boolean, unknown>
+  readonly filterChange: i0.OutputEmitterRef<InanduGridFilterState>
+  readonly filterPlaceholder: i0.InputSignal<string>
+  readonly filterQuery: i0.WritableSignal<string>
+  readonly filterableColumns: i0.Signal<InanduColumnComponent[]>
+  readonly filteredData: i0.Signal<T[]>
+  readonly groupAggregateColumns: i0.Signal<InanduColumnComponent[]>
+  readonly groupByColumn: i0.Signal<InanduColumnComponent | undefined>
+  readonly groupByLabel: i0.Signal<any>
+  readonly groupableColumns: i0.Signal<InanduColumnComponent[]>
+  readonly groupedRows: i0.Signal<{ key: string; rows: T[]; aggregates: Record<string, number>; }[]>
+  readonly hasActiveColumnFilters: i0.Signal<boolean>
+  readonly hasColumnGroups: i0.Signal<boolean>
+  readonly hasMasterDetail: i0.Signal<boolean>
+  readonly hasRowActions: i0.Signal<boolean>
+  readonly hasRowDragHandle: i0.Signal<boolean>
+  readonly hasTreeData: i0.Signal<boolean>
+  readonly height: i0.InputSignalWithTransform<number, unknown>
+  readonly hideableColumns: i0.Signal<InanduColumnComponent[]>
+  readonly id: i0.InputSignal<string>
+  readonly infiniteScroll: i0.InputSignalWithTransform<boolean, unknown>
+  readonly infiniteScrollThreshold: i0.InputSignalWithTransform<number, unknown>
+  readonly isValidating: i0.WritableSignal<boolean>
+  readonly lang: i0.InputSignal<string>
+  readonly liveMessage: i0.Signal<any>
+  readonly loadMore: i0.OutputEmitterRef<InanduGridLoadMoreEvent>
+  readonly loading: i0.InputSignalWithTransform<boolean, unknown>
+  readonly msgAddRow: i0.Signal<any>
+  readonly msgAll: i0.Signal<any>
+  readonly msgAutosizeColumn: i0.Signal<any>
+  readonly msgCancelAllFilters: i0.Signal<any>
+  readonly msgCancelFilter: i0.Signal<any>
+  readonly msgCancelGrouping: i0.Signal<any>
+  readonly msgCancelRowEdit: i0.Signal<any>
+  readonly msgCollapseDetail: i0.Signal<any>
+  readonly msgDeleteRow: i0.Signal<any>
+  readonly msgDragRow: i0.Signal<any>
+  readonly msgEditRow: i0.Signal<any>
+  readonly msgExpandDetail: i0.Signal<any>
+  readonly msgExportCsv: i0.Signal<any>
+  readonly msgExportExcel: i0.Signal<any>
+  readonly msgExportPdf: i0.Signal<any>
+  readonly msgFilterFrom: i0.Signal<any>
+  readonly msgFilterMax: i0.Signal<any>
+  readonly msgFilterMin: i0.Signal<any>
+  readonly msgFilterPlaceholder: i0.Signal<any>
+  readonly msgFilterTo: i0.Signal<any>
+  readonly msgFirstPage: i0.Signal<any>
+  readonly msgGroupByHint: i0.Signal<any>
+  readonly msgLastPage: i0.Signal<any>
+  readonly msgLoading: i0.Signal<any>
+  readonly msgNextPage: i0.Signal<any>
+  readonly msgNoData: i0.Signal<any>
+  readonly msgPreviousPage: i0.Signal<any>
+  readonly msgPrint: i0.Signal<any>
+  readonly msgSaveRow: i0.Signal<any>
+  readonly msgSelectAll: i0.Signal<any>
+  readonly msgToggleColumns: i0.Signal<any>
+  readonly multiRange: i0.InputSignalWithTransform<boolean, unknown>
+  readonly orderedColumns: i0.Signal<InanduColumnComponent[]>
+  readonly pageChange: i0.OutputEmitterRef<InanduGridPageState>
+  readonly pageLabelText: i0.Signal<any>
+  readonly pageSize: i0.Signal<number>
+  readonly pagedData: i0.Signal<T[]>
+  readonly paging: i0.InputSignal<InanduGridPagingOptions | undefined>
+  readonly persist: i0.InputSignal<readonly InanduGridStatePart[]>
+  readonly pinnedBottomRows: i0.InputSignal<T[]>
+  readonly pinnedTopRows: i0.InputSignal<T[]>
+  readonly resolvedLang: i0.Signal<string>
+  readonly rootClasses: i0.Signal<string>
+  readonly rowActionsTemplate: i0.Signal<i0.TemplateRef<InanduRowActionsContext<T>> | undefined>
+  readonly rowCreate: i0.OutputEmitterRef<Partial<T>>
+  readonly rowDelete: i0.OutputEmitterRef<T>
+  readonly rowOrderChange: i0.OutputEmitterRef<T[]>
+  readonly rowReorder: i0.InputSignalWithTransform<boolean, unknown>
+  readonly rowSave: i0.OutputEmitterRef<InanduGridRowSave<T>>
+  readonly rowsDelete: i0.OutputEmitterRef<T[]>
+  readonly selectable: i0.InputSignalWithTransform<boolean, unknown>
+  readonly selectedCount: i0.Signal<number>
+  readonly selectedRowsList: i0.Signal<T[]>
+  readonly selectionChange: i0.OutputEmitterRef<T[]>
+  readonly serverSide: i0.InputSignalWithTransform<boolean, unknown>
+  readonly showTotals: i0.InputSignalWithTransform<boolean, unknown>
+  readonly showTotalsRow: i0.Signal<boolean>
+  readonly singleDetailExpand: i0.InputSignalWithTransform<boolean, unknown>
+  readonly someVisibleSelected: i0.Signal<boolean>
+  readonly sortChange: i0.OutputEmitterRef<InanduGridSortCriterion[]>
+  readonly sortCriteria: i0.WritableSignal<InanduGridSortCriterion[]>
+  readonly sortedData: i0.Signal<T[]>
+  readonly stateKey: i0.InputSignal<string>
+  readonly theme: i0.InputSignal<string>
+  readonly totalColumnCount: i0.Signal<number>
+  readonly totalItems: i0.InputSignalWithTransform<number | undefined, unknown>
+  readonly totalPages: i0.Signal<number>
+  readonly treeChildrenKey: i0.InputSignal<string>
+  readonly treeDefaultExpanded: i0.InputSignalWithTransform<number | "none" | "all", string | number>
+  readonly treeRows: i0.Signal<TreeVisibleRow<T>[]>
+  readonly viewportRangeChange: i0.OutputEmitterRef<InanduGridViewportRange>
+  readonly virtualItems: i0.Signal<VirtualRowItem<T>[]>
+  readonly virtualRowHeight: i0.InputSignalWithTransform<number | undefined, unknown>
+  readonly virtualScroll: i0.InputSignalWithTransform<boolean, unknown>
+  readonly virtualViewportHeight: i0.Signal<number>
+  readonly visibleColumns: i0.Signal<InanduColumnComponent[]>
+  readonly visibleRowCount: i0.Signal<number>
+  readonly width: i0.InputSignalWithTransform<number, unknown>
+  rowActionsContext: (row: T) => InanduRowActionsContext<T>
+  rowDraftChecked: (field: string) => boolean
+  rowDraftText: (field: string) => string
+  saveNewRow: () => Promise<void>
+  saveRow: (row: T) => Promise<void>
+  selectRowLabel: (index: number) => string
+  selectRows: (rows: T[]) => void
+  setAllTreeRowsExpanded: (expanded: boolean) => void
+  setColumnOrder: (fields: readonly string[]) => void
+  setColumnPinned: (field: string, side: InanduColumnStickySide | undefined) => void
+  setColumnWidth: (field: string, width: number) => void
+  setFilterQuery: (query: string) => void
+  setGroupBy: (field: string | undefined) => void
+  setRowDraftValue: (field: string, value: unknown) => void
+  setSort: (criteria: InanduGridSortCriterion[]) => void
+  sortByLabel: (column: InanduColumnComponent) => string
+  sortDirectionFor: (field: string) => SortDirection | undefined
+  sortPriorityFor: (field: string) => number | undefined
+  startAddingRow: () => void
+  startEditingRow: (row: T) => void
+  stickyOffset: (column: InanduColumnComponent) => number
+  stickyOffsetRight: (column: InanduColumnComponent) => number
+  toggleColumnFilterPopup: (field: string) => void
+  toggleColumnTogglePopup: () => void
+  toggleColumnVisibility: (field: string) => void
+  toggleRowExpanded: (row: T) => void
+  toggleRowSelection: (row: T) => void
+  toggleSelectAll: () => void
+  toggleSort: (field: string, event?: MouseEvent) => void
+  toggleTreeRow: (row: T) => void
+  totalsCellText: (column: InanduColumnComponent) => string
+  trackVirtualItem: (_index: number, item: VirtualRowItem<T>) => unknown
+  treeToggleLabel: (row: T) => string
+  updateColumnFilter: (field: string, patch: InanduGridColumnFilterValue) => void
+  validateCell: (column: InanduColumnComponent, value: unknown, row?: Record<string, unknown>) => string | null
+type InanduGridCustomTranslations = Record<string, Record<string, string>>
+interface InanduGridFilterState
+  columnFilters: Record<string, InanduGridColumnFilterValue>
+  query: string
+interface InanduGridLoadMoreEvent
+  loadedCount: number
+type InanduGridNewRowValues<T extends InanduGridRow = InanduGridRow> = Partial<T>
+interface InanduGridPageState
+  page: number
+  pageSize: number
+interface InanduGridPagingOptions
+  firstLabel?: string | undefined
+  lastLabel?: string | undefined
+  nextLabel?: string | undefined
+  pageLabel?: ((page: number, totalPages: number) => string) | undefined
+  pageSize?: number | undefined
+  previousLabel?: string | undefined
+  showFirstButton?: boolean | undefined
+  showLastButton?: boolean | undefined
+  showNextButton?: boolean | undefined
+  showPreviousButton?: boolean | undefined
+type InanduGridRow = Record<string, unknown>
+interface InanduGridRowSave
+  row: T
+  values: Partial<T>
+interface InanduGridSavedState
+  columnFilters: Record<string, InanduGridColumnFilterValue>
+  columnWidths: Record<string, number>
+  filterQuery: string
+  hiddenFields: string[]
+  pinnedOverrides: Record<string, InanduColumnStickySide | "none">
+  reorderedFields: string[]
+  sortCriteria: { field: string; direction: "asc" | "desc"; }[]
+interface InanduGridSortCriterion
+  direction: SortDirection
+  field: string
+type InanduGridStatePart = 'columnWidths' | 'reorderedFields' | 'hiddenFields' | 'pinnedOverrides' | 'sortCriteria' | 'filterQuery' | 'columnFilters'
+interface InanduGridViewportRange
+  endIndex: number
+  startIndex: number
+interface InanduHeaderTemplateContext
+  $implicit: string
+  field: string
+  title: string
+interface InanduPasteOptions
+  booleanLabels?: { truthy?: readonly string[]; falsy?: readonly string[]; } | undefined
+  locale?: string | undefined
+interface InanduRowActionsContext
+  $implicit: T
+  row: T
+function parseLocaleNumber(raw: string, locale?: string): number | undefined
+function parsePastedBoolean(raw: string, options?: InanduPasteOptions): boolean | undefined
+function parsePastedCell(raw: string, type: InanduColumnType, options?: InanduPasteOptions): { value: unknown; } | undefined
+function parsePastedDate(raw: string, locale?: string): Date | undefined
+function printHtmlDocument(html: string, options?: { autoPrint?: boolean; }): void
+function sanitizeGridState(value: unknown, parts?: readonly InanduGridStatePart[]): Partial<InanduGridSavedState>
+type SortDirection = 'asc' | 'desc'

@@ -52,7 +52,14 @@ npm run lint         # lint both projects
 npm run test:lib     # library unit tests (Karma/Jasmine, headless Chrome)
 npm test             # demo app unit tests
 npm run e2e          # Playwright e2e against the built demo (auto-serves on :4202)
+npm run api:check    # after build:lib: the exported API matches api/public-api.txt
+npm run api:update   # rewrite that snapshot (review the diff: it is the API change of the release)
+npm run check:package    # after build:lib: jspdf on demand, size budgets, tarball contents, entry points
+npm run smoke:package    # after build:lib: install the packed tarball in an empty project and compile a consumer
 ```
+
+A pull request that changes the public API (an input, an export, a type) has to include the updated `api/public-api.txt`; CI
+fails otherwise. Size budgets live in `scripts/check-package.mjs`: raise one there when the growth is intended.
 
 One-shot headless unit run (no watch, no interactive Chrome):
 
