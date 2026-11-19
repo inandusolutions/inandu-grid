@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, afterNextRender, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, of } from 'rxjs';
 import {
@@ -117,6 +117,20 @@ export class AppComponent {
 
   selectTab(tab: DemoTab): void {
     this.activeTab.set(tab);
+    // Keep the address in step with the tab, so the link can be shared (#demo-editing). replaceState: no history entry per click.
+    try {
+      history.replaceState(null, '', tab === 'overview' ? '#demo' : `#demo-${tab}`);
+    } catch {
+      /* history unavailable (sandboxed frame): the tab still switches */
+    }
+  }
+
+  /** Opens the tab named by a `#demo-<tab>` link and scrolls the demo into view. */
+  private openTabFromHash(): void {
+    const tab = (location.hash.match(/^#demo-(\w+)$/)?.[1] ?? '') as DemoTab;
+    if (!(['overview', 'editing', 'tree', 'scale', 'themes'] as const).includes(tab)) return;
+    this.activeTab.set(tab);
+    document.getElementById('demo')?.scrollIntoView();
   }
 
   // ------------------------------------------------------------ feature explorer
@@ -316,6 +330,7 @@ export class AppComponent {
   private readonly http = inject(HttpClient);
 
   constructor() {
+    afterNextRender(() => this.openTabFromHash());
     this.http
       .get<InanduGridRow[]>(USERS_API_URL)
       .pipe(
