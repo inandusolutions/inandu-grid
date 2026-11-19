@@ -22,8 +22,9 @@ if (!existsSync(dist)) {
 const version = (name) => JSON.parse(readFileSync(join(root, 'node_modules', name, 'package.json'), 'utf8')).version;
 const work = mkdtempSync(join(tmpdir(), 'grid-smoke-'));
 const npmCli = process.env.npm_execpath;
-const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
-const npm = (args, cwd) => (npmCli ? run(process.execPath, [npmCli, ...args], cwd) : run('npm', args, cwd));
+const run = (cmd, args, cwd, shell = false) => execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], shell });
+// Through npm scripts npm_execpath is set and npm's own CLI is called with node; run directly, npm.cmd needs a shell on Windows.
+const npm = (args, cwd) => (npmCli ? run(process.execPath, [npmCli, ...args], cwd) : run('npm', args, cwd, process.platform === 'win32'));
 
 try {
   // pack the built package, exactly as published
