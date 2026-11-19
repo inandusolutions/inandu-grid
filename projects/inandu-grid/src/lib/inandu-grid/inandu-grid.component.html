@@ -1,7 +1,7 @@
 <div [class]="rootClasses()" [attr.id]="id() || null" [attr.dir]="dir()" [style.width.px]="width() || null" [style.height.px]="height() || null" [style.--inandu-select-column-width.px]="selectColumnWidthPx" [style.--inandu-row-drag-column-width.px]="rowDragColumnWidthPx" [style.--inandu-detail-toggle-column-width.px]="detailToggleColumnWidthPx" tabindex="-1" (keydown)="onGridKeyDown($event)">
   <div class="inandu-sr-only" role="status" aria-live="polite">{{ liveMessage() }}</div>
   @if (exportable() || columnToggle() || (selectable() && deletable())) {
-    <div class="inandu-toolbar">
+    <div class="inandu-toolbar" [class.inandu-toolbar-labels]="toolbarLabels()">
       @if (exportable()) {
         <button type="button" class="inandu-pager-button inandu-icon inandu-icon-export-csv" [disabled]="visibleRowCount() === 0 || loading() || !!error()" [attr.aria-label]="msgExportCsv()" [title]="msgExportCsv()" (click)="exportCsv()"></button>
         <button type="button" class="inandu-pager-button inandu-icon inandu-icon-export-excel" [disabled]="visibleRowCount() === 0 || loading() || !!error()" [attr.aria-label]="msgExportExcel()" [title]="msgExportExcel()" (click)="exportExcel()"></button>

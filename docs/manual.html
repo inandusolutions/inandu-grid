@@ -734,7 +734,8 @@ evenOnly = (v: unknown) =&gt; typeof v === 'number' &amp;&amp; v % 2 ? 'Must be 
     <section id="export">
       <h2>22. Export &amp; print <span class="pill opt-in">grid</span></h2>
       <p><code>exportable="true"</code> renders a toolbar above the table with four buttons: CSV, Excel,
-        PDF, Print.</p>
+        PDF, Print. The buttons are icon-only by default (keyboard focus shows the action name as a tooltip);
+        add <code>toolbarLabels="true"</code> to print the name next to each icon on screens wider than 600px.</p>
       <ul>
         <li><strong>CSV</strong> — <code>\r\n</code>-joined, with a UTF-8 BOM so Excel reads accented text correctly.</li>
         <li><strong>Excel</strong> — a SpreadsheetML <code>.xls</code> (plain XML, opens natively in Excel / LibreOffice / Sheets, zero added dependency). Numeric columns keep a real number type. A binary <code>.xlsx</code> is a <code>@inandu-solutions/grid-pro</code> feature.</li>
@@ -844,6 +845,7 @@ evenOnly = (v: unknown) =&gt; typeof v === 'number' &amp;&amp; v % 2 ? 'Must be 
           <tr><td><code>cellRangeSelection</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
           <tr><td><code>showTotals</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
           <tr><td><code>exportable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
+          <tr><td><code>toolbarLabels</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
           <tr><td><code>creatable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
           <tr><td><code>deletable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
           <tr><td><code>deleteConfirmMessage</code></td><td><code>string</code></td><td><code>''</code> (no prompt)</td></tr>

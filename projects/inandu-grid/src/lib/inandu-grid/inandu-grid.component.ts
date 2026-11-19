@@ -2466,6 +2466,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly exportable = input(false, { transform: booleanAttribute });
 
   /**
+   * Prints the action name ("Export CSV", "Print", ...; translated) next to each toolbar icon. Off by default
+   * so the toolbar stays compact; below 600px it falls back to icons only. Keyboard focus always shows the name.
+   */
+  readonly toolbarLabels = input(false, { transform: booleanAttribute });
+
+  /**
    * Downloads the currently-visible rows (the same "what's on screen right now" set `visibleRows`
    * already defines for the select-all checkbox — the current page, or every group's rows while
    * grouped) as a CSV file, using each column's *formatted* value, same "match what's on screen"

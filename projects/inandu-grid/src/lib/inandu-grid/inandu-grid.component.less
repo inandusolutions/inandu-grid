@@ -448,8 +448,9 @@
 
 .inandu-tree-toggle {
     flex: none;
-    width: 1.1em;
-    height: 1.1em;
+    // At least 24x24 CSS px (WCAG 2.2 SC 2.5.8); the spacer below uses the same width so rows stay aligned.
+    width: max(1.1em, 24px);
+    height: max(1.1em, 24px);
     padding: 0;
     border: none;
     background: none;
@@ -461,7 +462,82 @@
 .inandu-tree-toggle-spacer {
     flex: none;
     display: inline-block;
-    width: 1.1em;
+    width: max(1.1em, 24px);
+}
+
+// WCAG 2.2 SC 2.5.8 (target size, minimum): every built-in control is at least 24x24 CSS px. The extra
+// room is padding/min-size, never a bigger glyph, so the icons keep their look; icon buttons are centred.
+.inandu-sort-button,
+.inandu-column-filter-toggle,
+.inandu-pager-button {
+    min-width: 24px;
+    min-height: 24px;
+    box-sizing: border-box;
+}
+
+.inandu-sort-button.inandu-icon,
+.inandu-column-filter-toggle.inandu-icon,
+.inandu-pager-button.inandu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inandu-select-checkbox {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+}
+
+// Toolbar actions are icon-only by default. A keyboard user gets the action name as a tooltip on focus
+// (hover already has the native `title`), and `[toolbarLabels]` prints it next to the icon.
+.inandu-toolbar .inandu-pager-button.inandu-icon {
+    position: relative;
+}
+
+.inandu-focus-tooltip() {
+    content: attr(aria-label);
+    position: absolute;
+    top: calc(100% + 4px);
+    inset-inline-end: 0;
+    z-index: 10;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: #222;
+    color: #fff;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.inandu-toolbar:not(.inandu-toolbar-labels) .inandu-pager-button.inandu-icon:focus-visible::after {
+    .inandu-focus-tooltip();
+}
+
+.inandu-toolbar-labels .inandu-pager-button.inandu-icon {
+    gap: 0.4em;
+    padding-inline: 10px;
+}
+
+.inandu-toolbar-labels .inandu-pager-button.inandu-icon::after {
+    content: attr(aria-label);
+    font-size: 0.85em;
+}
+
+// On narrow screens the labelled toolbar falls back to icons only, with the focus tooltip back in place.
+@media (max-width: 600px) {
+    .inandu-toolbar-labels .inandu-pager-button.inandu-icon {
+        padding-inline: 8px;
+    }
+
+    .inandu-toolbar-labels .inandu-pager-button.inandu-icon::after {
+        content: none;
+    }
+
+    .inandu-toolbar-labels .inandu-pager-button.inandu-icon:focus-visible::after {
+        .inandu-focus-tooltip();
+    }
 }
 
 // `position: sticky` has to be set via a selector at least as specific as `.xtable th`'s own
