@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (tooling, no effect on the published code)
 
-- `support-matrix.json` writes the supported Angular, Node and browser versions once, and `npm run check:support` (a CI step) fails when`
+- `support-matrix.json` writes the supported Angular, Node and browser versions once, and `npm run check:support` (a CI step) fails when
   `package.json`, the library manifest, `.nvmrc`, the CI workflow or the README tables disagree with it.
 
 ## [1.6.0] - 2026-11-19
