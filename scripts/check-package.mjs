@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist/inandu-grid');
 
-/** Ceilings in bytes. Current values (1.5.0): bundle 229 KB, tarball 149 KB. */
+/** Ceilings in bytes. Current values (1.6.0): bundle 227 KB, tarball 147 KB. */
 const BUDGET = { bundle: 260 * 1024, tarball: 170 * 1024 };
 
 const failures = [];
@@ -28,6 +28,11 @@ if (!existsSync(dist)) {
 
 const pkg = JSON.parse(readFileSync(join(dist, 'package.json'), 'utf8'));
 const bundlePath = join(dist, pkg.module ?? 'fesm2022/inandu-solutions-grid-angular.mjs');
+
+// 0. The version the demo site advertises to search engines (JSON-LD `softwareVersion` in src/index.html) is the version being released.
+// It sat at 1.0.0 through five releases because nothing compared it; bump it with the version in projects/inandu-grid/package.json.
+const siteVersion = readFileSync(join(root, 'src/index.html'), 'utf8').match(/"softwareVersion"\s*:\s*"([^"]+)"/)?.[1];
+if (siteVersion !== pkg.version) fail(`src/index.html says softwareVersion ${siteVersion ?? '(missing)'} but the package is ${pkg.version}: update the JSON-LD block`);
 
 // 1. jspdf on demand
 const bundle = readFileSync(bundlePath, 'utf8');

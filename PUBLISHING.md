@@ -88,7 +88,8 @@ Published **manually** from a maintainer's machine — an npm account that is an
 of the `@inandu-solutions` org, with an authenticator app for the 2FA prompt.
 
 1. **Bump the version** in `projects/inandu-grid/package.json` (SemVer — a breaking change
-   to a selector or the public API is a major).
+   to a selector or the public API is a major) and the `"softwareVersion"` in the JSON-LD block of
+   `src/index.html` (what the demo site tells search engines; `npm run check:package` fails if the two differ).
 2. **Update `CHANGELOG.md`**: move `## [Unreleased]` items under `## [x.y.z] - YYYY-MM-DD`;
    fix the compare links at the bottom.
 3. **Commit** (`chore(release): vX.Y.Z`) and **tag**:
