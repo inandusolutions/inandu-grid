@@ -1,6 +1,6 @@
-import { booleanAttribute, ChangeDetectionStrategy, Component, computed, contentChild, contentChildren, effect, ElementRef, HostListener, inject, input, LOCALE_ID, numberAttribute, output, signal, TemplateRef, untracked, viewChildren } from '@angular/core';
+import { booleanAttribute, ChangeDetectionStrategy, Component, computed, contentChild, contentChildren, effect, ElementRef, HostListener, inject, input, LOCALE_ID, numberAttribute, output, signal, TemplateRef, untracked, viewChild, viewChildren } from '@angular/core';
 import { formatNumber, NgTemplateOutlet } from '@angular/common';
-import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
 import { InanduCellTemplateContext, InanduColumnComponent, InanduEditTemplateContext, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
 import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inandu-column/inandu-column.component';
@@ -1067,6 +1067,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         break;
       case 'ArrowUp':
       case 'ArrowDown': {
+        if (this.virtualScroll() && cell.getAttribute('role') === 'gridcell' && this.moveVirtualFocus(event, row, colIndex, key === 'ArrowDown' ? 1 : -1)) {
+          return;
+        }
         const rows = Array.from(table.querySelectorAll<HTMLElement>('tr[role="row"]'));
         const rowIndex = rows.indexOf(row);
         const nextRow = rows[rowIndex + (key === 'ArrowDown' ? 1 : -1)];
@@ -1080,6 +1083,170 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       nextCell.tabIndex = 0;
       nextCell.focus();
     }
+  }
+
+
+  // ---------------------------------------------------------------- keyboard focus and the virtual window
+  //
+  // With `virtualScroll()` only the rows near the viewport are in the DOM. Walking the DOM alone (as `onGridKeyDown` does) loses an
+  // arrow key that outruns the window, and a focused cell whose row scrolls out of the DOM drops focus to <body>, where Tab restarts
+  // from the top of the page. These keep the keyboard working across the window.
+
+  private readonly virtualViewport = viewChild(CdkVirtualScrollViewport);
+  /** The cell that last had focus in the virtual grid, as its item index and column. Forgotten when focus really leaves the grid. */
+  private lastVirtualFocus: { index: number; col: number } | null = null;
+  /** A keyboard move to an item that is not rendered yet: the viewport scrolls there first, then this cell takes focus. */
+  private pendingVirtualFocus: { index: number; col: number; at: number } | null = null;
+
+  /**
+   * Watches the viewport's rows being added and removed. That is the moment to act: a row that had focus has just left the DOM (park
+   * focus), or the row a keyboard move was waiting for has just been rendered (focus it). The cdk renders on its own schedule, so
+   * reacting to the DOM itself is more reliable than guessing when the next render is.
+   */
+  private readonly watchVirtualRows = effect(onCleanup => {
+    const viewport = this.virtualViewport();
+    if (!viewport || typeof MutationObserver === 'undefined') {
+      return;
+    }
+    const observer = new MutationObserver(() => this.reconcileVirtualFocus());
+    observer.observe(viewport.elementRef.nativeElement, { childList: true, subtree: true });
+    onCleanup(() => observer.disconnect());
+  });
+
+  /**
+   * The cdk measures the viewport once and again only on window resize. A grid created while hidden (a tab panel, a collapsed section)
+   * is measured at 0px and keeps rendering a handful of rows after it is shown: a half-empty viewport, and the last rows out of reach.
+   * Watching the viewport's own size and asking the cdk to measure again fixes that for any way the size changes.
+   */
+  private readonly watchVirtualViewportSize = effect(onCleanup => {
+    const viewport = this.virtualViewport();
+    if (!viewport || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(() => viewport.checkViewportSize());
+    observer.observe(viewport.elementRef.nativeElement);
+    onCleanup(() => observer.disconnect());
+  });
+
+  /** The index, among the viewport's items, of a rendered `<tr>`; `-1` when it is not an item row. */
+  private virtualItemIndex(tr: Element): number {
+    // Read from the row itself (`data-virtual-index`, the cdkVirtualFor index): the viewport's rendered range already describes the
+    // *next* window while the DOM still holds the previous one, so range plus position would be wrong during a scroll.
+    const index = Number(tr.getAttribute('data-virtual-index'));
+    return tr.hasAttribute('data-virtual-index') && Number.isInteger(index) ? index : -1;
+  }
+
+  /** Bound to the root's `(focusin)`: remembers which cell of a virtual grid has focus. */
+  onGridFocusIn(event: FocusEvent): void {
+    if (!this.virtualScroll()) {
+      return;
+    }
+    const cell = (event.target as HTMLElement).closest<HTMLElement>('[role="gridcell"]');
+    const tr = cell?.closest('tr');
+    if (!cell || !tr) {
+      return;
+    }
+    const index = this.virtualItemIndex(tr);
+    if (index >= 0) {
+      this.lastVirtualFocus = { index, col: Array.from(tr.querySelectorAll('[role="gridcell"]')).indexOf(cell) };
+    }
+  }
+
+  /**
+   * Bound to the root's `(focusout)`. When focus leaves the grid for good (a click on the page, Tab out) the remembered cell is
+   * forgotten. When the cell was *removed* because its row scrolled out of the DOM the cell is no longer connected: that is not
+   * the user leaving, so the memory stays and focus is parked on the viewport (see `reconcileVirtualFocus`).
+   */
+  onGridFocusOut(event: FocusEvent): void {
+    const cell = event.target as HTMLElement;
+    // A timeout, not a microtask: when a row is removed the browser fires this event just before the cell leaves the DOM, so only
+    // a moment later can `isConnected` tell "removed" from "the user moved away".
+    setTimeout(() => {
+      if (cell.isConnected && !this.elementRef.nativeElement.contains(document.activeElement)) {
+        this.lastVirtualFocus = null;
+      }
+    });
+  }
+
+  /**
+   * Run whenever the viewport's rows change (see `watchVirtualRows`). A pending keyboard move takes focus once its row is
+   * rendered. If the remembered cell's row has been removed, focus is parked on the viewport so it stays inside the grid; when the row
+   * is rendered again focus returns to the cell.
+   */
+  private reconcileVirtualFocus(): void {
+    const viewport = this.virtualViewport();
+    if (this.pendingVirtualFocus && Date.now() - this.pendingVirtualFocus.at > 1500) {
+      this.pendingVirtualFocus = null; // the row never rendered (the user moved on): do not jump to it later
+    }
+    const want = this.pendingVirtualFocus ?? this.lastVirtualFocus;
+    if (!viewport || !want) {
+      return;
+    }
+    const element = viewport.elementRef.nativeElement;
+    const rendered = element.querySelector(`tr[data-virtual-index="${want.index}"]`) !== null;
+    const active = document.activeElement;
+    const focusLost = !active || active === document.body;
+    if (this.pendingVirtualFocus) {
+      if (rendered && this.focusVirtualCell(element, want)) {
+        this.pendingVirtualFocus = null;
+      }
+      return;
+    }
+    if (rendered && (focusLost || active === element)) {
+      this.focusVirtualCell(element, want);
+    } else if (!rendered && focusLost) {
+      element.focus({ preventScroll: true });
+    }
+  }
+
+  private focusVirtualCell(viewportElement: HTMLElement, want: { index: number; col: number }): boolean {
+    const cells = viewportElement.querySelector(`tr[data-virtual-index="${want.index}"]`)?.querySelectorAll<HTMLElement>('[role="gridcell"]');
+    const next = cells?.[Math.min(want.col, (cells?.length ?? 1) - 1)];
+    if (!next) {
+      return false;
+    }
+    const previous = document.activeElement;
+    if (previous instanceof HTMLElement && previous !== next && viewportElement.contains(previous)) {
+      previous.tabIndex = -1;
+    }
+    next.tabIndex = 0;
+    next.focus();
+    return true;
+  }
+
+  /**
+   * ArrowUp / ArrowDown between item rows of a virtual grid, by item index. A move to a row that is not rendered yet scrolls it into
+   * view and focuses it once rendered, so a fast run of arrow keys never loses a key at the edge of the window. Returns `false` to leave
+   * the move to the DOM walk in `onGridKeyDown` (the neighbour is rendered, or this is the first row going up, which goes to the header).
+   */
+  private moveVirtualFocus(event: KeyboardEvent, row: Element, col: number, step: 1 | -1): boolean {
+    const viewport = this.virtualViewport();
+    const rendered = this.virtualItemIndex(row);
+    if (!viewport || rendered < 0) {
+      return false;
+    }
+    // While an earlier move is still waiting for its row to render, focus is still on the old cell: the next key continues from that
+    // move's target, not from the old cell, or every key pressed meanwhile would be lost.
+    const waiting = this.pendingVirtualFocus !== null;
+    const current = this.pendingVirtualFocus?.index ?? rendered;
+    const total = viewport.getDataLength();
+    const target = current + step;
+    if (target < 0) {
+      return false;
+    }
+    if (target >= total) {
+      event.preventDefault();
+      return true;
+    }
+    const range = viewport.getRenderedRange();
+    if (!waiting && target >= range.start && target < range.end) {
+      return false;
+    }
+    event.preventDefault();
+    this.pendingVirtualFocus = { index: target, col, at: Date.now() };
+    viewport.scrollToIndex(target); // the cdk's own index-to-offset arithmetic; the row lands at the top, with the following rows below it
+    this.reconcileVirtualFocus(); // already rendered (a second key while waiting): focus it now; otherwise the row observer will
+    return true;
   }
 
   /**
@@ -2605,6 +2772,15 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   private readonly editingRow = signal<T | undefined>(undefined);
 
   /**
+   * Moves on every start, cancel and save of an edit or an add. A save that finds a different session when its `asyncValidator`
+   * returns was cancelled or replaced meanwhile and stands down, even when the user started editing the very same row again
+   * (comparing the row alone cannot tell the two attempts apart). `savingSession` stops a second Save from running while the first
+   * one is still validating.
+   */
+  private editSession = 0;
+  private savingSession: number | null = null;
+
+  /**
    * Draft values for whichever row-level edit is in progress — `editingRow()`'s fields, or (see
    * `creatable`) a brand-new row's fields while `isAddingRow()` — keyed by field, always in the *raw
    * control* shape (a string for text/number/date inputs, a boolean for the checkbox), not yet parsed
@@ -2645,6 +2821,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     for (const column of this.editableColumns()) {
       draft[column.field()] = this.seedDraftValue(row, column);
     }
+    this.editSession += 1;
     this.editingRow.set(row);
     this.rowDraft.set(draft);
     this.fieldErrors.set({});
@@ -2712,6 +2889,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** "Cancel" — discards the draft and exits edit mode without emitting `rowSave`. */
   cancelRowEdit(): void {
+    this.editSession += 1;
     this.editingRow.set(undefined);
     this.rowDraft.set({});
     this.fieldErrors.set({});
@@ -2759,13 +2937,19 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
         continue;
       }
       pendingAsyncChecks.push(
-        asyncValidator(parsedRow[field], parsedRow).then(asyncMessage => {
-          if (asyncMessage) {
-            errors[field] = asyncMessage;
-          } else if (parsedRow[field] !== undefined) {
-            values[field] = parsedRow[field];
-          }
-        })
+        asyncValidator(parsedRow[field], parsedRow)
+          .then(asyncMessage => {
+            if (asyncMessage) {
+              errors[field] = asyncMessage;
+            } else if (parsedRow[field] !== undefined) {
+              values[field] = parsedRow[field];
+            }
+          })
+          // A validator that throws (a network error, say) is a failed check, shown under its field: the row stays in edit mode and
+          // the click handler is not left with a rejected promise nobody handles.
+          .catch((error: unknown) => {
+            errors[field] = error instanceof Error && error.message ? error.message : String(error);
+          })
       );
     }
     if (pendingAsyncChecks.length > 0) {
@@ -2848,22 +3032,34 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     if (!this.isEditingRow(row)) {
       return;
     }
-    const { errors, values } = await this.validateAndParseDraft(this.rowDraft());
-    // Re-checked after the await: if the user hit Cancel (or somehow started editing a different
-    // row) while an asyncValidator was pending, this save is stale and must not apply its result.
-    if (!this.isEditingRow(row)) {
-      return;
+    const session = this.editSession;
+    if (this.savingSession === session) {
+      return; // Save pressed again while the first one is still validating
     }
-    if (Object.keys(errors).length > 0) {
-      this.fieldErrors.set(errors);
-      return;
+    this.savingSession = session;
+    try {
+      const { errors, values } = await this.validateAndParseDraft(this.rowDraft());
+      // Re-checked after the await: if the user hit Cancel (or started editing a different row, or this one again) while an
+      // asyncValidator was pending, this save is stale and must not apply its result.
+      if (this.editSession !== session) {
+        return;
+      }
+      if (Object.keys(errors).length > 0) {
+        this.fieldErrors.set(errors);
+        return;
+      }
+      this.editSession += 1;
+      this.editingRow.set(undefined);
+      this.rowDraft.set({});
+      this.fieldErrors.set({});
+      // Cast: values is built dynamically from string field names (see validateAndParseDraft), so
+      // there's no way to statically prove it matches Partial<T> — see InanduGridRowSave's doc comment.
+      this.rowSave.emit({ row, values: values as Partial<T> });
+    } finally {
+      if (this.savingSession === session) {
+        this.savingSession = null;
+      }
     }
-    this.editingRow.set(undefined);
-    this.rowDraft.set({});
-    this.fieldErrors.set({});
-    // Cast: values is built dynamically from string field names (see validateAndParseDraft), so
-    // there's no way to statically prove it matches Partial<T> — see InanduGridRowSave's doc comment.
-    this.rowSave.emit({ row, values: values as Partial<T> });
   }
 
   /** Emitted when a row's "Delete" button is confirmed (or clicked, if no `deleteConfirmMessage` is set) — the exact `data()` row reference. */
@@ -2921,6 +3117,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** The "Add row" trigger — starts a blank draft (every field defaults to its own empty control value; nothing needs seeding, unlike `startEditingRow`). */
   startAddingRow(): void {
+    this.editSession += 1;
     this.isAddingRow.set(true);
     this.rowDraft.set({});
     this.fieldErrors.set({});
@@ -2928,6 +3125,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** "Cancel" on the new-row draft — discards it without emitting `rowCreate`. */
   cancelAddRow(): void {
+    this.editSession += 1;
     this.isAddingRow.set(false);
     this.rowDraft.set({});
     this.fieldErrors.set({});
@@ -2946,20 +3144,32 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     if (!this.isAddingRow()) {
       return;
     }
-    const { errors, values } = await this.validateAndParseDraft(this.rowDraft());
-    // Re-checked after the await, same reasoning as saveRow()'s post-await isEditingRow() guard.
-    if (!this.isAddingRow()) {
-      return;
+    const session = this.editSession;
+    if (this.savingSession === session) {
+      return; // Save pressed again while the first one is still validating
     }
-    if (Object.keys(errors).length > 0) {
-      this.fieldErrors.set(errors);
-      return;
+    this.savingSession = session;
+    try {
+      const { errors, values } = await this.validateAndParseDraft(this.rowDraft());
+      // Re-checked after the await, same reasoning as saveRow()'s post-await session check.
+      if (this.editSession !== session) {
+        return;
+      }
+      if (Object.keys(errors).length > 0) {
+        this.fieldErrors.set(errors);
+        return;
+      }
+      this.editSession += 1;
+      this.isAddingRow.set(false);
+      this.rowDraft.set({});
+      this.fieldErrors.set({});
+      // Cast: same reasoning as saveRow()'s emit — values is a dynamically-built field bag, not
+      // something the compiler can verify actually matches Partial<T>.
+      this.rowCreate.emit(values as Partial<T>);
+    } finally {
+      if (this.savingSession === session) {
+        this.savingSession = null;
+      }
     }
-    this.isAddingRow.set(false);
-    this.rowDraft.set({});
-    this.fieldErrors.set({});
-    // Cast: same reasoning as saveRow()'s emit — values is a dynamically-built field bag, not
-    // something the compiler can verify actually matches Partial<T>.
-    this.rowCreate.emit(values as Partial<T>);
   }
 }
