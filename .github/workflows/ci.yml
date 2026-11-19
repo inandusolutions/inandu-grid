@@ -117,9 +117,13 @@ jobs:
   # Firefox, WebKit and a touch device (the main e2e job is Chromium only).
   e2e-cross-browser:
     name: e2e ${{ matrix.project }}
-    # Pinned to 24.04 on purpose. ubuntu-latest became 26.04 on 2026-11-18/19, and there `playwright install --with-deps` takes 4-10
-    # minutes (it was 30-60 s on 24.04), which put the step at its time limit. Unpin once that install is fast again.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    # The official Playwright image already has the system libraries WebKit and Firefox need, so nothing is installed with apt. On
+    # 2026-11-19 `playwright install --with-deps` took 10+ minutes and timed out on every runner image (the Ubuntu mirrors the
+    # runners were given downloaded a few packages a minute). Keep the tag equal to the @playwright/test version in package-lock.json;
+    # the browsers themselves are still fetched by `playwright install` below, so a patch difference is harmless.
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -136,9 +140,9 @@ jobs:
       - run: npm ci
 
       - name: Install Playwright browser
-        # WebKit and Firefox need system libraries the runner image does not all ship, hence --with-deps here.
+        # System libraries come from the container image; this only downloads the browser build for the installed Playwright version.
         timeout-minutes: 10
-        run: npx playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project }}
+        run: npx playwright install ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project }}
 
       - name: E2E tests
         run: npx playwright test --project=${{ matrix.project }} --workers=2
