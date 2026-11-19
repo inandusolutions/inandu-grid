@@ -115,3 +115,17 @@ Scope is usually `inandu-grid` (library) or `grid-app` (demo).
 - Fill in the PR template.
 - CI must be green (lint, unit tests, build, e2e).
 - A maintainer will review; squash-merge is the default.
+
+## Dependency updates
+
+Dependabot opens its pull requests on Mondays: one run for npm and one for GitHub Actions. Packages that peer-pin each other are grouped, so they move together in one pull request instead of breaking each other in separate ones:
+
+- **angular**: `@angular/*`, `@angular-devkit/*`, `ng-packagr` and `zone.js`. The Angular build tooling peer-pins the exact `@angular/compiler` version, so these always move together.
+
+Every other development dependency gets one grouped pull request for minor and patch updates. Major updates are never grouped: each one is its own pull request, read and decided on its own.
+
+Rules for these pull requests:
+
+- They need the same green checks as any other pull request, and nothing is merged with a failing or skipped check.
+- A group is merged as a whole. If one package in it breaks the build, fix or hold the whole group; do not split it by hand, because the packages are grouped exactly because they cannot move apart.
+- Runtime dependencies are few on purpose. A pull request that adds one needs a reason in its description.
