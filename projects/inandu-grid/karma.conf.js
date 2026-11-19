@@ -29,6 +29,9 @@ module.exports = function (config) {
       dir: require('path').join(__dirname, '../../coverage/inandu-grid'),
       subdir: '.',
       reporters: [{ type: 'html' }, { type: 'text-summary' }],
+      // Measured 2026-11-19: statements 94.6, branches 81.1, functions 96.7, lines 94.9. A few points under, so a drop
+      // fails `npm run test:lib -- --code-coverage` (CI) and normal change does not. Raise them when coverage rises.
+      check: { global: { statements: 91, branches: 78, functions: 93, lines: 91 } },
     },
     reporters: ['progress', 'kjhtml'],
     // 'ChromeHeadlessCI' is 'ChromeHeadless' + '--no-sandbox' for CI runners (GitHub Actions'
