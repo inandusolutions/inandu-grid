@@ -81,6 +81,9 @@ export interface InanduDetailTemplateContext<T extends InanduGridRow = InanduGri
   row: T;
 }
 
+/** How long a keyboard move to a row that is not rendered yet may wait for that row before it is forgotten (milliseconds). */
+const PENDING_VIRTUAL_FOCUS_TTL_MS = 1500;
+
 /** One entry of `InanduGridComponent.virtualItems()` — see its doc comment. Internal only, not part of the public API. */
 type VirtualRowItem<T extends InanduGridRow = InanduGridRow> =
   | { kind: 'group'; key: string; column: InanduColumnComponent; count: number; aggregates: Record<string, number> }
@@ -1093,10 +1096,18 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   // from the top of the page. These keep the keyboard working across the window.
 
   private readonly virtualViewport = viewChild(CdkVirtualScrollViewport);
-  /** The cell that last had focus in the virtual grid, as its item index and column. Forgotten when focus really leaves the grid. */
-  private lastVirtualFocus: { index: number; col: number } | null = null;
-  /** A keyboard move to an item that is not rendered yet: the viewport scrolls there first, then this cell takes focus. */
-  private pendingVirtualFocus: { index: number; col: number; at: number } | null = null;
+  /**
+   * The cell that last had focus in the virtual grid: its column, its item index and the row object. Forgotten when focus really leaves
+   * the grid. The row object is what identifies the record (this grid has no `rowId`; a row is the object in `data()`), so that after a
+   * sort or a filter the focus returns to the same record, not to the same position.
+   */
+  private lastVirtualFocus: { index: number; col: number; row: T | null } | null = null;
+  /**
+   * A keyboard move to an item that is not rendered yet: the viewport scrolls there first, then this cell takes focus. It is about the
+   * items as they were (`items`) and the moment of the key press (`at`): it is dropped when the items change, when it has waited too
+   * long, and when focus has gone somewhere else on the page, so it can never pull focus away later.
+   */
+  private pendingVirtualFocus: { index: number; col: number; at: number; items: readonly VirtualRowItem<T>[] } | null = null;
 
   /**
    * Watches the viewport's rows being added and removed. That is the moment to act: a row that had focus has just left the DOM (park
@@ -1148,7 +1159,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     }
     const index = this.virtualItemIndex(tr);
     if (index >= 0) {
-      this.lastVirtualFocus = { index, col: Array.from(tr.querySelectorAll('[role="gridcell"]')).indexOf(cell) };
+      const item = this.virtualItems()[index];
+      this.lastVirtualFocus = {
+        index,
+        col: Array.from(tr.querySelectorAll('[role="gridcell"]')).indexOf(cell),
+        row: item?.kind === 'row' ? item.row : null,
+      };
     }
   }
 
@@ -1175,26 +1191,45 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    */
   private reconcileVirtualFocus(): void {
     const viewport = this.virtualViewport();
-    if (this.pendingVirtualFocus && Date.now() - this.pendingVirtualFocus.at > 1500) {
-      this.pendingVirtualFocus = null; // the row never rendered (the user moved on): do not jump to it later
-    }
-    const want = this.pendingVirtualFocus ?? this.lastVirtualFocus;
-    if (!viewport || !want) {
+    if (!viewport) {
       return;
     }
     const element = viewport.elementRef.nativeElement;
-    const rendered = element.querySelector(`tr[data-virtual-index="${want.index}"]`) !== null;
     const active = document.activeElement;
     const focusLost = !active || active === document.body;
-    if (this.pendingVirtualFocus) {
-      if (rendered && this.focusVirtualCell(element, want)) {
-        this.pendingVirtualFocus = null;
+    // Focus inside the viewport, or on <body> (where it falls when the focused row is removed), is the only state in which the grid may
+    // move it: with focus anywhere else on the page it must leave it alone.
+    const focusInGrid = focusLost || active === element || element.contains(active);
+    const isRendered = (index: number) => element.querySelector(`tr[data-virtual-index="${index}"]`) !== null;
+
+    const pending = this.pendingVirtualFocus;
+    if (pending) {
+      if (Date.now() - pending.at > PENDING_VIRTUAL_FOCUS_TTL_MS || pending.items !== this.virtualItems() || !focusInGrid) {
+        this.pendingVirtualFocus = null; // the items changed, it waited too long, or the user went elsewhere: the request is moot
+      } else {
+        if (isRendered(pending.index) && this.focusVirtualCell(element, pending)) {
+          this.pendingVirtualFocus = null;
+        }
+        return;
+      }
+    }
+
+    const last = this.lastVirtualFocus;
+    if (!last || !(focusLost || active === element)) {
+      return;
+    }
+    // The record, not the position: after a sort or a filter it may be somewhere else, or gone.
+    const index = last.row ? this.virtualItems().findIndex(item => item.kind === 'row' && item.row === last.row) : last.index;
+    if (index < 0) {
+      this.lastVirtualFocus = null; // that record is gone: there is nothing to give focus back to, so keep focus on the grid
+      if (focusLost) {
+        element.focus({ preventScroll: true });
       }
       return;
     }
-    if (rendered && (focusLost || active === element)) {
-      this.focusVirtualCell(element, want);
-    } else if (!rendered && focusLost) {
+    if (isRendered(index)) {
+      this.focusVirtualCell(element, { index, col: last.col });
+    } else if (focusLost) {
       element.focus({ preventScroll: true });
     }
   }
@@ -1243,7 +1278,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       return false;
     }
     event.preventDefault();
-    this.pendingVirtualFocus = { index: target, col, at: Date.now() };
+    this.pendingVirtualFocus = { index: target, col, at: Date.now(), items: this.virtualItems() };
     viewport.scrollToIndex(target); // the cdk's own index-to-offset arithmetic; the row lands at the top, with the following rows below it
     this.reconcileVirtualFocus(); // already rendered (a second key while waiting): focus it now; otherwise the row observer will
     return true;
