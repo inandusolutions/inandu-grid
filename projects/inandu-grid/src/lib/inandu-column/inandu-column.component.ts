@@ -65,6 +65,12 @@ export type InanduColumnValidator = (value: unknown, row: Record<string, unknown
  */
 export type InanduColumnAsyncValidator = (value: unknown, row: Record<string, unknown>) => Promise<string | null>;
 
+/**
+ * Turns whatever an `asyncValidator` threw (a network error, a server error) into the text shown under the field. See
+ * `InanduColumnComponent.asyncValidatorError`.
+ */
+export type InanduColumnAsyncValidatorError = (error: unknown) => string;
+
 function optionalNumberAttribute(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') {
     return undefined;
@@ -216,6 +222,15 @@ export class InanduColumnComponent {
    * `true` and the row's Save/Cancel buttons disable.
    */
   readonly asyncValidator = input<InanduColumnAsyncValidator | undefined>(undefined);
+
+  /**
+   * What to show under the field when `asyncValidator` itself fails (it throws or rejects: a network error, a server error), as opposed
+   * to answering with a message. Receives whatever was thrown and returns the text for the user — see
+   * `InanduColumnAsyncValidatorError`. Bind it as a property (`[asyncValidatorError]="myFn"`). Without it the grid shows the `message` of an
+   * `Error`, which can be a technical or raw server message, and a fixed generic text for anything that is not an `Error`. Use it to show
+   * your own wording (and to keep technical details out of the interface). If it throws, the generic text is shown.
+   */
+  readonly asyncValidatorError = input<InanduColumnAsyncValidatorError | undefined>(undefined);
 
   /**
    * Which edge this column pins to when `sticky="true"` — `'left'` (the default) stacks after the

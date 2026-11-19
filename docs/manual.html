@@ -678,7 +678,8 @@ onSave(e: InanduGridRowSave) {
         <li><code>min</code> / <code>max</code> — inclusive bounds on the parsed number (<code>number</code> columns only).</li>
         <li><code>pattern</code> — a <code>RegExp</code> source string tested against the raw string. A malformed pattern is treated as "no pattern", not an error.</li>
         <li><code>[validator]</code> — <code>(value, row) =&gt; string | null</code>. Runs after every built-in rule passes; <code>row</code> is the in-progress parsed values.</li>
-        <li><code>[asyncValidator]</code> — <code>(value, row) =&gt; Promise&lt;string | null&gt;</code>. All fields' async checks run concurrently; Save / Cancel are disabled while any is pending.</li>
+        <li><code>[asyncValidator]</code> — <code>(value, row) =&gt; Promise&lt;string | null&gt;</code>. All fields' async checks run concurrently; Save / Cancel are disabled while any is pending. Typing while a check runs invalidates it: the older values are not saved, what you typed is kept, and Save checks and saves the new values.</li>
+        <li><code>[asyncValidatorError]</code> — <code>(error) =&gt; string</code>. What the user sees when the async check itself fails (it throws or rejects), as opposed to answering with a message. Without it an <code>Error</code>'s message is shown, and a generic text for anything else; use it to keep technical or server details out of the interface.</li>
       </ol>
       <pre><code>&lt;inandu-column field="code" editable="true"
   required="true" pattern="^[A-Z]{2}\d{4}$"&gt;&lt;/inandu-column&gt;
@@ -920,6 +921,7 @@ evenOnly = (v: unknown) =&gt; typeof v === 'number' &amp;&amp; v % 2 ? 'Must be 
           <tr><td><code>pattern</code></td><td><code>string</code> (RegExp source)</td><td><code>''</code></td></tr>
           <tr><td><code>[validator]</code></td><td><code>InanduColumnValidator</code></td><td>unset</td></tr>
           <tr><td><code>[asyncValidator]</code></td><td><code>InanduColumnAsyncValidator</code></td><td>unset</td></tr>
+          <tr><td><code>[asyncValidatorError]</code></td><td><code>InanduColumnAsyncValidatorError</code></td><td>unset</td></tr>
         </tbody>
       </table></div>
 

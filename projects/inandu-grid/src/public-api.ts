@@ -29,6 +29,7 @@ export type {
   InanduColumnType,
   InanduColumnValidator,
   InanduColumnAsyncValidator,
+  InanduColumnAsyncValidatorError,
   InanduColumnStickySide,
   InanduColumnAggregate,
   InanduCellTemplateContext,

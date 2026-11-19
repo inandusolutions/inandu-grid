@@ -81,6 +81,9 @@ export interface InanduDetailTemplateContext<T extends InanduGridRow = InanduGri
   row: T;
 }
 
+/** Shown under a field when its `asyncValidator` failed and there is nothing better to show (not an `Error`, or `asyncValidatorError` threw). */
+const ASYNC_VALIDATOR_FAILED_MESSAGE = 'Validation could not be completed';
+
 /** How long a keyboard move to a row that is not rendered yet may wait for that row before it is forgotten (milliseconds). */
 const PENDING_VIRTUAL_FOCUS_TTL_MS = 1500;
 
@@ -2919,7 +2922,31 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     if (!this.editingRow() && !this.isAddingRow()) {
       return;
     }
+    // Typing while a Save is still checking the draft makes that check about values that are no longer the draft. Starting a new session
+    // lets the running save stand down when its check returns, so the older values are not saved and what was just typed is kept; the
+    // user presses Save again for the new values.
+    if (this.savingSession !== null) {
+      this.editSession += 1;
+    }
     this.rowDraft.update(draft => ({ ...draft, [field]: value }));
+  }
+
+  /** The text for a field whose `asyncValidator` threw: the column's `asyncValidatorError` if it has one, else the `Error`'s message. */
+  private asyncValidatorFailureMessage(column: InanduColumnComponent, error: unknown): string {
+    try {
+      const format = column.asyncValidatorError();
+      if (format) {
+        const message = format(error);
+        if (typeof message === 'string' && message) {
+          return message;
+        }
+      } else if (error instanceof Error && error.message) {
+        return error.message;
+      }
+    } catch {
+      /* the consumer's own formatter failed: fall through to the generic text */
+    }
+    return ASYNC_VALIDATOR_FAILED_MESSAGE;
   }
 
   /** "Cancel" — discards the draft and exits edit mode without emitting `rowSave`. */
@@ -2983,7 +3010,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
           // A validator that throws (a network error, say) is a failed check, shown under its field: the row stays in edit mode and
           // the click handler is not left with a rejected promise nobody handles.
           .catch((error: unknown) => {
-            errors[field] = error instanceof Error && error.message ? error.message : String(error);
+            errors[field] = this.asyncValidatorFailureMessage(column, error);
           })
       );
     }
