@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { InanduGridComponent, InanduGridRow } from './inandu-grid.component';
 import { InanduColumnComponent } from '../inandu-column/inandu-column.component';
 
@@ -149,6 +150,101 @@ describe('InanduGridComponent virtual scroll: keyboard and focus', () => {
     viewport().scrollTop = 0;
     expect(await waitFor(() => indexOfRow(renderedRows()[0]) === 0)).toBeTrue();
     expect(active()).toBe(outside);
+  });
+
+  describe('a keyboard jump that has to wait for its row', () => {
+    /** The grid, with the private state this part of the behaviour hangs on. */
+    interface GridInternals {
+      pendingVirtualFocus: { index: number; col: number; at: number; items: readonly unknown[] } | null;
+      virtualItems(): readonly unknown[];
+    }
+    const internals = () => fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as unknown as GridInternals;
+    /** Asks for row `index` as a keyboard jump would, without it being rendered, so it stays pending until the row shows up. */
+    const requestJump = (index: number, ageMs = 0) => {
+      internals().pendingVirtualFocus = { index, col: 0, at: Date.now() - ageMs, items: internals().virtualItems() };
+    };
+    const scrollNear = async (index: number) => {
+      viewport().scrollTop = viewport().scrollHeight * (index / host.rows.length);
+      expect(await waitFor(() => renderedRows().some(row => indexOfRow(row) === index))).toBeTrue();
+      await new Promise(resolve => setTimeout(resolve, 30)); // the grid reacts to the rows arriving a moment later
+    };
+
+    it('lands on its row when the row arrives promptly and focus is still in the grid', async () => {
+      focusCell(0);
+      requestJump(300);
+      await scrollNear(300);
+      expect(indexOfRow(active())).toBe(300);
+    });
+
+    it('never takes focus away from another field when the row finally appears', async () => {
+      focusCell(0);
+      requestJump(300);
+      const outside = root().querySelector('#outside') as HTMLInputElement;
+      outside.focus();
+      await scrollNear(300);
+      expect(active()).toBe(outside);
+      expect(internals().pendingVirtualFocus).toBeNull();
+    });
+
+    it('is forgotten when it has waited too long', async () => {
+      focusCell(0);
+      requestJump(300, 5000);
+      await scrollNear(300);
+      expect(indexOfRow(active())).not.toBe(300);
+      expect(internals().pendingVirtualFocus).toBeNull();
+    });
+
+    it('is forgotten when the rows change in the meantime (a filter, new data)', async () => {
+      focusCell(0);
+      requestJump(300);
+      host.rows = host.rows.map(row => ({ ...row })); // same size, new rows
+      fixture.detectChanges();
+      await scrollNear(300);
+      expect(indexOfRow(active())).not.toBe(300);
+      expect(internals().pendingVirtualFocus).toBeNull();
+    });
+  });
+
+  describe('focus parked on the viewport while its row is out of the window', () => {
+    const park = async () => {
+      focusCell(2, 1); // "Person 3"
+      viewport().scrollTop = viewport().scrollHeight / 2;
+      expect(await waitFor(() => indexOfRow(renderedRows()[0]) > 100)).toBeTrue();
+      expect(await waitFor(() => active() === viewport())).toBeTrue();
+    };
+    const scrollToEnd = async () => {
+      viewport().scrollTop = viewport().scrollHeight;
+      expect(await waitFor(() => indexOfRow(renderedRows().at(-1)!) >= 495)).toBeTrue();
+      await new Promise(resolve => setTimeout(resolve, 30));
+    };
+
+    it('returns to the same record after the data was re-ordered, not to the same position', async () => {
+      await park();
+      host.rows = [...host.rows].reverse(); // the same objects: Person 3 is now at the end
+      fixture.detectChanges();
+      await scrollToEnd();
+      expect(active()?.textContent).toContain('Person 3');
+    });
+
+    it('gives focus to nobody when that record is gone, and keeps it on the viewport', async () => {
+      await park();
+      host.rows = host.rows.filter(row => row['id'] !== 3);
+      fixture.detectChanges();
+      viewport().scrollTop = 0;
+      expect(await waitFor(() => indexOfRow(renderedRows()[0]) === 0)).toBeTrue();
+      await new Promise(resolve => setTimeout(resolve, 30));
+      expect(active()).toBe(viewport());
+    });
+
+    it('with fresh objects (a refresh from an API) the record is not recognised, so focus is not handed to a look-alike', async () => {
+      await park();
+      host.rows = host.rows.map(row => ({ ...row })); // a grid without a row id identifies a record by its object
+      fixture.detectChanges();
+      viewport().scrollTop = 0;
+      expect(await waitFor(() => indexOfRow(renderedRows()[0]) === 0)).toBeTrue();
+      await new Promise(resolve => setTimeout(resolve, 30));
+      expect(active()).toBe(viewport());
+    });
   });
 
   it('a click elsewhere on the page also makes the grid forget its cell', async () => {
