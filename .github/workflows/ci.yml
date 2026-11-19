@@ -135,8 +135,18 @@ jobs:
 
       - name: Install Playwright browser
         # WebKit and Firefox need system libraries the runner image does not all ship, hence --with-deps here.
-        timeout-minutes: 10
-        run: npx playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project }}
+        # The install normally takes 20-90 s, but apt on the runner sometimes stalls for 10+ minutes (Ubuntu mirror): cut an attempt
+        # off after 4 minutes and try again, up to 3 times, instead of failing the job and blocking the pull request.
+        timeout-minutes: 15
+        run: |
+          for attempt in 1 2 3; do
+            if timeout --kill-after=15s 4m npx playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project }}; then
+              exit 0
+            fi
+            echo "::warning::browser install attempt $attempt did not finish, retrying"
+            sleep 5
+          done
+          exit 1
 
       - name: E2E tests
         run: npx playwright test --project=${{ matrix.project }} --workers=2
