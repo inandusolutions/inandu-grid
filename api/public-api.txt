@@ -262,6 +262,7 @@ class InanduGridComponent
   readonly sortedData: i0.Signal<T[]>
   readonly stateKey: i0.InputSignal<string>
   readonly theme: i0.InputSignal<string>
+  readonly toolbarLabels: i0.InputSignalWithTransform<boolean, unknown>
   readonly totalColumnCount: i0.Signal<number>
   readonly totalItems: i0.InputSignalWithTransform<number | undefined, unknown>
   readonly totalPages: i0.Signal<number>
