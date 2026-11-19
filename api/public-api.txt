@@ -5,9 +5,11 @@ interface InanduCellTemplateContext
   row: Record<string, unknown>
 type InanduColumnAggregate = 'sum' | 'avg' | 'min' | 'max' | 'count' | ''
 type InanduColumnAsyncValidator = (value: unknown, row: Record<string, unknown>) => Promise<string | null>
+type InanduColumnAsyncValidatorError = (error: unknown) => string
 class InanduColumnComponent
   readonly aggregate: i0.InputSignal<InanduColumnAggregate>
   readonly asyncValidator: i0.InputSignal<InanduColumnAsyncValidator | undefined>
+  readonly asyncValidatorError: i0.InputSignal<InanduColumnAsyncValidatorError | undefined>
   readonly cellTemplate: i0.Signal<i0.TemplateRef<InanduCellTemplateContext> | undefined>
   readonly editTemplate: i0.Signal<i0.TemplateRef<InanduEditTemplateContext> | undefined>
   readonly editable: i0.InputSignalWithTransform<boolean, unknown>

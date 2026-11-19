@@ -21,10 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cell scrolls out of the window focus waits on the grid and returns to the cell, instead of falling to `<body>`. Rendered virtual rows carry
   a `data-virtual-index` attribute and the viewport is focusable by code (`tabindex="-1"`).
 - Documentation: the README documents the fixed row height of `virtualScroll` as a known limitation and `ACCESSIBILITY.md` is new.
-
+- Row editing: typing while an `asyncValidator` is still checking a Save now invalidates that check. The older values are not saved, what
+  was typed is kept, and pressing Save again checks and saves the new values. Before, the older values were saved and the new typing was
+  silently discarded. Applies to adding a row too.
+- Row editing: when an `asyncValidator` itself fails, a thrown value that is not an `Error` no longer shows as `[object Object]`: it shows
+  a fixed generic text ("Validation could not be completed"). An `Error` still shows its message; see the new `asyncValidatorError`
+  input in the "Added" section below.
 - Documentation: the README, the package README and the manual said `jspdf` is installed automatically with the package. It is an optional peer
   dependency: install it (`npm install jspdf`) only if you use PDF export. Also corrected: the README claimed Playwright fails under Node 24
   (the e2e suite passes on Node 24.19 with Playwright 1.65).
+
+### Added
+
+- Column input `[asyncValidatorError]` (and the exported type `InanduColumnAsyncValidatorError`): what the user sees when the
+  `asyncValidator` itself fails (it throws or rejects), as opposed to answering with a message. It receives what was thrown and returns the
+  text to show, so technical or server messages can be kept out of the interface. If it throws or returns nothing, the generic text is shown.
 
 ### Added (tooling, no effect on the published code)
 
