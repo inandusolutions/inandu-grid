@@ -65,7 +65,7 @@
         <li><strong>0</strong><span>paid features</span></li>
         <li><strong>3</strong><span>runtime dependencies</span></li>
         <li><strong>5,000</strong><span>rows, virtualized</span></li>
-        <li><strong>5</strong><span>bundled languages</span></li>
+        <li title="English, Spanish, French, Italian and Chinese"><strong>5</strong><span>bundled languages<br /><small>EN · ES · FR · IT · ZH</small></span></li>
       </ul>
     </div>
   </section>
@@ -119,7 +119,7 @@
               <inandu-column title="City" field="City" width="140" order="0" sortable="true" filter="yes" groupable="true" sticky="true"></inandu-column>
               <inandu-column title="Role" field="Role" width="170" order="1" groupable="true"></inandu-column>
               <inandu-column title="Active" field="Active" width="100" type="boolean" format="Yes|No" filter="yes"></inandu-column>
-              <inandu-column title="Since" field="Since" width="130" type="date" format="DD/MM/YYYY" filter="yes"></inandu-column>
+              <inandu-column title="Since" field="Since" width="130" type="date" format="YYYY-MM-DD" filter="yes"></inandu-column>
               <inandu-column title="Revenue" field="Revenue" width="130" type="number" format="1.2-2" filter="yes" aggregate="sum"></inandu-column>
             </inandu-grid>
           </div>
@@ -149,7 +149,7 @@
               <inandu-column title="Product" field="product" width="220" editable="true" required="true"></inandu-column>
               <inandu-column title="Price" field="price" width="120" type="number" format="1.2-2" editable="true" required="true" min="0" aggregate="sum"></inandu-column>
               <inandu-column title="In stock" field="inStock" width="110" type="boolean" format="Yes|No" editable="true"></inandu-column>
-              <inandu-column title="Restock" field="restock" width="130" type="date" format="DD/MM/YYYY" editable="true"></inandu-column>
+              <inandu-column title="Restock" field="restock" width="130" type="date" format="YYYY-MM-DD" editable="true"></inandu-column>
               <ng-template let-row>
                 <button type="button" class="inandu-pager-button demo-row-action" (click)="onInventoryRowDuplicate(row)">Duplicate</button>
               </ng-template>
@@ -177,7 +177,7 @@
               <inandu-column title="Email" field="email" width="200" sortable="true"></inandu-column>
               <inandu-column title="Phone" field="phone" width="160"></inandu-column>
               <inandu-column title="Active" field="active" width="100" type="boolean" format="Active|Inactive" editable="true"></inandu-column>
-              <inandu-column title="Joined" field="joined" width="120" type="date" format="DD/MM/YYYY"></inandu-column>
+              <inandu-column title="Joined" field="joined" width="120" type="date" format="YYYY-MM-DD"></inandu-column>
             </inandu-grid>
           </div>
         </div>
@@ -333,7 +333,7 @@
 
           <div class="explorer-actions">
             @if (activeFeature().demo; as demo) {
-              <button type="button" class="btn btn-primary" (click)="openDemo(demo)">See it running ↑</button>
+              <button type="button" class="btn btn-primary" (click)="openDemo(demo)">Try the live demo ↑</button>
             }
             <a class="btn btn-secondary" [href]="featureDocUrl(activeFeature().doc)">Read the docs →</a>
           </div>
@@ -417,7 +417,7 @@
       </div>
 
       <p class="fineprint">
-        Orientation, not a scorecard — check each project's own docs for current details. If you need
+        Orientation, not a scorecard — last checked November 2026; check each project's own docs for current details. If you need
         pivoting or integrated charts, AG Grid Enterprise is the right tool.
       </p>
     </div>
