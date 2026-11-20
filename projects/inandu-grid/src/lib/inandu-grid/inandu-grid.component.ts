@@ -10,6 +10,8 @@ import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/i
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 import { InanduGridColumnResize } from './inandu-grid-column-resize';
 import { InanduGridStateStorage } from './inandu-grid-state-storage';
+import { isMultiCellRange, normalizeRange, rangesContain, rangeToTsv } from './inandu-grid-range';
+import type { InanduGridRange } from './inandu-grid-range';
 import { treeRowsToExpand } from './inandu-grid-tree';
 import { exportCsv, exportExcel, exportPdf, printTable } from './inandu-grid-exporter';
 import type { InanduGridExportTable } from './inandu-grid-exporter';
@@ -1416,22 +1418,10 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   private readonly isSelectingRange = signal(false);
 
   /** `rangeAnchor()`/`rangeFocus()` normalized into an inclusive `[min, max]` rectangle, or `undefined` while nothing is selected. */
-  private readonly selectedRange = computed(() => {
-    const anchor = this.rangeAnchor();
-    const focus = this.rangeFocus();
-    if (!anchor || !focus) {
-      return undefined;
-    }
-    return {
-      minRow: Math.min(anchor.row, focus.row),
-      maxRow: Math.max(anchor.row, focus.row),
-      minCol: Math.min(anchor.col, focus.col),
-      maxCol: Math.max(anchor.col, focus.col),
-    };
-  });
+  private readonly selectedRange = computed(() => normalizeRange(this.rangeAnchor(), this.rangeFocus()));
 
   /** Rectangles frozen by an earlier Ctrl-drag while `multiRange()` is on — the active one lives in `selectedRange()`. */
-  private readonly committedRanges = signal<{ minRow: number; maxRow: number; minCol: number; maxCol: number }[]>([]);
+  private readonly committedRanges = signal<InanduGridRange[]>([]);
 
   /** Every selected rectangle, active one last — `committedRanges()` plus `selectedRange()`. */
   private readonly allRanges = computed(() => {
@@ -1443,9 +1433,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** Whether `(rowIndex, colIndex)` (both into `pagedData()`/`visibleColumns()`) falls inside *any* selected rectangle — drives `.inandu-cell-range-selected` in the template. */
   isCellInRange(rowIndex: number, colIndex: number): boolean {
-    return this.allRanges().some(
-      r => rowIndex >= r.minRow && rowIndex <= r.maxRow && colIndex >= r.minCol && colIndex <= r.maxCol,
-    );
+    return rangesContain(this.allRanges(), rowIndex, colIndex);
   }
 
   /** Starts a new range selection gesture — a plain click resets to this cell; shift-click extends the *existing* anchor; Ctrl/Cmd-click (with `multiRange`) freezes the current rectangle and starts another. */
@@ -1512,7 +1500,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.cellRangesChange.emit([]);
   }
 
-  private rangeToSelection(r: { minRow: number; maxRow: number; minCol: number; maxCol: number }): InanduGridCellRangeSelection<T> {
+  private rangeToSelection(r: InanduGridRange): InanduGridCellRangeSelection<T> {
     return {
       rows: this.pagedData().slice(r.minRow, r.maxRow + 1),
       fields: this.visibleColumns().slice(r.minCol, r.maxCol + 1).map(column => column.field()),
@@ -1534,17 +1522,15 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   );
 
   /** The full selected range formatted as TSV (one line per row, tab-separated columns) — what `clipboardCopyText()` copies when a genuine (more-than-one-cell) range is active. */
-  private selectedRangeText(range: { minRow: number; maxRow: number; minCol: number; maxCol: number }): string {
-    const rows = this.pagedData().slice(range.minRow, range.maxRow + 1);
-    const columns = this.visibleColumns().slice(range.minCol, range.maxCol + 1);
-    return rows.map(row => columns.map(column => this.formatValue(column, row)).join('\t')).join('\n');
+  private selectedRangeText(range: InanduGridRange): string {
+    return rangeToTsv(range, this.pagedData(), this.visibleColumns(), (column, row) => this.formatValue(column, row));
   }
 
   /** What `Ctrl+C` actually copies: the whole selected range as TSV when `cellRangeSelection()` is on and more than one cell is selected, else just the focused cell (see `copyCellText()`). */
   private clipboardCopyText(row: T, field: string): string {
     if (this.cellRangeSelection()) {
       const range = this.selectedRange();
-      if (range && (range.minRow !== range.maxRow || range.minCol !== range.maxCol)) {
+      if (range && isMultiCellRange(range)) {
         return this.selectedRangeText(range);
       }
     }
