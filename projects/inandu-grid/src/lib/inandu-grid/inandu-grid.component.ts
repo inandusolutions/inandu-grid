@@ -9,6 +9,8 @@ import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 import { InanduGridColumnResize } from './inandu-grid-column-resize';
+import { exportCsv, exportExcel, exportPdf, printTable } from './inandu-grid-exporter';
+import type { InanduGridExportTable } from './inandu-grid-exporter';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
 // in `@inandu-solutions/grid-core` — framework-agnostic, no `@angular/*` dependency, shared with the
 // React and Vue grids. This component is the Angular binding layer over it.
@@ -23,15 +25,10 @@ import {
   coerceToDate,
   compareCellValues,
   computeGroupAggregates,
-  downloadBlob,
   escapeAttributeSelectorValue,
-  escapeCsvValue,
-  escapeMarkup,
   sanitizeGridState,
   GRID_STATE_VERSION,
   ALL_GRID_STATE_PARTS,
-  buildPrintHtml,
-  printHtmlDocument,
   collectTreeRows,
   flattenTree,
   formatCellValue,
@@ -40,7 +37,6 @@ import {
   parseDraftValue,
   parsePastedCell,
   placeColumnsByOrder,
-  truncatePdfText,
 } from '@inandu-solutions/grid-core';
 import type { InanduGridColumnFilterValue, InanduGridRow, InanduGridStatePart, NumberFormatter, TreeVisibleRow } from '@inandu-solutions/grid-core';
 
@@ -2700,130 +2696,50 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly toolbarLabels = input(false, { transform: booleanAttribute });
 
   /**
-   * Downloads the currently-visible rows (the same "what's on screen right now" set `visibleRows`
-   * already defines for the select-all checkbox — the current page, or every group's rows while
-   * grouped) as a CSV file, using each column's *formatted* value, same "match what's on screen"
-   * rule the rest of the library follows.
+   * What the export and print methods write: the visible columns and `visibleRows()` (the current page, or every group's rows while
+   * grouped), each cell as its *formatted* value — the same "match what's on screen" rule the rest of the library follows.
    */
-  exportCsv(): void {
-    const columns = this.visibleColumns();
-    const lines = [
-      columns.map(column => escapeCsvValue(column.title() || column.field())).join(','),
-      ...this.visibleRows().map(row => columns.map(column => escapeCsvValue(this.formatValue(column, row))).join(',')),
-    ];
-    // Leading BOM so Excel opens accented text (e.g. "México", "Sí") as UTF-8 instead of Latin-1.
-    downloadBlob('\uFEFF' + lines.join('\r\n'), `${this.id() || 'inandu-grid'}-export.csv`, 'text/csv;charset=utf-8;');
-  }
-
-  /**
-   * Downloads the currently-visible rows as a PDF: one simple table drawn with jsPDF's low-level
-   * text/line primitives rather than its `autotable` plugin, to keep this to a single dependency.
-   * Cells are single-line, truncated with an ellipsis if they overflow their column's width (no
-   * text wrapping/variable row heights); the header row is redrawn at the top of every new page.
-   * `jspdf` is dynamically imported so a grid that never calls this never pays to load it.
-   */
-  async exportPdf(): Promise<void> {
-    const { jsPDF: JsPdf } = await import('jspdf').catch((error: unknown) => {
-      // `jspdf` is an optional peer dependency: a project that never exports PDF does not install it.
-      throw new Error('PDF export needs the "jspdf" package: run `npm install jspdf`.', { cause: error });
-    });
+  private exportTable(): InanduGridExportTable {
     const columns = this.visibleColumns();
     const rows = this.visibleRows();
-    const headerValues = columns.map(column => column.title() || column.field());
-
-    const doc = new JsPdf({ orientation: 'landscape' });
-    const marginX = 10;
-    const marginY = 10;
-    const rowHeight = 8;
-    const pageWidth = doc.internal.pageSize.getWidth() - marginX * 2;
-    const pageHeight = doc.internal.pageSize.getHeight() - marginY;
-    const rawWidths = columns.map(column => this.effectiveWidth(column) || 80);
-    const totalRaw = rawWidths.reduce((sum, width) => sum + width, 0) || 1;
-    const colWidths = rawWidths.map(width => (width / totalRaw) * pageWidth);
-
-    let y = marginY;
-    const drawRow = (values: string[], bold: boolean): void => {
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
-      let x = marginX;
-      values.forEach((value, i) => {
-        doc.text(truncatePdfText(doc, value, colWidths[i] - 4), x + 2, y + 6);
-        x += colWidths[i];
-      });
-      y += rowHeight;
+    return {
+      name: this.id() || 'inandu-grid',
+      headers: columns.map(column => column.title() || column.field()),
+      widths: columns.map(column => this.effectiveWidth(column)),
+      rowCount: rows.length,
+      text: (row, column) => this.formatValue(columns[column], rows[row]),
+      number: (row, column) => this.numericCellValue(columns[column], rows[row]),
     };
-
-    drawRow(headerValues, true);
-    for (const row of rows) {
-      if (y + rowHeight > pageHeight) {
-        doc.addPage();
-        y = marginY;
-        drawRow(headerValues, true);
-      }
-      drawRow(columns.map(column => this.formatValue(column, row)), false);
-    }
-
-    // Goes through the same downloadBlob() helper exportCsv() uses (via doc.output('blob'), a real
-    // Blob already typed 'application/pdf') rather than jsPDF's own `.save()` — that method's
-    // browser-feature-detection branches for *how* to trigger the download aren't worth depending on
-    // when this achieves the identical result with one predictable, already-tested code path.
-    downloadBlob(doc.output('blob'), `${this.id() || 'inandu-grid'}-export.pdf`);
   }
 
-  /** `row[column.field()]` if `column` is numeric and the raw value really is a finite `number`, else `undefined` — used by `exportExcel()` so a numeric column ends up genuinely numeric-typed in the sheet rather than a formatted string. */
+  /** Downloads the currently-visible rows (see `exportTable`) as a CSV file. */
+  exportCsv(): void {
+    exportCsv(this.exportTable());
+  }
+
+  /** Downloads the currently-visible rows as a PDF (needs the optional `jspdf` peer; it is loaded only when this is called). */
+  async exportPdf(): Promise<void> {
+    await exportPdf(this.exportTable());
+  }
+
+  /** `row[column.field()]` if `column` is numeric and the raw value really is a finite `number`, else `undefined` — so a numeric column ends up genuinely numeric-typed in the spreadsheet rather than a formatted string. */
   private numericCellValue(column: InanduColumnComponent, row: T): number | undefined {
     const raw = row[column.field()];
     return column.type() === 'number' && typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined;
   }
 
   /**
-   * Downloads the currently-visible rows as a spreadsheet: the dependency-free "SpreadsheetML" XML
-   * Excel 2003+ (and LibreOffice/Google Sheets) opens natively — plain text, no binary format to get
-   * right — using the same `visibleColumns()`/`visibleRows()`/`formatValue()` source data as every
-   * other export, and `numericCellValue()` so a numeric column stays genuinely numeric-typed.
-   * (A real Open XML `.xlsx` workbook, which needs a heavier dependency, is a `@inandu-solutions/grid-pro` feature.)
+   * Downloads the currently-visible rows as a spreadsheet: the dependency-free "SpreadsheetML" XML Excel 2003+ (and
+   * LibreOffice/Google Sheets) opens natively. (A real Open XML `.xlsx` workbook, which needs a heavier dependency, is a
+   * `@inandu-solutions/grid-pro` feature.)
    */
   exportExcel(): void {
-    const columns = this.visibleColumns();
-    const dataCell = (column: InanduColumnComponent, row: T): string => {
-      const num = this.numericCellValue(column, row);
-      return num !== undefined
-        ? `<Cell><Data ss:Type="Number">${num}</Data></Cell>`
-        : `<Cell><Data ss:Type="String">${escapeMarkup(this.formatValue(column, row))}</Data></Cell>`;
-    };
-    const headerRow = `<Row ss:StyleID="header">${columns
-      .map(column => `<Cell><Data ss:Type="String">${escapeMarkup(column.title() || column.field())}</Data></Cell>`)
-      .join('')}</Row>`;
-    const dataRows = this.visibleRows()
-      .map(row => `<Row>${columns.map(column => dataCell(column, row)).join('')}</Row>`)
-      .join('');
-
-    const xml = '<?xml version="1.0"?>'
-      + '<?mso-application progid="Excel.Sheet"?>'
-      + '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
-      + '<Styles><Style ss:ID="header"><Font ss:Bold="1"/></Style></Styles>'
-      + '<Worksheet ss:Name="Sheet1"><Table>'
-      + headerRow + dataRows
-      + '</Table></Worksheet></Workbook>';
-
-    downloadBlob(xml, `${this.id() || 'inandu-grid'}-export.xls`, 'application/vnd.ms-excel');
+    exportExcel(this.exportTable());
   }
 
-  /**
-   * Opens a new tab with a plain, print-styled `<table>` of the currently-visible rows and triggers
-   * the browser's print dialog on it — reusing the exact same `visibleColumns()`/`visibleRows()`/
-   * `formatValue()` pipeline the other three export methods do, rather than printing the live page
-   * (which would include the toolbar, pager, and any surrounding app chrome). The page is a `Blob` URL opened with
-   * `noopener`, so it has no handle back to the app.
-   */
+  /** Opens a new tab with a print-styled table of the currently-visible rows and triggers the browser's print dialog on it. */
   printTable(): void {
-    const columns = this.visibleColumns();
-    printHtmlDocument(
-      buildPrintHtml(
-        this.id() || 'inandu-grid',
-        columns.map(column => column.title() || column.field()),
-        this.visibleRows().map(row => columns.map(column => this.formatValue(column, row))),
-      ),
-    );
+    printTable(this.exportTable());
   }
 
   /** Emitted when a row's "Save" button is clicked — see `InanduGridRowSave`. */
