@@ -9,6 +9,7 @@ import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 import { InanduGridColumnResize } from './inandu-grid-column-resize';
+import { InanduGridStateStorage } from './inandu-grid-state-storage';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
 // in `@inandu-solutions/grid-core` — framework-agnostic, no `@angular/*` dependency, shared with the
 // React and Vue grids. This component is the Angular binding layer over it.
@@ -19,7 +20,6 @@ import {
   MIN_COLUMN_WIDTH,
   ROW_DRAG_COLUMN_WIDTH,
   SELECT_COLUMN_WIDTH,
-  STATE_STORAGE_PREFIX,
   coerceToDate,
   compareCellValues,
   computeGroupAggregates,
@@ -27,8 +27,6 @@ import {
   escapeAttributeSelectorValue,
   escapeCsvValue,
   escapeMarkup,
-  sanitizeGridState,
-  GRID_STATE_VERSION,
   ALL_GRID_STATE_PARTS,
   buildPrintHtml,
   printHtmlDocument,
@@ -187,7 +185,7 @@ export interface InanduGridViewportRange {
     // A dedicated, isolated TranslateService per grid instance — required so two <inandu-grid>s on
     // the same page can each show a different `lang` simultaneously, and so this library never
     // touches (or depends on) any TranslateService the host app might have of its own.
-    providers: [provideChildTranslateService(), InanduGridColumnResize],
+    providers: [provideChildTranslateService(), InanduGridColumnResize, InanduGridStateStorage],
 })
 /**
  * Generic over `T`, the row type — inferred automatically from whatever's bound to `[data]` (Angular
@@ -312,6 +310,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** Guards the one-time `stateKey`-based restore effect in the constructor against re-running. */
   private hasRestoredState = false;
+  private readonly stateStorage = inject(InanduGridStateStorage);
 
   /** Everything persisted under `stateKey` — column widths/order/visibility/pin, sort, and filters. */
   private readonly persistableState = computed(() => ({
@@ -326,56 +325,32 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** Removes what `stateKey` saved for this grid from `localStorage` (the grid on screen keeps its current state). A no-op without a `stateKey`. */
   clearPersistedState(): void {
-    const key = this.stateKey();
-    if (!key || !this.isBrowser) {
-      return;
-    }
-    try {
-      localStorage.removeItem(STATE_STORAGE_PREFIX + key);
-    } catch {
-      // Storage may be unavailable; there is nothing saved to clear then.
-    }
+    this.stateStorage.clear(this.stateKey());
   }
 
-  /** Best-effort restore of a previously-persisted state blob for `key` — silently does nothing if there's none, it's unparseable, or `localStorage` itself throws. */
+  /** Puts back what was saved for `key` (see `InanduGridStateStorage.read`); a part that is missing or invalid is left as it is. */
   private restorePersistedState(key: string): void {
-    if (!this.isBrowser) {
-      return;
+    const state = this.stateStorage.read(key, this.persist());
+    if (state.columnWidths) {
+      this.columnWidths.set(state.columnWidths);
     }
-    if (!key) {
-      return;
+    if (state.reorderedFields) {
+      this.reorderedFields.set(state.reorderedFields);
     }
-    try {
-      const raw = localStorage.getItem(STATE_STORAGE_PREFIX + key);
-      if (!raw) {
-        return;
-      }
-      // Whatever is in storage may be stale, edited by hand or from another version: only the parts with the right
-      // shape, types and sizes get through (see `sanitizeGridState`), never the raw parsed object.
-      const state = sanitizeGridState(JSON.parse(raw), this.persist());
-      if (state.columnWidths) {
-        this.columnWidths.set(state.columnWidths);
-      }
-      if (state.reorderedFields) {
-        this.reorderedFields.set(state.reorderedFields);
-      }
-      if (state.hiddenFields) {
-        this.hiddenFields.set(new Set(state.hiddenFields));
-      }
-      if (state.pinnedOverrides) {
-        this.pinnedOverrides.set(state.pinnedOverrides);
-      }
-      if (state.sortCriteria) {
-        this.sortCriteria.set(state.sortCriteria);
-      }
-      if (state.filterQuery !== undefined) {
-        this.filterQuery.set(state.filterQuery);
-      }
-      if (state.columnFilters) {
-        this.columnFilters.set(state.columnFilters);
-      }
-    } catch {
-      // Corrupt/stale persisted state (or no localStorage access) — start fresh instead of throwing.
+    if (state.hiddenFields) {
+      this.hiddenFields.set(new Set(state.hiddenFields));
+    }
+    if (state.pinnedOverrides) {
+      this.pinnedOverrides.set(state.pinnedOverrides);
+    }
+    if (state.sortCriteria) {
+      this.sortCriteria.set(state.sortCriteria);
+    }
+    if (state.filterQuery !== undefined) {
+      this.filterQuery.set(state.filterQuery);
+    }
+    if (state.columnFilters) {
+      this.columnFilters.set(state.columnFilters);
     }
   }
 
@@ -553,16 +528,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     effect(() => {
       const key = this.stateKey();
       const state = this.persistableState();
-      if (!key || !this.isBrowser) {
-        return;
-      }
-      try {
-        const wanted = new Set(this.persist());
-        const saved = Object.fromEntries(Object.entries(state).filter(([part]) => wanted.has(part as InanduGridStatePart)));
-        localStorage.setItem(STATE_STORAGE_PREFIX + key, JSON.stringify({ v: GRID_STATE_VERSION, ...saved }));
-      } catch {
-        // Persistence is a convenience, not a guarantee — silently skip a save that can't happen.
-      }
+      const parts = this.persist();
+      this.stateStorage.write(key, state, parts);
     });
 
     // Server-side mode: notify the consumer of every sort/page/filter change instead of computing
