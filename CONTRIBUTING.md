@@ -58,6 +58,20 @@ npm run check:package    # after build:lib: jspdf on demand, size budgets, tarba
 npm run smoke:package    # after build:lib: install the packed tarball in an empty project and compile a consumer
 ```
 
+### Why the unit tests still run on Karma
+
+Karma is deprecated in Angular, but it still works and the library's specs need a real browser (the CDK virtual scroller, row
+measurement, `ResizeObserver`, focus). Moving to Vitest was tried on 2026-11-20 and put off on purpose:
+
+- The Angular builder (`@angular/build:unit-test`, `runner: vitest`) runs with one change to `angular.json`; with happy-dom, the
+  specs without Jasmine passed (translations 4/4, differential corpus 22/22).
+- The rest do not run as they are: the specs use `spyOn`, `jasmine.createSpy`, `expectAsync`, `toBeTrue`/`toBeFalse` and
+  `fakeAsync` (about 230 places to convert), the virtual-scroll and keyboard specs need real layout (so Vitest's browser mode,
+  not happy-dom), and the coverage thresholds in CI would have to be set again for v8 coverage.
+- Do it when Angular announces Karma's removal, or when Karma starts to get in the way. Suggested split: (1) the Vitest builder in
+  browser mode with two specs that do not use Jasmine; (2) convert the specs file by file; (3) the coverage thresholds.
+  The React and Vue grids already use Vitest, and the Pro Angular repo has the same Karma setup, so decide them together.
+
 A pull request that changes the public API (an input, an export, a type) has to include the updated `api/public-api.txt`; CI
 fails otherwise. Size budgets live in `scripts/check-package.mjs`: raise one there when the growth is intended.
 
