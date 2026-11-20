@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Destroying a grid in the middle of a column-resize drag left its `mousemove`/`mouseup` listeners on `window`; they are now removed on destroy.
+- The grid no longer listens to every document click and mouseup on the page: the outside-click listener exists only while a filter or column popup is open, and the mouseup listener only during a range drag. A page with many grids no longer runs every grid's handler on every click.
+
 ## [1.7.0] - 2026-11-19
 
 ### Fixed
