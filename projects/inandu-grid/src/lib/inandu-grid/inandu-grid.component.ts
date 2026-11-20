@@ -8,6 +8,7 @@ import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inan
 import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
+import { InanduGridColumnResize } from './inandu-grid-column-resize';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
 // in `@inandu-solutions/grid-core` — framework-agnostic, no `@angular/*` dependency, shared with the
 // React and Vue grids. This component is the Angular binding layer over it.
@@ -186,7 +187,7 @@ export interface InanduGridViewportRange {
     // A dedicated, isolated TranslateService per grid instance — required so two <inandu-grid>s on
     // the same page can each show a different `lang` simultaneously, and so this library never
     // touches (or depends on) any TranslateService the host app might have of its own.
-    providers: [provideChildTranslateService()],
+    providers: [provideChildTranslateService(), InanduGridColumnResize],
 })
 /**
  * Generic over `T`, the row type — inferred automatically from whatever's bound to `[data]` (Angular
@@ -488,11 +489,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   constructor() {
     registerInanduGridTranslations(this.translate);
 
-    // Listeners on `window`/`document` must not outlive the grid: a drag or a popup can still be active when it is destroyed.
-    inject(DestroyRef).onDestroy(() => {
-      this.stopResizeDrag();
-      this.stopRangeDragListener();
-    });
+    // The range-drag listener on `document` must not outlive the grid (the column-resize drag cleans up its own, see InanduGridColumnResize).
+    inject(DestroyRef).onDestroy(() => this.stopRangeDragListener());
 
     // The outside-click listener exists only while a popup is open, so a page with many grids does not run every grid's handler on every click.
     effect(onCleanup => {
@@ -2627,37 +2625,14 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     return offset;
   }
 
-  private resizingField: string | undefined;
-  private resizeStartX = 0;
-  private resizeStartWidth = 0;
+  private readonly columnResize = inject(InanduGridColumnResize);
 
   /** Starts a column-resize drag from that header's `.inandu-column-resize-handle`. */
   onResizeHandleMouseDown(event: MouseEvent, column: InanduColumnComponent): void {
     event.preventDefault();
-    this.stopResizeDrag();
-    this.resizingField = column.field();
-    this.resizeStartX = event.clientX;
-    this.resizeStartWidth = this.effectiveWidth(column);
-    window.addEventListener('mousemove', this.onResizeMouseMove);
-    window.addEventListener('mouseup', this.onResizeMouseUp);
-  }
-
-  private readonly onResizeMouseMove = (event: MouseEvent): void => {
-    const field = this.resizingField;
-    if (!field) {
-      return;
-    }
-    const width = Math.max(MIN_COLUMN_WIDTH, this.resizeStartWidth + (event.clientX - this.resizeStartX));
-    this.columnWidths.update(widths => ({ ...widths, [field]: width }));
-  };
-
-  private readonly onResizeMouseUp = (): void => this.stopResizeDrag();
-
-  /** Ends a column-resize drag and removes its `window` listeners — also called when the grid is destroyed mid-drag. */
-  private stopResizeDrag(): void {
-    this.resizingField = undefined;
-    window.removeEventListener('mousemove', this.onResizeMouseMove);
-    window.removeEventListener('mouseup', this.onResizeMouseUp);
+    this.columnResize.start(event, column.field(), this.effectiveWidth(column), (field, width) =>
+      this.columnWidths.update(widths => ({ ...widths, [field]: width })),
+    );
   }
 
   /** Double-click on a resize handle → fit the column to its content (#33). */
