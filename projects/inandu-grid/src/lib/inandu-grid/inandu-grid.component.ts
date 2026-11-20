@@ -9,8 +9,8 @@ import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
-// in ../core now — framework-agnostic, no `@angular/*` dependency, reusable as-is by a non-Angular
-// port. This component is the Angular binding layer over it.
+// in `@inandu-solutions/grid-core` — framework-agnostic, no `@angular/*` dependency, shared with the
+// React and Vue grids. This component is the Angular binding layer over it.
 import {
   AGGREGATE_SYMBOLS,
   DETAIL_TOGGLE_COLUMN_WIDTH,
@@ -45,7 +45,7 @@ import type { InanduGridColumnFilterValue, InanduGridRow, InanduGridStatePart, N
 
 export type SortDirection = 'asc' | 'desc';
 
-// `InanduGridRow` and `InanduGridColumnFilterValue` moved to ../core; re-exported here because
+// `InanduGridRow` and `InanduGridColumnFilterValue` live in `@inandu-solutions/grid-core`; re-exported here because
 // `public-api.ts` re-exports them from this module (keeping the library's public API unchanged).
 export type { InanduGridRow, InanduGridColumnFilterValue, InanduGridStatePart };
 
@@ -2242,9 +2242,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   private readonly locale = inject(LOCALE_ID);
 
   /**
-   * Adapter handed to the framework-agnostic `../core` helpers so number formatting still routes
+   * Adapter handed to the framework-agnostic `grid-core` helpers so number formatting still routes
    * through Angular's `formatNumber` (honouring whatever locale data the host app registered) —
-   * keeping rendered/filtered/exported numbers byte-identical to before the core split. The core's
+   * keeping rendered/filtered/exported numbers identical to the Angular formatting. The core's
    * own `defaultNumberFormatter` (an `Intl.NumberFormat` wrapper) is the fallback a non-Angular
    * consumer gets.
    */

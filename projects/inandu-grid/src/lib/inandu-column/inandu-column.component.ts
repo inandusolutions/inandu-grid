@@ -81,8 +81,7 @@ function optionalNumberAttribute(value: unknown): number | undefined {
 
 @Component({
     selector: 'inandu-column',
-    templateUrl: './inandu-column.component.html',
-    styleUrl: './inandu-column.component.less',
+    template: '',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InanduColumnComponent {
