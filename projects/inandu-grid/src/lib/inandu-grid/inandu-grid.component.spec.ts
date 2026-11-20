@@ -919,6 +919,33 @@ describe('InanduGridComponent column resize', () => {
     expect(headers[1].query(By.css('.inandu-column-resize-handle'))).toBeNull();
   });
 
+  it('destroying the grid in the middle of a drag removes the window listeners', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+    const removeSpy = spyOn(window, 'removeEventListener').and.callThrough();
+
+    const handle = fixture.debugElement.query(By.css('.inandu-column-resize-handle')).nativeElement as HTMLElement;
+    handle.dispatchEvent(new MouseEvent('mousedown', { clientX: 200 }));
+    fixture.destroy();
+
+    const removedTypes = removeSpy.calls.allArgs().map(args => args[0]);
+    expect(removedTypes).toContain('mousemove');
+    expect(removedTypes).toContain('mouseup');
+  });
+
+  it('a second mousedown before mouseup does not leave a drag behind', () => {
+    const fixture = TestBed.createComponent(ResizeHostComponent);
+    fixture.detectChanges();
+
+    const handle = fixture.debugElement.query(By.css('.inandu-column-resize-handle')).nativeElement as HTMLElement;
+    handle.dispatchEvent(new MouseEvent('mousedown', { clientX: 200 }));
+    handle.dispatchEvent(new MouseEvent('mousedown', { clientX: 200 }));
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 400 }));
+    fixture.detectChanges();
+    expect(colWidths(fixture)).toEqual(['100px', '60px']);
+  });
+
   it('dragging the handle resizes only that column, clamped to a minimum width', () => {
     const fixture = TestBed.createComponent(ResizeHostComponent);
     fixture.detectChanges();
@@ -5006,5 +5033,51 @@ describe('InanduGridComponent grid-core 0.1.2 behaviour', () => {
   it('shows a date in the timeZone of its column', () => {
     const [row] = fixture.componentInstance.rows;
     expect(grid.copyCellText(row, 'at')).toBe('2024-01-04');
+  });
+});
+
+describe('InanduGridComponent document listeners', () => {
+  it('listens for document clicks only while the column popup is open', () => {
+    TestBed.configureTestingModule({ imports: [ColumnToggleHostComponent] });
+    const fixture = TestBed.createComponent(ColumnToggleHostComponent);
+    document.body.appendChild(fixture.nativeElement);
+    const addSpy = spyOn(document, 'addEventListener').and.callThrough();
+    const removeSpy = spyOn(document, 'removeEventListener').and.callThrough();
+    const types = (spy: jasmine.Spy) => spy.calls.allArgs().map(args => args[0]);
+    fixture.detectChanges();
+    expect(types(addSpy)).not.toContain('click');
+
+    (fixture.debugElement.query(By.css('.inandu-column-toggle-button')).nativeElement as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(types(addSpy)).toContain('click');
+    expect(fixture.debugElement.query(By.css('.inandu-column-toggle-popup'))).not.toBeNull();
+
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.inandu-column-toggle-popup'))).toBeNull();
+    expect(types(removeSpy)).toContain('click');
+    fixture.nativeElement.remove();
+  });
+
+  it('listens for the end of a range drag only while dragging, and drops it on destroy', () => {
+    const fixture = TestBed.createComponent(CellRangeHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    const addSpy = spyOn(document, 'addEventListener').and.callThrough();
+    const removeSpy = spyOn(document, 'removeEventListener').and.callThrough();
+    const count = (spy: jasmine.Spy) => spy.calls.allArgs().filter(args => args[0] === 'mouseup').length;
+    expect(count(addSpy)).toBe(0);
+
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 1, 1);
+    expect(count(addSpy)).toBe(1);
+
+    document.dispatchEvent(new MouseEvent('mouseup'));
+    expect(count(removeSpy)).toBe(1);
+
+    grid.onCellRangeMouseDown(fakeMouseEvent(), 0, 0);
+    expect(count(addSpy)).toBe(2);
+    fixture.destroy();
+    expect(count(removeSpy)).toBe(2);
   });
 });

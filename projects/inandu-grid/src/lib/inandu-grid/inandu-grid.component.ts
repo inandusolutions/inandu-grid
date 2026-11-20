@@ -1,4 +1,5 @@
-import { booleanAttribute, ChangeDetectionStrategy, Component, computed, contentChild, contentChildren, effect, ElementRef, HostListener, inject, input, LOCALE_ID, numberAttribute, output, signal, TemplateRef, untracked, viewChild, viewChildren } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { booleanAttribute, ChangeDetectionStrategy, Component, computed, contentChild, contentChildren, DestroyRef, effect, ElementRef, inject, input, LOCALE_ID, numberAttribute, output, signal, TemplateRef, untracked, viewChild, viewChildren } from '@angular/core';
 import { formatNumber, NgTemplateOutlet } from '@angular/common';
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
@@ -449,6 +450,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   private readonly translate = inject(TranslateService);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
   readonly resolvedLang = computed(() => resolveInanduGridLang(this.lang(), this.translate));
 
   readonly msgNoData = this.translate.translate('MsgNoData', undefined, this.resolvedLang);
@@ -485,6 +487,23 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   constructor() {
     registerInanduGridTranslations(this.translate);
+
+    // Listeners on `window`/`document` must not outlive the grid: a drag or a popup can still be active when it is destroyed.
+    inject(DestroyRef).onDestroy(() => {
+      this.stopResizeDrag();
+      this.stopRangeDragListener();
+    });
+
+    // The outside-click listener exists only while a popup is open, so a page with many grids does not run every grid's handler on every click.
+    effect(onCleanup => {
+      if (!this.openFilterField() && !this.columnTogglePopupOpen()) {
+        return;
+      }
+      const doc = this.document;
+      const listener = (event: MouseEvent): void => this.onDocumentClick(event);
+      doc.addEventListener('click', listener);
+      onCleanup(() => doc.removeEventListener('click', listener));
+    });
 
     // Tree mode (#3): apply `treeDefaultExpanded` once per distinct `data()` array. In its own
     // effect (not the `treeRows` computed) since it writes a signal.
@@ -1019,7 +1038,6 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   }
 
   /** Closes the open column-filter popup and/or the column-visibility toggle popup on any click outside of it (and outside its own toggle button) — the two popups are independent, so either, both, or neither can close on a given click. */
-  @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (this.openFilterField() && !target.closest('.inandu-column-filter-popup') && !target.closest('.inandu-column-filter-toggle')) {
@@ -1468,6 +1486,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       return;
     }
     this.isSelectingRange.set(true);
+    this.startRangeDragListener();
     const additive = this.multiRange() && (event.ctrlKey || event.metaKey) && !event.shiftKey;
     if (additive) {
       const active = this.selectedRange();
@@ -1491,9 +1510,29 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   }
 
   /** Ends the in-progress drag — bound at the document level (not the cell) since the mouse button can be released outside any cell and the drag should still stop. */
-  @HostListener('document:mouseup')
   onDocumentMouseUp(): void {
     this.isSelectingRange.set(false);
+    this.stopRangeDragListener();
+  }
+
+  /** Listens for the end of a range drag on the document only while one is in progress (added on `mousedown`, removed on `mouseup` and on destroy). */
+  private rangeDragListening = false;
+  private readonly onRangeDragMouseUp = (): void => this.onDocumentMouseUp();
+
+  private startRangeDragListener(): void {
+    if (this.rangeDragListening) {
+      return;
+    }
+    this.rangeDragListening = true;
+    this.document.addEventListener('mouseup', this.onRangeDragMouseUp);
+  }
+
+  private stopRangeDragListener(): void {
+    if (!this.rangeDragListening) {
+      return;
+    }
+    this.rangeDragListening = false;
+    this.document.removeEventListener('mouseup', this.onRangeDragMouseUp);
   }
 
   /** Clears the current range selection and emits `cellRangeChange` with `undefined`. */
@@ -2595,6 +2634,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** Starts a column-resize drag from that header's `.inandu-column-resize-handle`. */
   onResizeHandleMouseDown(event: MouseEvent, column: InanduColumnComponent): void {
     event.preventDefault();
+    this.stopResizeDrag();
     this.resizingField = column.field();
     this.resizeStartX = event.clientX;
     this.resizeStartWidth = this.effectiveWidth(column);
@@ -2611,11 +2651,14 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.columnWidths.update(widths => ({ ...widths, [field]: width }));
   };
 
-  private readonly onResizeMouseUp = (): void => {
+  private readonly onResizeMouseUp = (): void => this.stopResizeDrag();
+
+  /** Ends a column-resize drag and removes its `window` listeners — also called when the grid is destroyed mid-drag. */
+  private stopResizeDrag(): void {
     this.resizingField = undefined;
     window.removeEventListener('mousemove', this.onResizeMouseMove);
     window.removeEventListener('mouseup', this.onResizeMouseUp);
-  };
+  }
 
   /** Double-click on a resize handle → fit the column to its content (#33). */
   onResizeHandleDblClick(event: MouseEvent, column: InanduColumnComponent): void {
