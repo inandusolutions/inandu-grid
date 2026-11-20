@@ -1,5 +1,5 @@
-import { DOCUMENT } from '@angular/common';
-import { booleanAttribute, ChangeDetectionStrategy, Component, computed, contentChild, contentChildren, DestroyRef, effect, ElementRef, inject, input, LOCALE_ID, numberAttribute, output, signal, TemplateRef, untracked, viewChild, viewChildren } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { booleanAttribute, ChangeDetectionStrategy, Component, computed, contentChild, contentChildren, DestroyRef, effect, ElementRef, inject, input, linkedSignal, LOCALE_ID, numberAttribute, output, PLATFORM_ID, signal, TemplateRef, untracked, viewChild, viewChildren } from '@angular/core';
 import { formatNumber, NgTemplateOutlet } from '@angular/common';
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
@@ -326,7 +326,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   /** Removes what `stateKey` saved for this grid from `localStorage` (the grid on screen keeps its current state). A no-op without a `stateKey`. */
   clearPersistedState(): void {
     const key = this.stateKey();
-    if (!key) {
+    if (!key || !this.isBrowser) {
       return;
     }
     try {
@@ -338,6 +338,9 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** Best-effort restore of a previously-persisted state blob for `key` — silently does nothing if there's none, it's unparseable, or `localStorage` itself throws. */
   private restorePersistedState(key: string): void {
+    if (!this.isBrowser) {
+      return;
+    }
     if (!key) {
       return;
     }
@@ -451,6 +454,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   private readonly translate = inject(TranslateService);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
+  /** `false` while rendering on the server: there is no `localStorage`, `window.confirm()` or pointer there. */
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   readonly resolvedLang = computed(() => resolveInanduGridLang(this.lang(), this.translate));
 
   readonly msgNoData = this.translate.translate('MsgNoData', undefined, this.resolvedLang);
@@ -485,6 +490,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly msgExpandDetail = this.translate.translate('MsgExpandDetail', undefined, this.resolvedLang);
   readonly msgCollapseDetail = this.translate.translate('MsgCollapseDetail', undefined, this.resolvedLang);
 
+  // The constructor's effects, by kind (kept for the next reader; see the review of 2026-11-20):
+  //  - to the outside world, so they stay effects: customTranslations -> TranslateService, persist -> localStorage,
+  //    sortChange / pageChange / filterChange / viewport range -> outputs, outside-click listener -> document;
+  //  - one-time restore of the saved state (a signal input's bound value is not available during construction);
+  //  - DOM measurement: measuredRowHeight reads a rendered row.
+  // State that can be derived is not written by an effect: the tree's expanded nodes are a `linkedSignal` of `data()`.
   constructor() {
     registerInanduGridTranslations(this.translate);
 
@@ -504,10 +515,6 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       doc.addEventListener('click', listener);
       onCleanup(() => doc.removeEventListener('click', listener));
     });
-
-    // Tree mode (#3): apply `treeDefaultExpanded` once per distinct `data()` array. In its own
-    // effect (not the `treeRows` computed) since it writes a signal.
-    effect(() => this.seedTreeExpansion());
 
     // Layers customTranslations() on top of the built-in dictionaries whenever it changes — merge
     // (not replace), so only the keys the consumer actually supplies override the built-in text.
@@ -548,7 +555,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     effect(() => {
       const key = this.stateKey();
       const state = this.persistableState();
-      if (!key) {
+      if (!key || !this.isBrowser) {
         return;
       }
       try {
@@ -2048,8 +2055,14 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     !!this.treeChildrenKey() && !this.groupByColumn() && !this.virtualScroll() && !this.serverSide(),
   );
 
-  /** Expanded tree nodes, by object reference (like `expandedRows`/`selectedRows`). */
-  private readonly expandedTreeRows = signal<Set<T>>(new Set());
+  /**
+   * Expanded tree nodes, by object reference (like `expandedRows`/`selectedRows`). Seeded from `treeDefaultExpanded` and
+   * reset to that seed whenever `data()` is a different array; `toggle`/`expandAll`/`collapseAll` write to it in between.
+   */
+  private readonly expandedTreeRows = linkedSignal<T[], Set<T>>({
+    source: () => this.data(),
+    computation: data => untracked(() => this.treeSeed(data)),
+  });
 
   private readonly childrenOf = (row: T): readonly T[] | undefined => {
     const value = (row as Record<string, unknown>)[this.treeChildrenKey()];
@@ -2057,7 +2070,6 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   };
 
   /** `true` once the initial `treeDefaultExpanded` seeding has run for the current `data()`. */
-  private treeSeededFor: T[] | undefined;
 
   /** `data()` walked into the flat, expansion-aware list of rows the template renders in tree mode. */
   readonly treeRows = computed<TreeVisibleRow<T>[]>(() => {
@@ -2098,19 +2110,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     });
   });
 
-  /** Seeds `expandedTreeRows` from `treeDefaultExpanded` the first time a given `data()` is seen.
-   *  Called from an `effect` (see the constructor) — never from a computed. */
-  private seedTreeExpansion(): void {
-    if (!untracked(this.hasTreeData)) return;
-    const data = this.data();
-    if (this.treeSeededFor === data) return;
-    this.treeSeededFor = data;
-    const mode = untracked(this.treeDefaultExpanded);
-    if (mode === 'none') {
-      this.expandedTreeRows.set(new Set());
-      return;
-    }
+  /** The nodes `treeDefaultExpanded` opens for `data` — empty outside tree mode. */
+  private treeSeed(data: T[]): Set<T> {
     const next = new Set<T>();
+    if (!this.hasTreeData()) return next;
+    const mode = this.treeDefaultExpanded();
+    if (mode === 'none') return next;
     if (mode === 'all') {
       for (const row of collectTreeRows(data, this.childrenOf)) {
         if (this.childrenOf(row)?.length) next.add(row);
@@ -2128,7 +2133,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       };
       walk(data, 0);
     }
-    this.expandedTreeRows.set(next);
+    return next;
   }
 
   isTreeRowExpanded(row: T): boolean {
@@ -3171,16 +3176,63 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
   readonly rowDelete = output<T>();
 
   /**
-   * The row's own "Delete" button. If `deleteConfirmMessage()` is set, prompts via `window.confirm()`
-   * first and does nothing when the user cancels; otherwise deletes immediately. Like `rowSave`, the
+   * The row's own "Delete" button. If `confirmDelete()` is set it decides (sync or async); else, if `deleteConfirmMessage()` is set,
+   * prompts via `window.confirm()` first and does nothing when the user cancels; otherwise deletes immediately. Like `rowSave`, the
    * grid never removes `row` from `data()` itself — persisting the removal is the consumer's job.
    */
   deleteRow(row: T): void {
-    const message = this.deleteConfirmMessage();
-    if (message && !window.confirm(message)) {
+    this.confirmThen(this.deleteConfirmMessage(), [row], () => this.rowDelete.emit(row));
+  }
+
+  /**
+   * Asks the consumer to confirm a delete (a row, or the selected rows) before it happens. Return `true` — or a promise
+   * that resolves to `true` — to go ahead. Set, it replaces `deleteConfirmMessage` / `bulkDeleteConfirmMessage` and their
+   * `window.confirm()`, so the app can show its own, styled and translated dialog. A rejection counts as "not confirmed".
+   */
+  readonly confirmDelete = input<((rows: T[]) => boolean | Promise<boolean>) | undefined>(undefined);
+
+  /** `true` while a `confirmDelete` promise is waiting: a second click on a delete button then does nothing, instead of opening a second dialog. */
+  private confirmingDelete = false;
+
+  /**
+   * Runs `proceed` once the delete is confirmed: by `confirmDelete()` if set, else by `window.confirm(message)` if there is a
+   * message, else at once. Everything stays synchronous unless `confirmDelete()` returns a promise. Without a browser (server
+   * rendering) a `window.confirm()` cannot be asked, so nothing is deleted.
+   */
+  private confirmThen(message: string, rows: T[], proceed: () => void): void {
+    const confirmFn = this.confirmDelete();
+    if (!confirmFn) {
+      if (message && (!this.isBrowser || !window.confirm(message))) {
+        return;
+      }
+      proceed();
       return;
     }
-    this.rowDelete.emit(row);
+    if (this.confirmingDelete) {
+      return;
+    }
+    let answer: boolean | Promise<boolean>;
+    try {
+      answer = confirmFn(rows);
+    } catch (error) {
+      console.error('inandu-grid: confirmDelete threw; the delete was not confirmed.', error);
+      return;
+    }
+    if (typeof answer === 'boolean') {
+      if (answer) proceed();
+      return;
+    }
+    this.confirmingDelete = true;
+    answer.then(
+      confirmed => {
+        this.confirmingDelete = false;
+        if (confirmed) proceed();
+      },
+      error => {
+        this.confirmingDelete = false;
+        console.error('inandu-grid: confirmDelete rejected; the delete was not confirmed.', error);
+      },
+    );
   }
 
   /** Optional confirmation message for the toolbar's "Delete selected" bulk action — same `window.confirm()` gating as `deleteConfirmMessage`, independently configurable since bulk deletion is a bigger, easier-to-regret action than deleting one row. */
@@ -3198,14 +3250,12 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * the selection (there's nothing left to keep selected once the consumer removes them from `data()`).
    */
   deleteSelectedRows(): void {
-    const message = this.bulkDeleteConfirmMessage();
-    if (message && !window.confirm(message)) {
-      return;
-    }
     const rows = Array.from(this.selectedRows());
-    this.selectedRows.set(new Set());
-    this.selectionChange.emit([]);
-    this.rowsDelete.emit(rows);
+    this.confirmThen(this.bulkDeleteConfirmMessage(), rows, () => {
+      this.selectedRows.set(new Set());
+      this.selectionChange.emit([]);
+      this.rowsDelete.emit(rows);
+    });
   }
 
   /** `MsgDeleteSelected` interpolated with `selectedCount()` — the bulk-delete button's aria-label/title. */

@@ -161,6 +161,7 @@ class InanduGridComponent
   readonly columnGroups: i0.Signal<readonly InanduColumnGroupComponent[]>
   readonly columnToggle: i0.InputSignalWithTransform<boolean, unknown>
   readonly columns: i0.Signal<InanduColumnComponent[]>
+  readonly confirmDelete: i0.InputSignal<((rows: T[]) => boolean | Promise<boolean>) | undefined>
   readonly creatable: i0.InputSignalWithTransform<boolean, unknown>
   readonly currentPage: i0.Signal<number>
   readonly customTranslations: i0.InputSignal<InanduGridCustomTranslations | undefined>

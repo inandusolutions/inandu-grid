@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `confirmDelete` input: `(rows) => boolean | Promise<boolean>` decides whether a row delete or the bulk delete goes ahead, so an app can show its own, styled and translated dialog instead of `window.confirm()`. It replaces `deleteConfirmMessage` / `bulkDeleteConfirmMessage` when set; without it nothing changes. A rejection or a throw counts as not confirmed, and a second click while a promise is pending is ignored.
+
 ### Fixed
 
+- Rendering on the server: the grid no longer touches `localStorage` (restoring or saving `stateKey` state, `clearPersistedState()`) there, and a delete that only has a `deleteConfirmMessage` is not carried out, because `window.confirm()` cannot ask.
+- Tree data: the expanded nodes are now a `linkedSignal` of `data()` instead of an effect that wrote them. Same behaviour, but they are also re-seeded when tree mode is switched on after the data was set.
 - Destroying a grid in the middle of a column-resize drag left its `mousemove`/`mouseup` listeners on `window`; they are now removed on destroy.
 - The grid no longer listens to every document click and mouseup on the page: the outside-click listener exists only while a filter or column popup is open, and the mouseup listener only during a range drag. A page with many grids no longer runs every grid's handler on every click.
 

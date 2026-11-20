@@ -1,4 +1,4 @@
-import { Component, Type, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Type, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
 import { ComponentFixture, fakeAsync, flush, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
@@ -5079,5 +5079,183 @@ describe('InanduGridComponent document listeners', () => {
     expect(count(addSpy)).toBe(2);
     fixture.destroy();
     expect(count(removeSpy)).toBe(2);
+  });
+});
+
+@Component({
+  template: `
+    <inandu-grid [data]="rows" lang="en" selectable="true" deletable="true" [confirmDelete]="confirmFn"
+      deleteConfirmMessage="not used when confirmDelete is set"
+      (rowDelete)="deletedRows.push($event)" (rowsDelete)="bulkDeleted = $event">
+      <inandu-column title="Name" field="name"></inandu-column>
+    </inandu-grid>
+  `,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [InanduGridComponent, InanduColumnComponent],
+})
+class ConfirmDeleteHostComponent {
+  rows: InanduGridRow[] = [{ name: 'Amy' }, { name: 'Bob' }];
+  deletedRows: InanduGridRow[] = [];
+  bulkDeleted: InanduGridRow[] = [];
+  confirmFn: (rows: InanduGridRow[]) => boolean | Promise<boolean> = () => true;
+}
+
+describe('InanduGridComponent confirmDelete (async confirmation)', () => {
+  let fixture: ComponentFixture<ConfirmDeleteHostComponent>;
+  let host: ConfirmDeleteHostComponent;
+  let grid: InanduGridComponent;
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(ConfirmDeleteHostComponent);
+    host = fixture.componentInstance;
+    fixture.detectChanges();
+    grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+  });
+
+  it('never calls window.confirm when confirmDelete is set; a sync true deletes at once', () => {
+    const confirmSpy = spyOn(window, 'confirm');
+    const fn = jasmine.createSpy('confirmDelete').and.returnValue(true);
+    host.confirmFn = fn;
+    fixture.detectChanges();
+
+    grid.deleteRow(host.rows[0]);
+
+    expect(fn).toHaveBeenCalledWith([host.rows[0]]);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(host.deletedRows).toEqual([host.rows[0]]);
+  });
+
+  it('a sync false does not delete', () => {
+    host.confirmFn = () => false;
+    fixture.detectChanges();
+    grid.deleteRow(host.rows[0]);
+    expect(host.deletedRows).toEqual([]);
+  });
+
+  it('waits for a promise, deletes only when it resolves to true', fakeAsync(() => {
+    let resolve!: (value: boolean) => void;
+    host.confirmFn = () => new Promise<boolean>(r => (resolve = r));
+    fixture.detectChanges();
+
+    grid.deleteRow(host.rows[1]);
+    expect(host.deletedRows).toEqual([]);
+    resolve(true);
+    flush();
+    expect(host.deletedRows).toEqual([host.rows[1]]);
+  }));
+
+  it('a promise resolving to false, or rejecting, does not delete (a rejection is logged)', fakeAsync(() => {
+    const errorSpy = spyOn(console, 'error');
+    host.confirmFn = () => Promise.resolve(false);
+    fixture.detectChanges();
+    grid.deleteRow(host.rows[0]);
+    flush();
+    expect(host.deletedRows).toEqual([]);
+
+    host.confirmFn = () => Promise.reject(new Error('dialog closed'));
+    fixture.detectChanges();
+    grid.deleteRow(host.rows[0]);
+    flush();
+    expect(host.deletedRows).toEqual([]);
+    expect(errorSpy).toHaveBeenCalled();
+  }));
+
+  it('a function that throws counts as not confirmed', () => {
+    const errorSpy = spyOn(console, 'error');
+    host.confirmFn = () => { throw new Error('boom'); };
+    fixture.detectChanges();
+    grid.deleteRow(host.rows[0]);
+    expect(host.deletedRows).toEqual([]);
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it('a second click while the first confirmation is pending does not ask again', fakeAsync(() => {
+    const fn = jasmine.createSpy('confirmDelete').and.returnValue(new Promise<boolean>(() => undefined));
+    host.confirmFn = fn;
+    fixture.detectChanges();
+    grid.deleteRow(host.rows[0]);
+    grid.deleteRow(host.rows[1]);
+    expect(fn).toHaveBeenCalledTimes(1);
+  }));
+
+  it('the bulk delete gets every selected row, and clears the selection only after the confirmation', fakeAsync(() => {
+    const checkboxes = fixture.debugElement.queryAll(By.css('tbody .inandu-select-checkbox')).map(el => el.nativeElement as HTMLInputElement);
+    checkboxes[0].dispatchEvent(new Event('change'));
+    checkboxes[1].dispatchEvent(new Event('change'));
+    let resolve!: (value: boolean) => void;
+    const fn = jasmine.createSpy('confirmDelete').and.callFake(() => new Promise<boolean>(r => (resolve = r)));
+    host.confirmFn = fn;
+    fixture.detectChanges();
+
+    grid.deleteSelectedRows();
+    expect(fn).toHaveBeenCalledWith(host.rows);
+    expect(host.bulkDeleted).toEqual([]);
+    expect(grid.selectedCount()).toBe(2);
+
+    resolve(true);
+    flush();
+    expect(host.bulkDeleted).toEqual(host.rows);
+    expect(grid.selectedCount()).toBe(0);
+  }));
+});
+
+describe('InanduGridComponent on the server platform', () => {
+  const STORAGE_KEY = 'inandu-grid-state:persist-test-grid';
+
+  afterEach(() => localStorage.removeItem(STORAGE_KEY));
+
+  it('does not read, write or clear localStorage', () => {
+    TestBed.configureTestingModule({ providers: [{ provide: PLATFORM_ID, useValue: 'server' }] });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 1, hiddenFields: ['score'] }));
+    const getSpy = spyOn(Storage.prototype, 'getItem').and.callThrough();
+    const setSpy = spyOn(Storage.prototype, 'setItem').and.callThrough();
+    const removeSpy = spyOn(Storage.prototype, 'removeItem').and.callThrough();
+    const fixture = TestBed.createComponent(PersistedStateHostComponent);
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+    grid.setColumnWidth('name', 200);
+    fixture.detectChanges();
+    grid.clearPersistedState();
+
+    expect(getSpy).not.toHaveBeenCalled();
+    expect(setSpy).not.toHaveBeenCalled();
+    expect(removeSpy).not.toHaveBeenCalled();
+  });
+
+  it('with a deleteConfirmMessage it does not delete (nothing can ask) and does not touch window.confirm', () => {
+    TestBed.configureTestingModule({ providers: [{ provide: PLATFORM_ID, useValue: 'server' }] });
+    const confirmSpy = spyOn(window, 'confirm');
+    const fixture = TestBed.createComponent(DeletableHostComponent);
+    fixture.componentInstance.confirmMessage = 'Delete?';
+    fixture.detectChanges();
+    const grid = fixture.debugElement.query(By.directive(InanduGridComponent)).componentInstance as InanduGridComponent;
+
+    grid.deleteRow(fixture.componentInstance.rows[0]);
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.deletedRows).toEqual([]);
+  });
+});
+
+describe('InanduGridComponent tree expansion follows data()', () => {
+  it('keeps what the user opened across re-renders, and re-seeds from treeDefaultExpanded when data is a new array', () => {
+    const f = TestBed.createComponent(TreeHostComponent);
+    f.componentInstance.defaultExpanded = 1;
+    f.detectChanges();
+    const names = () => f.debugElement.queryAll(By.css('tbody tr.inandu-tree-row td[data-field="name"]'))
+      .map(c => c.nativeElement.textContent.trim());
+    expect(names()).toEqual(['Fruit', 'Apple', 'Banana', 'Veg']);
+
+    // The user opens Banana: it stays open through a plain re-render.
+    f.debugElement.queryAll(By.css('tr.inandu-tree-row'))[2].query(By.css('.inandu-tree-toggle')).nativeElement.click();
+    f.detectChanges();
+    expect(names()).toEqual(['Fruit', 'Apple', 'Banana', 'Cavendish', 'Veg']);
+    f.detectChanges();
+    expect(names()).toEqual(['Fruit', 'Apple', 'Banana', 'Cavendish', 'Veg']);
+
+    // A new data array starts again from the default (first level only).
+    f.componentInstance.rows = [{ name: 'Nuts', qty: 1, children: [{ name: 'Almond', qty: 2, children: [{ name: 'Raw', qty: 1 }] }] }];
+    f.detectChanges();
+    expect(names()).toEqual(['Nuts', 'Almond']);
   });
 });

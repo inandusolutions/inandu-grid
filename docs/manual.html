@@ -665,6 +665,12 @@ onSave(e: InanduGridRowSave) {
       <p><code>deletable="true"</code> adds a Delete button per row. With <code>deleteConfirmMessage</code>
         set, a native <code>window.confirm()</code> gates it. Emits <code>(rowDelete)</code> with the row
         reference; you filter it out of your own array.</p>
+      <p>To use your own dialog instead, pass <code>[confirmDelete]</code>: a function
+        <code>(rows) =&gt; boolean | Promise&lt;boolean&gt;</code> (it gets the row, or every selected row for the bulk
+        delete). It replaces both confirm messages and <code>window.confirm()</code>; a rejected promise or a function that
+        throws counts as not confirmed. While a promise is pending, a second click on a delete button does nothing.
+        When rendering on the server there is no <code>window.confirm()</code>, so a grid that only has a confirm message
+        does not delete there.</p>
     </section>
 
     <!-- 18 -->
@@ -855,6 +861,7 @@ evenOnly = (v: unknown) =&gt; typeof v === 'number' &amp;&amp; v % 2 ? 'Must be 
           <tr><td><code>deletable</code></td><td><code>boolean</code></td><td><code>false</code></td></tr>
           <tr><td><code>deleteConfirmMessage</code></td><td><code>string</code></td><td><code>''</code> (no prompt)</td></tr>
           <tr><td><code>bulkDeleteConfirmMessage</code></td><td><code>string</code></td><td><code>''</code></td></tr>
+          <tr><td><code>confirmDelete</code></td><td><code>(rows) =&gt; boolean | Promise&lt;boolean&gt;</code></td><td>unset (uses the messages above)</td></tr>
           <tr><td><code>stateKey</code></td><td><code>string</code></td><td><code>''</code> (no persistence)</td></tr>
           <tr><td><code>lang</code></td><td><code>string</code> (BCP 47)</td><td>browser → <code>en</code></td></tr>
           <tr><td><code>customTranslations</code></td><td><code>InanduGridCustomTranslations</code></td><td>unset</td></tr>
