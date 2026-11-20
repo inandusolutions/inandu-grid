@@ -4,7 +4,7 @@ import { formatNumber, NgTemplateOutlet } from '@angular/common';
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { provideChildTranslateService, TranslateService } from '@ngx-translate/core';
 import { InanduCellTemplateContext, InanduColumnComponent, InanduEditTemplateContext, InanduHeaderTemplateContext } from '../inandu-column/inandu-column.component';
-import type { InanduColumnAsyncValidator, InanduColumnStickySide } from '../inandu-column/inandu-column.component';
+import type { InanduColumnStickySide } from '../inandu-column/inandu-column.component';
 import { InanduColumnGroupComponent } from '../inandu-column-group/inandu-column-group.component';
 import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/inandu-grid-translations';
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
@@ -13,6 +13,8 @@ import { InanduGridStateStorage } from './inandu-grid-state-storage';
 import { isMultiCellRange, normalizeRange, rangesContain, rangeToTsv } from './inandu-grid-range';
 import type { InanduGridRange } from './inandu-grid-range';
 import { treeRowsToExpand } from './inandu-grid-tree';
+import { validateAndParseDraft, validateColumnValue } from './inandu-grid-validation';
+import type { InanduGridValidationMessages } from './inandu-grid-validation';
 import { exportCsv, exportExcel, exportPdf, printTable } from './inandu-grid-exporter';
 import type { InanduGridExportTable } from './inandu-grid-exporter';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
@@ -34,7 +36,6 @@ import {
   formatCellValue,
   hasMeaningfulFilterValue,
   matchesColumnFilter,
-  parseDraftValue,
   parsePastedCell,
   placeColumnsByOrder,
 } from '@inandu-solutions/grid-core';
@@ -78,9 +79,6 @@ export interface InanduDetailTemplateContext<T extends InanduGridRow = InanduGri
   $implicit: T;
   row: T;
 }
-
-/** Shown under a field when its `asyncValidator` failed and there is nothing better to show (not an `Error`, or `asyncValidatorError` threw). */
-const ASYNC_VALIDATOR_FAILED_MESSAGE = 'Validation could not be completed';
 
 /** How long a keyboard move to a row that is not rendered yet may wait for that row before it is forgotten (milliseconds). */
 const PENDING_VIRTUAL_FOCUS_TTL_MS = 1500;
@@ -2796,24 +2794,6 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     this.rowDraft.update(draft => ({ ...draft, [field]: value }));
   }
 
-  /** The text for a field whose `asyncValidator` threw: the column's `asyncValidatorError` if it has one, else the `Error`'s message. */
-  private asyncValidatorFailureMessage(column: InanduColumnComponent, error: unknown): string {
-    try {
-      const format = column.asyncValidatorError();
-      if (format) {
-        const message = format(error);
-        if (typeof message === 'string' && message) {
-          return message;
-        }
-      } else if (error instanceof Error && error.message) {
-        return error.message;
-      }
-    } catch {
-      /* the consumer's own formatter failed: fall through to the generic text */
-    }
-    return ASYNC_VALIDATOR_FAILED_MESSAGE;
-  }
-
   /** "Cancel" — discards the draft and exits edit mode without emitting `rowSave`. */
   cancelRowEdit(): void {
     this.editSession += 1;
@@ -2841,95 +2821,19 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * passed for that field; every field's async check (if any) runs concurrently via `Promise.all`,
    * not one after another.
    */
-  private async validateAndParseDraft(draft: Record<string, unknown>): Promise<{ errors: Record<string, string>; values: Record<string, unknown> }> {
-    const parsedRow: Record<string, unknown> = {};
-    for (const column of this.editableColumns()) {
-      parsedRow[column.field()] = parseDraftValue(draft[column.field()], column.type());
-    }
-    const errors: Record<string, string> = {};
-    const values: Record<string, unknown> = {};
-    const pendingAsyncChecks: Promise<void>[] = [];
-    for (const column of this.editableColumns()) {
-      const field = column.field();
-      const message = this.validateColumnValue(column, draft[field], parsedRow[field], parsedRow);
-      if (message) {
-        errors[field] = message;
-        continue;
-      }
-      const asyncValidator: InanduColumnAsyncValidator | undefined = column.asyncValidator();
-      if (!asyncValidator) {
-        if (parsedRow[field] !== undefined) {
-          values[field] = parsedRow[field];
-        }
-        continue;
-      }
-      pendingAsyncChecks.push(
-        asyncValidator(parsedRow[field], parsedRow)
-          .then(asyncMessage => {
-            if (asyncMessage) {
-              errors[field] = asyncMessage;
-            } else if (parsedRow[field] !== undefined) {
-              values[field] = parsedRow[field];
-            }
-          })
-          // A validator that throws (a network error, say) is a failed check, shown under its field: the row stays in edit mode and
-          // the click handler is not left with a rejected promise nobody handles.
-          .catch((error: unknown) => {
-            errors[field] = this.asyncValidatorFailureMessage(column, error);
-          })
-      );
-    }
-    if (pendingAsyncChecks.length > 0) {
-      this.isValidating.set(true);
-      try {
-        await Promise.all(pendingAsyncChecks);
-      } finally {
-        this.isValidating.set(false);
-      }
-    }
-    return { errors, values };
+  private validateAndParseDraft(draft: Record<string, unknown>): Promise<{ errors: Record<string, string>; values: Record<string, unknown> }> {
+    return validateAndParseDraft(this.editableColumns(), draft, this.validationMessages(), validating => this.isValidating.set(validating));
   }
 
-  /**
-   * Runs `required`/`min`/`max`/`pattern`/`validator` (see `InanduColumnComponent`) for one field, in that
-   * order, stopping at the first failure — `raw` is the draft's raw control value (what `required`/
-   * `pattern` check), `parsed` is that same value already run through `parseDraftValue()` (what `min`/
-   * `max`/`validator` check), and `parsedRow` is every editable field's parsed value for the row
-   * currently being saved, given to `validator` for cross-field checks.
-   */
-  private validateColumnValue(column: InanduColumnComponent, raw: unknown, parsed: unknown, parsedRow: Record<string, unknown>): string | null {
-    if (column.required() && (raw === '' || raw === undefined || raw === null)) {
-      return this.translate.instant('MsgValidationRequired', undefined, this.resolvedLang());
-    }
-    if (column.type() === 'number' && typeof parsed === 'number') {
-      const min = column.min();
-      if (min !== undefined && parsed < min) {
-        return this.translate.instant('MsgValidationMin', { min }, this.resolvedLang());
-      }
-      const max = column.max();
-      if (max !== undefined && parsed > max) {
-        return this.translate.instant('MsgValidationMax', { max }, this.resolvedLang());
-      }
-    }
-    const pattern = column.pattern();
-    if (pattern && typeof raw === 'string' && raw !== '') {
-      // A malformed `pattern` (dev-supplied config) would otherwise throw out of this `async`
-      // validation and reject the save with an unhandled error — treat it as "no pattern" instead.
-      let regExp: RegExp | undefined;
-      try {
-        regExp = new RegExp(pattern);
-      } catch {
-        regExp = undefined;
-      }
-      if (regExp && !regExp.test(raw)) {
-        return this.translate.instant('MsgValidationPattern', undefined, this.resolvedLang());
-      }
-    }
-    const validator = column.validator();
-    if (validator) {
-      return validator(parsed, parsedRow);
-    }
-    return null;
+  /** The built-in rules' texts, translated for the grid's current language. */
+  private validationMessages(): InanduGridValidationMessages {
+    const lang = this.resolvedLang();
+    return {
+      required: () => this.translate.instant('MsgValidationRequired', undefined, lang),
+      min: min => this.translate.instant('MsgValidationMin', { min }, lang),
+      max: max => this.translate.instant('MsgValidationMax', { max }, lang),
+      pattern: () => this.translate.instant('MsgValidationPattern', undefined, lang),
+    };
   }
 
   /**
@@ -2945,7 +2849,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    * cross-field checks.
    */
   validateCell(column: InanduColumnComponent, value: unknown, row: Record<string, unknown> = {}): string | null {
-    return this.validateColumnValue(column, value, value, row);
+    return validateColumnValue(column, value, value, row, this.validationMessages());
   }
 
   /**
