@@ -13,6 +13,7 @@ import { InanduGridStateStorage } from './inandu-grid-state-storage';
 import { isMultiCellRange, normalizeRange, rangesContain, rangeToTsv } from './inandu-grid-range';
 import type { InanduGridRange } from './inandu-grid-range';
 import { treeRowsToExpand } from './inandu-grid-tree';
+import { shouldLoadMore, viewportWindow, virtualMoveTarget, visibleRowCount } from './inandu-grid-virtual';
 import { validateAndParseDraft, validateColumnValue } from './inandu-grid-validation';
 import type { InanduGridValidationMessages } from './inandu-grid-validation';
 import { exportCsv, exportExcel, exportPdf, printTable } from './inandu-grid-exporter';
@@ -1251,22 +1252,23 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     }
     // While an earlier move is still waiting for its row to render, focus is still on the old cell: the next key continues from that
     // move's target, not from the old cell, or every key pressed meanwhile would be lost.
-    const waiting = this.pendingVirtualFocus !== null;
-    const current = this.pendingVirtualFocus?.index ?? rendered;
-    const total = viewport.getDataLength();
-    const target = current + step;
-    if (target < 0) {
-      return false;
-    }
-    if (target >= total) {
-      event.preventDefault();
-      return true;
-    }
     const range = viewport.getRenderedRange();
-    if (!waiting && target >= range.start && target < range.end) {
+    const move = virtualMoveTarget({
+      current: this.pendingVirtualFocus?.index ?? rendered,
+      step,
+      total: viewport.getDataLength(),
+      renderedStart: range.start,
+      renderedEnd: range.end,
+      waiting: this.pendingVirtualFocus !== null,
+    });
+    if (move === 'header' || move === 'dom') {
       return false;
     }
     event.preventDefault();
+    if (move === 'swallow') {
+      return true;
+    }
+    const target = move.scrollTo;
     this.pendingVirtualFocus = { index: target, col, at: Date.now(), items: this.virtualItems() };
     viewport.scrollToIndex(target); // the cdk's own index-to-offset arithmetic; the row lands at the top, with the following rows below it
     this.reconcileVirtualFocus(); // already rendered (a second key while waiting): focus it now; otherwise the row observer will
@@ -1831,8 +1833,8 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       return;
     }
     const total = this.sortedData().length;
-    const visibleCount = Math.ceil(this.virtualViewportHeight() / (this.effectiveVirtualRowHeight() || 1));
-    if (startIndex + visibleCount + this.infiniteScrollThreshold() >= total && total !== this.lastLoadMoreLength()) {
+    const visibleCount = visibleRowCount(this.virtualViewportHeight(), this.effectiveVirtualRowHeight());
+    if (shouldLoadMore(startIndex, visibleCount, this.infiniteScrollThreshold(), total, this.lastLoadMoreLength())) {
       this.lastLoadMoreLength.set(total);
       this.loadMore.emit({ loadedCount: total });
     }
@@ -1849,15 +1851,16 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     if (!this.virtualScroll() || !this.serverSide()) {
       return;
     }
-    const start = Math.max(0, this.viewportStartIndex());
-    const visibleCount = Math.ceil(this.virtualViewportHeight() / (this.effectiveVirtualRowHeight() || 1));
-    const cap = this.totalItems() ?? this.data().length;
-    const endIndex = cap > 0 ? Math.min(cap, start + visibleCount) : start + visibleCount;
+    const range: InanduGridViewportRange = viewportWindow(
+      this.viewportStartIndex(),
+      this.virtualViewportHeight(),
+      this.effectiveVirtualRowHeight(),
+      this.totalItems() ?? this.data().length,
+    );
     const prev = this.lastViewportRange();
-    if (prev && prev.startIndex === start && prev.endIndex === endIndex) {
+    if (prev && prev.startIndex === range.startIndex && prev.endIndex === range.endIndex) {
       return;
     }
-    const range: InanduGridViewportRange = { startIndex: start, endIndex };
     this.lastViewportRange.set(range);
     this.viewportRangeChange.emit(range);
   }
