@@ -10,6 +10,7 @@ import { registerInanduGridTranslations, resolveInanduGridLang } from '../i18n/i
 import { InanduDetailTemplateDirective } from './inandu-detail-template.directive';
 import { InanduGridColumnResize } from './inandu-grid-column-resize';
 import { InanduGridStateStorage } from './inandu-grid-state-storage';
+import { treeRowsToExpand } from './inandu-grid-tree';
 import { exportCsv, exportExcel, exportPdf, printTable } from './inandu-grid-exporter';
 import type { InanduGridExportTable } from './inandu-grid-exporter';
 // The grid's pure logic (sorting / filtering / formatting / parsing / aggregation / export) lives
@@ -27,7 +28,6 @@ import {
   computeGroupAggregates,
   escapeAttributeSelectorValue,
   ALL_GRID_STATE_PARTS,
-  collectTreeRows,
   flattenTree,
   formatCellValue,
   hasMeaningfulFilterValue,
@@ -2030,8 +2030,6 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
     return Array.isArray(value) ? (value as T[]) : undefined;
   };
 
-  /** `true` once the initial `treeDefaultExpanded` seeding has run for the current `data()`. */
-
   /** `data()` walked into the flat, expansion-aware list of rows the template renders in tree mode. */
   readonly treeRows = computed<TreeVisibleRow<T>[]>(() => {
     if (!this.hasTreeData()) return [];
@@ -2073,28 +2071,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
 
   /** The nodes `treeDefaultExpanded` opens for `data` — empty outside tree mode. */
   private treeSeed(data: T[]): Set<T> {
-    const next = new Set<T>();
-    if (!this.hasTreeData()) return next;
-    const mode = this.treeDefaultExpanded();
-    if (mode === 'none') return next;
-    if (mode === 'all') {
-      for (const row of collectTreeRows(data, this.childrenOf)) {
-        if (this.childrenOf(row)?.length) next.add(row);
-      }
-    } else {
-      const walk = (level: readonly T[], depth: number): void => {
-        if (depth >= mode) return;
-        for (const row of level) {
-          const kids = this.childrenOf(row);
-          if (kids?.length) {
-            next.add(row);
-            walk(kids, depth + 1);
-          }
-        }
-      };
-      walk(data, 0);
-    }
-    return next;
+    return this.hasTreeData() ? treeRowsToExpand(data, this.treeDefaultExpanded(), this.childrenOf) : new Set<T>();
   }
 
   isTreeRowExpanded(row: T): boolean {
@@ -2125,11 +2102,7 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
       this.expandedTreeRows.set(new Set());
       return;
     }
-    const next = new Set<T>();
-    for (const row of collectTreeRows(untracked(this.data), this.childrenOf)) {
-      if (this.childrenOf(row)?.length) next.add(row);
-    }
-    this.expandedTreeRows.set(next);
+    this.expandedTreeRows.set(treeRowsToExpand(untracked(this.data), 'all', this.childrenOf));
   }
 
   /** `visibleRows().length` — exposed publicly just so the template can disable the export buttons when there's nothing to export. */
