@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-20
+
 ### Added
 
 - `confirmDelete` input: `(rows) => boolean | Promise<boolean>` decides whether a row delete or the bulk delete goes ahead, so an app can show its own, styled and translated dialog instead of `window.confirm()`. It replaces `deleteConfirmMessage` / `bulkDeleteConfirmMessage` when set; without it nothing changes. A rejection or a throw counts as not confirmed, and a second click while a promise is pending is ignored.
@@ -268,7 +270,9 @@ framework-agnostic core (`projects/inandu-grid/src/lib/core/`, no `@angular/*`).
 - A real Open XML `.xlsx` export is a `@inandu-solutions/grid-pro` feature, not part of the
   MIT core.
 
-[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/inandusolutions/inandu-grid/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.7.0...v1.8.0
+[1.7.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.4.0...v1.5.0
 [1.3.0]: https://github.com/inandusolutions/inandu-grid/compare/v1.2.3...v1.3.0
