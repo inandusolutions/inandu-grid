@@ -33,6 +33,7 @@ import {
   computeGroupAggregates,
   escapeAttributeSelectorValue,
   ALL_GRID_STATE_PARTS,
+  createDeleteConfirmation,
   flattenTree,
   formatCellValue,
   hasMeaningfulFilterValue,
@@ -2915,47 +2916,23 @@ export class InanduGridComponent<T extends InanduGridRow = InanduGridRow> {
    */
   readonly confirmDelete = input<((rows: T[]) => boolean | Promise<boolean>) | undefined>(undefined);
 
-  /** `true` while a `confirmDelete` promise is waiting: a second click on a delete button then does nothing, instead of opening a second dialog. */
-  private confirmingDelete = false;
+  private readonly deleteConfirmation = createDeleteConfirmation();
 
   /**
    * Runs `proceed` once the delete is confirmed: by `confirmDelete()` if set, else by `window.confirm(message)` if there is a
-   * message, else at once. Everything stays synchronous unless `confirmDelete()` returns a promise. Without a browser (server
-   * rendering) a `window.confirm()` cannot be asked, so nothing is deleted.
+   * message, else at once (the rules live in `grid-core`'s `createDeleteConfirmation`, the same in every grid). Without a browser
+   * (server rendering) a `window.confirm()` cannot be asked, so nothing is deleted.
    */
   private confirmThen(message: string, rows: T[], proceed: () => void): void {
-    const confirmFn = this.confirmDelete();
-    if (!confirmFn) {
-      if (message && (!this.isBrowser || !window.confirm(message))) {
-        return;
-      }
-      proceed();
-      return;
-    }
-    if (this.confirmingDelete) {
-      return;
-    }
-    let answer: boolean | Promise<boolean>;
-    try {
-      answer = confirmFn(rows);
-    } catch (error) {
-      console.error('inandu-grid: confirmDelete threw; the delete was not confirmed.', error);
-      return;
-    }
-    if (typeof answer === 'boolean') {
-      if (answer) proceed();
-      return;
-    }
-    this.confirmingDelete = true;
-    answer.then(
-      confirmed => {
-        this.confirmingDelete = false;
-        if (confirmed) proceed();
+    this.deleteConfirmation.run(
+      {
+        // The rows handed over are this grid's own `T` rows, so a callback typed for `T[]` is safe to call with them.
+        confirmDelete: this.confirmDelete() as ((rows: InanduGridRow[]) => boolean | Promise<boolean>) | undefined,
+        message,
+        ask: this.isBrowser ? undefined : () => false,
       },
-      error => {
-        this.confirmingDelete = false;
-        console.error('inandu-grid: confirmDelete rejected; the delete was not confirmed.', error);
-      },
+      rows,
+      proceed,
     );
   }
 

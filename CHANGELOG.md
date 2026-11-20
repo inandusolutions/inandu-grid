@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `confirmDelete` input: `(rows) => boolean | Promise<boolean>` decides whether a row delete or the bulk delete goes ahead, so an app can show its own, styled and translated dialog instead of `window.confirm()`. It replaces `deleteConfirmMessage` / `bulkDeleteConfirmMessage` when set; without it nothing changes. A rejection or a throw counts as not confirmed, and a second click while a promise is pending is ignored.
 
+### Changed
+
+- Needs `@inandu-solutions/grid-core` `^0.1.6` (was `^0.1.5`). The saved state under `stateKey` and the delete confirmation (`confirmDelete`, `deleteConfirmMessage`) now run on `grid-core`'s `readSavedGridState` / `writeSavedGridState` / `clearSavedGridState` and `createDeleteConfirmation`, the code grid-react and grid-vue use too. No change in behaviour.
+
 ### Fixed
 
 - Rendering on the server: the grid no longer touches `localStorage` (restoring or saving `stateKey` state, `clearPersistedState()`) there, and a delete that only has a `deleteConfirmMessage` is not carried out, because `window.confirm()` cannot ask.
